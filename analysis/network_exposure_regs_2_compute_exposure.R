@@ -47,7 +47,7 @@ load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
 n_firms_base <- length(firms_base)
 
 # ---- Neumann series ----
-neumann_series <- function(A, v, max_iter = 50, tol = 1e-8) {
+neumann_series <- function(A, v, max_iter = 200, tol = 1e-8) {
   result <- v
   current_power <- as.numeric(A %*% v)
   for (k in seq_len(max_iter)) {
@@ -75,9 +75,12 @@ for (y in analysis_years) {
 
   eua_price_y <- eua_prices$eua_price[eua_prices$year == y]
 
-  # Direct exposure vector: shortage x price, for ETS firms in base universe
+  # Direct exposure vector: shortage x price, for ETS firms in base universe.
+  # Exclude firms with missing emissions/allocated_free (otherwise NA flows
+  # through the Neumann iteration and breaks convergence checks).
   ets_y <- firm_year_belgian_euets %>%
-    filter(year == y, in_sample == 1) %>%
+    filter(year == y, in_sample == 1,
+           !is.na(emissions), !is.na(allocated_free)) %>%
     select(vat, emissions, allocated_free)
 
   direct_exposure_abs <- rep(0, n_firms_base)

@@ -110,7 +110,7 @@ for (y in base_years) {
   ordered_inputs <- as.numeric(rowSums(exp_y))
 
   ets_y <- firm_year_belgian_euets %>%
-    filter(year == y, in_sample == 1) %>%
+    filter(year == y, in_sample == 1, !is.na(emissions)) %>%
     select(vat, emissions)
   eua_p <- eua_prices$eua_price[eua_prices$year == y]
 
