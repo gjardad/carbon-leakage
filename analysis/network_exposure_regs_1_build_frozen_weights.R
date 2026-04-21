@@ -140,23 +140,22 @@ valid_entries <- !is.na(row_costs_total) & row_costs_total > 0
 A_base@x[valid_entries] <- A_base@x[valid_entries] / row_costs_total[valid_entries]
 A_base@x[!valid_entries] <- 0
 
-# Vectorized row-scaling: cap any row with rowsum >= 1 to 0.99.
-# Only bites on data-inconsistency edges (e.g. inputs > total cost, or B2B sales > revenue).
-cap_rows <- function(M, cap = 0.99) {
+# Zero out any row with rowsum >= 1 (data inconsistency: inputs > total cost, or
+# B2B sales > revenue). These firms don't propagate shocks through the network.
+drop_bad_rows <- function(M) {
   rs <- rowSums(M)
   bad <- !is.na(rs) & rs >= 1
-  if (!any(bad)) return(list(M = M, max = max(rs, na.rm = TRUE), n_capped = 0L))
-  scale <- rep(1, nrow(M))
-  scale[bad] <- cap / rs[bad]
-  M@x <- M@x * scale[M@i + 1]
-  list(M = M, max = max(rowSums(M), na.rm = TRUE), n_capped = sum(bad))
+  if (!any(bad)) return(list(M = M, max = max(rs, na.rm = TRUE), n_dropped = 0L))
+  M@x[bad[M@i + 1]] <- 0
+  list(M = M, max = max(rowSums(M), na.rm = TRUE), n_dropped = sum(bad))
 }
 
-cat(sprintf("  Max row sum of A_base (pre-cap): %.6f\n", max(rowSums(A_base), na.rm = TRUE)))
-a_cap <- cap_rows(A_base)
-A_base <- a_cap$M
-if (a_cap$n_capped > 0) cat(sprintf("  Capped %d rows of A_base\n", a_cap$n_capped))
-cat(sprintf("  Final max row sum of A_base: %.6f\n", a_cap$max))
+cat(sprintf("  Max row sum of A_base (pre-drop): %.6f\n", max(rowSums(A_base), na.rm = TRUE)))
+a_drop <- drop_bad_rows(A_base)
+A_base <- a_drop$M
+if (a_drop$n_dropped > 0) cat(sprintf("  Dropped %d rows of A_base (inputs >= total cost)\n",
+                                       a_drop$n_dropped))
+cat(sprintf("  Final max row sum of A_base: %.6f\n", a_drop$max))
 
 # Build B_base (downstream: B[supplier, buyer] = sales / total_revenue_supplier)
 # Denominator is the supplier's TOTAL revenue (from annual accounts), not just its
@@ -169,12 +168,12 @@ valid_s <- !is.na(row_rev) & row_rev > 0
 B_base@x[valid_s] <- B_base@x[valid_s] / row_rev[valid_s]
 B_base@x[!valid_s] <- 0
 
-cat(sprintf("  Max row sum of B_base (pre-cap): %.6f\n", max(rowSums(B_base), na.rm = TRUE)))
-b_cap <- cap_rows(B_base)
-B_base <- b_cap$M
-if (b_cap$n_capped > 0) cat(sprintf("  Capped %d rows of B_base (sales > revenue in data)\n",
-                                     b_cap$n_capped))
-cat(sprintf("  Final max row sum of B_base: %.6f\n", b_cap$max))
+cat(sprintf("  Max row sum of B_base (pre-drop): %.6f\n", max(rowSums(B_base), na.rm = TRUE)))
+b_drop <- drop_bad_rows(B_base)
+B_base <- b_drop$M
+if (b_drop$n_dropped > 0) cat(sprintf("  Dropped %d rows of B_base (B2B sales > revenue)\n",
+                                       b_drop$n_dropped))
+cat(sprintf("  Final max row sum of B_base: %.6f\n", b_drop$max))
 
 # ---- Save ----
 save(A_base, B_base, firms_base, avg_costs,
