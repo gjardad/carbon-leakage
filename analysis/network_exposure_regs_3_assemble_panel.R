@@ -1,13 +1,13 @@
 ###############################################################################
-# phase2b_3_assemble_panel.R
+# network_exposure_regs_3_assemble_panel.R
 #
 # PURPOSE:
-#   Merge the raw frozen-weights exposure panel (from phase2b_2) with firm
+#   Merge the raw frozen-weights exposure panel (from script 2) with firm
 #   characteristics (sector, revenue, ETS status), and deflate revenue using
 #   the NACE4d PPI (falling back to NACE2d where NACE4d is missing).
 #
 # DATA:
-#   - data/processed/frozen_weights_exposure_raw.RData  (from phase2b_2)
+#   - data/processed/frozen_weights_exposure_raw.RData  (from script 2)
 #   - NBB_data/processed/firm_year_belgian_euets.RData
 #   - NBB_data/processed/deployment_panel.RData
 #   - NBB_data/processed/deflator_nace4d_2005base.RData

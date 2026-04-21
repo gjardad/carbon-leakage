@@ -1,5 +1,5 @@
 ###############################################################################
-# phase2b_1_build_frozen_weights.R
+# network_exposure_regs_1_build_frozen_weights.R
 #
 # PURPOSE:
 #   Build the frozen base-period A matrix (upstream) and B matrix (downstream)

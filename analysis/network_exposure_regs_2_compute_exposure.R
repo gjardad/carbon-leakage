@@ -1,9 +1,9 @@
 ###############################################################################
-# phase2b_2_compute_exposure.R
+# network_exposure_regs_2_compute_exposure.R
 #
 # PURPOSE:
 #   For each year 2012-2021, compute upstream and downstream network exposure
-#   using the FROZEN base-period A and B matrices (from phase2b_1) combined
+#   using the FROZEN base-period A and B matrices (from script 1) combined
 #   with time-varying direct exposure (shortage x EUA price, normalized by
 #   base-period average costs).
 #
@@ -13,7 +13,7 @@
 #   e_jt = max(emissions_jt - free_allowances_jt, 0) x price_t / avg_costs_j_base
 #
 # DATA:
-#   - data/processed/frozen_weights_matrices.RData  (from phase2b_1)
+#   - data/processed/frozen_weights_matrices.RData  (from script 1)
 #   - NBB_data/processed/firm_year_belgian_euets.RData
 #
 # OUTPUT:

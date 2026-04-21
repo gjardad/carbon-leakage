@@ -1,5 +1,5 @@
 ###############################################################################
-# phase2b_4_regressions.R
+# network_exposure_regs_4_regressions.R
 #
 # PURPOSE:
 #   Run firm-FE + nace4d x year FE regressions on the frozen-weights panel.
@@ -8,7 +8,7 @@
 #   Samples: all firms; non-ETS only (pure indirect channel).
 #
 # DATA:
-#   - data/processed/frozen_weights_exposure_panel.RData  (from phase2b_3)
+#   - data/processed/frozen_weights_exposure_panel.RData  (from script 3)
 ###############################################################################
 
 rm(list = ls())
