@@ -44,8 +44,15 @@ library(ggplot2)
 library(stringr)
 
 # ---- Paths ----
-nbb_data     <- "c:/Users/jota_/Documents/NBB_data"  # <-- ADJUST ON RMD
-project_root <- "c:/Users/jota_/Documents/carbon_policy_networks"
+if (Sys.info()[["user"]] == "JARDANG") {
+  # RMD
+  nbb_data     <- "X:/Documents/JARDANG/NBB_data"
+  project_root <- "X:/Documents/JARDANG/carbon-leakage"
+} else {
+  # Local 1
+  nbb_data     <- "c:/Users/jota_/Documents/NBB_data"
+  project_root <- "c:/Users/jota_/Documents/carbon-leakage"
+}
 
 proc_data  <- file.path(nbb_data, "processed")
 raw_data   <- file.path(nbb_data, "raw")

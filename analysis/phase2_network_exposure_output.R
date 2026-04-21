@@ -23,7 +23,13 @@ library(fixest)  # for feols with high-dimensional FE
 library(stringr)
 
 # ---- Paths ----
-project_root <- "c:/Users/jota_/Documents/carbon_policy_networks"
+if (Sys.info()[["user"]] == "JARDANG") {
+  # RMD
+  project_root <- "X:/Documents/JARDANG/carbon-leakage"
+} else {
+  # Local 1
+  project_root <- "c:/Users/jota_/Documents/carbon-leakage"
+}
 out_data     <- file.path(project_root, "data", "processed")
 output_tab   <- file.path(project_root, "output", "tables")
 output_fig   <- file.path(project_root, "output", "figures")
