@@ -1,0 +1,173 @@
+Phase 2: Network Exposure and Output
+=====================================
+
+Sample: firms in NACE4d sectors with >= 3 firms
+N firm-years: 8058, N firms: 695
+
+A. Log(real revenue) with nace4d×year FE, clustered by firm
+
+[A1] Upstream total:
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 8,058
+Fixed-effects: nace4d^year: 1,319
+Standard-errors: Clustered (vat) 
+             Estimate Std. Error t value  Pr(>|t|)    
+upstream_std 0.197684   0.066573 2.96944 0.0030863 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 1.42319     Adj. R2: 0.35029 
+                Within R2: 0.009123
+
+[A2] Downstream total:
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 8,058
+Fixed-effects: nace4d^year: 1,319
+Standard-errors: Clustered (vat) 
+               Estimate Std. Error t value  Pr(>|t|)    
+downstream_std 0.172244   0.061326 2.80868 0.0051144 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 1.42689     Adj. R2: 0.346906
+                Within R2: 0.003962
+
+[A3] Both:
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 8,058
+Fixed-effects: nace4d^year: 1,319
+Standard-errors: Clustered (vat) 
+               Estimate Std. Error t value Pr(>|t|)    
+upstream_std   0.173184   0.075181 2.30357 0.021542 *  
+downstream_std 0.085960   0.074119 1.15976 0.246544    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 1.42258     Adj. R2: 0.350749
+                Within R2: 0.00997 
+
+
+B. Output share (theta_it) with nace4d×year FE
+
+[B1] Upstream:
+OLS estimation, Dep. Var.: theta_it
+Observations: 8,058
+Fixed-effects: nace4d^year: 1,319
+Standard-errors: Clustered (vat) 
+             Estimate Std. Error t value Pr(>|t|) 
+upstream_std 0.012878   0.008208 1.56899  0.11711 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.189756     Adj. R2: 0.012962
+                 Within R2: 0.002193
+
+[B2] Downstream:
+OLS estimation, Dep. Var.: theta_it
+Observations: 8,058
+Fixed-effects: nace4d^year: 1,319
+Standard-errors: Clustered (vat) 
+               Estimate Std. Error t value Pr(>|t|)    
+downstream_std 0.013381   0.007105 1.88333 0.060074 .  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.189835     Adj. R2: 0.012133
+                 Within R2: 0.001355
+
+
+C. Non-ETS firms only
+
+[C1] Log(rev) ~ upstream indirect:
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 5,049
+Fixed-effects: nace4d^year: 1,062
+Standard-errors: Clustered (vat) 
+                         Estimate Std. Error t value Pr(>|t|)    
+upstream_indirect_std_ne 0.141372   0.064339 2.19729 0.028486 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 1.206     Adj. R2: 0.159686
+              Within R2: 0.005756
+
+[C2] Theta ~ upstream indirect:
+OLS estimation, Dep. Var.: theta_it
+Observations: 5,049
+Fixed-effects: nace4d^year: 1,062
+Standard-errors: Clustered (vat) 
+                         Estimate Std. Error t value Pr(>|t|)    
+upstream_indirect_std_ne 0.009861   0.004719 2.08968 0.037182 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.143851     Adj. R2: 0.144694
+                 Within R2: 0.001976
+
+
+D. Firm FE (within-firm variation)
+
+[D1] Log(rev) ~ upstream + firm FE:
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 8,036
+Fixed-effects: nace4d^year: 1,318,  vat: 674
+Standard-errors: Clustered (vat) 
+             Estimate Std. Error t value Pr(>|t|)    
+upstream_std 0.106984   0.040185 2.66231 0.007946 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.427397     Adj. R2: 0.934601
+                 Within R2: 0.014386
+
+[D2] Theta ~ upstream + firm FE:
+OLS estimation, Dep. Var.: theta_it
+Observations: 8,036
+Fixed-effects: nace4d^year: 1,318,  vat: 674
+Standard-errors: Clustered (vat) 
+             Estimate Std. Error t value Pr(>|t|)    
+upstream_std 0.003627   0.001804 2.01021 0.044808 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.05285     Adj. R2: 0.914891
+                Within R2: 0.001096
+
+[D3] Log(rev) ~ downstream + firm FE:
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 8,036
+Fixed-effects: nace4d^year: 1,318,  vat: 674
+Standard-errors: Clustered (vat) 
+               Estimate Std. Error t value Pr(>|t|)    
+downstream_std 0.094658   0.039891 2.37291 0.017929 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.428583     Adj. R2: 0.934238
+                 Within R2: 0.008908
+
+[D4] Theta ~ downstream + firm FE:
+OLS estimation, Dep. Var.: theta_it
+Observations: 8,036
+Fixed-effects: nace4d^year: 1,318,  vat: 674
+Standard-errors: Clustered (vat) 
+               Estimate Std. Error  t value Pr(>|t|) 
+downstream_std 0.000952   0.001924 0.494621  0.62103 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.052877     Adj. R2: 0.914803
+                 Within R2: 5.97e-5 
+
+[D5] Non-ETS, log(rev) ~ upstream indirect + firm FE:
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 5,031
+Fixed-effects: nace4d^year: 1,060,  vat: 456
+Standard-errors: Clustered (vat) 
+                         Estimate Std. Error  t value Pr(>|t|) 
+upstream_indirect_std_ne 0.007802   0.021787 0.358114  0.72042 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.353233     Adj. R2: 0.917784
+                 Within R2: 1.226e-4
+
+[D6] Non-ETS, theta ~ upstream indirect + firm FE:
+OLS estimation, Dep. Var.: theta_it
+Observations: 5,031
+Fixed-effects: nace4d^year: 1,060,  vat: 456
+Standard-errors: Clustered (vat) 
+                         Estimate Std. Error t value Pr(>|t|) 
+upstream_indirect_std_ne 0.003005    0.00269 1.11712  0.26453 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.049148     Adj. R2: 0.887314
+                 Within R2: 9.385e-4
