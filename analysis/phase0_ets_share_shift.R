@@ -22,27 +22,19 @@ library(tidyr)
 library(ggplot2)
 
 # ---- Paths ----
-if (Sys.info()[["user"]] == "JARDANG") {
-  # RMD
-  nbb_data     <- "X:/Documents/JARDANG/NBB_data"
-  project_root <- "X:/Documents/JARDANG/carbon-leakage"
-} else {
-  # Local 1
-  nbb_data     <- "c:/Users/jota_/Documents/NBB_data"
-  project_root <- "c:/Users/jota_/Documents/carbon-leakage"
-}
-proc_data    <- file.path(nbb_data, "processed")
-output_fig   <- file.path(project_root, "output", "figures")
-output_tab   <- file.path(project_root, "output", "tables")
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
 
 base_year <- 2005
 end_year  <- 2021
 
 # ---- Load data ----
-load(file.path(proc_data, "deflator_nace4d_2005base.RData"))
-load(file.path(proc_data, "firm_year_belgian_euets.RData"))
-load(file.path(proc_data, "training_sample.RData"))     # ETS + matched non-ETS firms
-load(file.path(proc_data, "deployment_panel.RData"))     # all non-ETS firms
+load(file.path(PROC_DATA, "deflator_nace4d_2005base.RData"))
+load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
+load(file.path(PROC_DATA, "training_sample.RData"))     # ETS + matched non-ETS firms
+load(file.path(PROC_DATA, "deployment_panel.RData"))     # all non-ETS firms
 
 # ---- Build full panel: training (ETS) + deployment (non-ETS) ----
 # Training sample has euets flag; deployment panel is all non-ETS
@@ -159,7 +151,7 @@ p1 <- ggplot(sector_year %>% filter(nace2d %in% top_sectors),
   scale_x_continuous(breaks = seq(base_year, end_year, by = 2)) +
   scale_y_continuous(labels = scales::percent_format())
 
-ggsave(file.path(output_fig, "phase0_ets_output_share_over_time.pdf"), p1, width = 10, height = 6)
+ggsave(file.path(OUTPUT_FIG, "phase0_ets_output_share_over_time.pdf"), p1, width = 10, height = 6)
 
 # ---- Figure 2: Aggregate ETS share ----
 agg_share <- all_firms %>%
@@ -180,7 +172,7 @@ p2 <- ggplot(agg_share, aes(x = year, y = ets_share)) +
   scale_x_continuous(breaks = seq(base_year, end_year, by = 2)) +
   scale_y_continuous(labels = scales::percent_format())
 
-ggsave(file.path(output_fig, "phase0_ets_agg_output_share.pdf"), p2, width = 9, height = 5)
+ggsave(file.path(OUTPUT_FIG, "phase0_ets_agg_output_share.pdf"), p2, width = 9, height = 5)
 
 # ---- Figure 3: Scatter of delta_ets_share vs lagged carbon cost ----
 p3 <- ggplot(sector_year %>% filter(!is.na(lag1_ccs)),
@@ -198,7 +190,7 @@ p3 <- ggplot(sector_year %>% filter(!is.na(lag1_ccs)),
   theme_minimal() +
   theme(legend.position = "right")
 
-ggsave(file.path(output_fig, "phase0_delta_ets_share_vs_lag_carbon_cost.pdf"),
+ggsave(file.path(OUTPUT_FIG, "phase0_delta_ets_share_vs_lag_carbon_cost.pdf"),
        p3, width = 10, height = 7)
 
 cat("Figures saved.\n")

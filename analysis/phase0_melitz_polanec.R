@@ -58,21 +58,10 @@ library(ggplot2)
 library(stringr)
 
 # ---- Paths ----
-if (Sys.info()[["user"]] == "JARDANG") {
-  # RMD
-  nbb_data     <- "X:/Documents/JARDANG/NBB_data"
-  project_root <- "X:/Documents/JARDANG/carbon-leakage"
-} else {
-  # Local 1
-  nbb_data     <- "c:/Users/jota_/Documents/NBB_data"
-  project_root <- "c:/Users/jota_/Documents/carbon-leakage"
-}
-
-proc_data  <- file.path(nbb_data, "processed")
-output_fig <- file.path(project_root, "output", "figures")
-output_tab <- file.path(project_root, "output", "tables")
-dir.create(output_fig, showWarnings = FALSE, recursive = TRUE)
-dir.create(output_tab, showWarnings = FALSE, recursive = TRUE)
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
 
 # ---- Config ----
 emissions_version <- "ets_only"
@@ -84,8 +73,8 @@ version_label <- switch(emissions_version, ets_only = "A", imputed = "B", bounds
 # SECTION 1: LOAD AND PREPARE DATA
 ###############################################################################
 
-load(file.path(proc_data, "deflator_nace4d_2005base.RData"))
-load(file.path(proc_data, "firm_year_belgian_euets.RData"))
+load(file.path(PROC_DATA, "deflator_nace4d_2005base.RData"))
+load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
 
 df <- firm_year_belgian_euets %>%
   mutate(nace2d = str_sub(nace5d, 1, 2),
@@ -373,7 +362,7 @@ p_agg <- ggplot(plot_agg, aes(x = t1, y = pct, fill = component)) +
   ) +
   scale_x_continuous(breaks = seq(base_year, end_year - window, by = 2))
 
-ggsave(file.path(output_fig, paste0("phase0_mp_decomp_v", version_label, ".pdf")),
+ggsave(file.path(OUTPUT_FIG, paste0("phase0_mp_decomp_v", version_label, ".pdf")),
        p_agg, width = 10, height = 6)
 
 # ---- Figure: Sector-level decomposition — rolling windows for top sectors ----
@@ -412,7 +401,7 @@ p_sec <- ggplot(plot_sec, aes(x = t1, y = pct, fill = component)) +
   ) +
   scale_x_continuous(breaks = seq(base_year, end_year - window, by = 4))
 
-ggsave(file.path(output_fig, paste0("phase0_mp_by_sector_v", version_label, ".pdf")),
+ggsave(file.path(OUTPUT_FIG, paste0("phase0_mp_by_sector_v", version_label, ".pdf")),
        p_sec, width = 12, height = 8)
 
 cat("\nFigures saved.\n")
@@ -425,7 +414,7 @@ write.csv(agg_print %>%
   select(t1, t2, n_survivors, n_entrants, n_exiters,
          pct_total, pct_within, pct_realloc, pct_entry, pct_exit) %>%
   mutate(across(starts_with("pct"), ~ round(., 2))),
-  file.path(output_tab, paste0("phase0_mp_decomp_v", version_label, ".csv")),
+  file.path(OUTPUT_TAB, paste0("phase0_mp_decomp_v", version_label, ".csv")),
   row.names = FALSE)
 
 write.csv(sec %>%
@@ -433,7 +422,7 @@ write.csv(sec %>%
   select(nace2d, em_share, t1, t2, n_survivors, n_entrants, n_exiters,
          pct_total, pct_within, pct_realloc, pct_entry, pct_exit) %>%
   mutate(across(starts_with("pct") | matches("em_share"), ~ round(., 2))),
-  file.path(output_tab, paste0("phase0_mp_by_sector_v", version_label, ".csv")),
+  file.path(OUTPUT_TAB, paste0("phase0_mp_by_sector_v", version_label, ".csv")),
   row.names = FALSE)
 
 cat("Tables saved.\n")

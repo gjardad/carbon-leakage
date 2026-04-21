@@ -25,20 +25,13 @@ library(ggplot2)
 library(stringr)
 
 # ---- Paths ----
-if (Sys.info()[["user"]] == "JARDANG") {
-  # RMD
-  project_root <- "X:/Documents/JARDANG/carbon-leakage"
-} else {
-  # Local 1
-  project_root <- "c:/Users/jota_/Documents/carbon-leakage"
-}
-out_data     <- file.path(project_root, "data", "processed")
-output_fig   <- file.path(project_root, "output", "figures")
-
-dir.create(output_fig, recursive = TRUE, showWarnings = FALSE)
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
 
 # ---- Load data ----
-load(file.path(out_data, "frozen_weights_exposure_panel.RData"))
+load(file.path(OUT_DATA, "frozen_weights_exposure_panel.RData"))
 
 # Filter to firms with valid sector and exposure data
 df <- frozen_exposure_panel %>%
@@ -126,7 +119,7 @@ p1 <- ggplot(variance_decomp, aes(x = year, y = within_share)) +
   ) +
   theme_minimal(base_size = 12)
 
-ggsave(file.path(output_fig, "network_exposure_regs_within_sector_variance.png"),
+ggsave(file.path(OUTPUT_FIG, "network_exposure_regs_within_sector_variance.png"),
        p1, width = 8, height = 5, dpi = 150)
 
 # ---- 4. Plot: distribution of upstream exposure for selected sectors ----
@@ -151,7 +144,7 @@ p2 <- ggplot(df_top, aes(x = upstream_exposure, fill = nace4d)) +
   theme_minimal(base_size = 10) +
   theme(legend.position = "none")
 
-ggsave(file.path(output_fig, "network_exposure_regs_exposure_distributions.png"),
+ggsave(file.path(OUTPUT_FIG, "network_exposure_regs_exposure_distributions.png"),
        p2, width = 10, height = 8, dpi = 150)
 
 # ---- 5. Plot: direct vs network exposure ----
@@ -171,7 +164,7 @@ p3 <- ggplot(df_with_direct %>% filter(year == 2021),
   ) +
   theme_minimal(base_size = 12)
 
-ggsave(file.path(output_fig, "network_exposure_regs_direct_vs_network.png"),
+ggsave(file.path(OUTPUT_FIG, "network_exposure_regs_direct_vs_network.png"),
        p3, width = 7, height = 6, dpi = 150)
 
 # ---- 6. Key diagnostic: correlation between direct and network ----

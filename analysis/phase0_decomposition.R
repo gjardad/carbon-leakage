@@ -44,22 +44,10 @@ library(ggplot2)
 library(stringr)
 
 # ---- Paths ----
-if (Sys.info()[["user"]] == "JARDANG") {
-  # RMD
-  nbb_data     <- "X:/Documents/JARDANG/NBB_data"
-  project_root <- "X:/Documents/JARDANG/carbon-leakage"
-} else {
-  # Local 1
-  nbb_data     <- "c:/Users/jota_/Documents/NBB_data"
-  project_root <- "c:/Users/jota_/Documents/carbon-leakage"
-}
-
-proc_data  <- file.path(nbb_data, "processed")
-raw_data   <- file.path(nbb_data, "raw")
-output_fig <- file.path(project_root, "output", "figures")
-output_tab <- file.path(project_root, "output", "tables")
-dir.create(output_fig, showWarnings = FALSE, recursive = TRUE)
-dir.create(output_tab, showWarnings = FALSE, recursive = TRUE)
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
 
 # ---- Config ----
 emissions_version <- "ets_only"
@@ -74,7 +62,7 @@ end_year  <- 2022
 # all in 2005 = 100 units.
 ###############################################################################
 
-deflator_file <- file.path(proc_data, "deflator_nace4d_2005base.RData")
+deflator_file <- file.path(PROC_DATA, "deflator_nace4d_2005base.RData")
 
 if (!file.exists(deflator_file)) {
   stop("Deflator not found. Run phase0_build_deflator.R first.\n",
@@ -88,7 +76,7 @@ cat("Deflator loaded:", n_distinct(deflator$nace4d), "NACE 4-digit sectors\n")
 # SECTION 2: LOAD FIRM DATA AND DEFLATE
 ###############################################################################
 
-load(file.path(proc_data, "firm_year_belgian_euets.RData"))
+load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
 
 df <- firm_year_belgian_euets %>%
   mutate(nace2d = str_sub(nace5d, 1, 2),
@@ -424,7 +412,7 @@ p_A <- ggplot(plot_data_A, aes(x = year, y = index, color = series, linetype = s
   ) +
   scale_x_continuous(breaks = seq(base_year, end_year, by = 2))
 
-ggsave(file.path(output_fig, paste0("phase0_decomp_firm_level_v",
+ggsave(file.path(OUTPUT_FIG, paste0("phase0_decomp_firm_level_v",
        switch(emissions_version, ets_only = "A", imputed = "B", bounds = "C"), ".pdf")),
        p_A, width = 10, height = 7)
 
@@ -460,7 +448,7 @@ p_B <- ggplot(plot_data_B, aes(x = year, y = pp, fill = component)) +
   ) +
   scale_x_continuous(breaks = seq(base_year, end_year, by = 2))
 
-ggsave(file.path(output_fig, paste0("phase0_decomp_channels_v",
+ggsave(file.path(OUTPUT_FIG, paste0("phase0_decomp_channels_v",
        switch(emissions_version, ets_only = "A", imputed = "B", bounds = "C"), ".pdf")),
        p_B, width = 10, height = 7)
 
@@ -498,7 +486,7 @@ p_C <- ggplot(plot_data_C, aes(x = year, y = index, color = method, linetype = m
   ) +
   scale_x_continuous(breaks = seq(base_year, end_year, by = 2))
 
-ggsave(file.path(output_fig, paste0("phase0_decomp_comparison_v",
+ggsave(file.path(OUTPUT_FIG, paste0("phase0_decomp_comparison_v",
        switch(emissions_version, ets_only = "A", imputed = "B", bounds = "C"), ".pdf")),
        p_C, width = 10, height = 7)
 
@@ -534,7 +522,7 @@ p_D <- ggplot(plot_data_D, aes(x = year, y = pp, fill = component)) +
   ) +
   scale_x_continuous(breaks = seq(base_year, end_year, by = 2))
 
-ggsave(file.path(output_fig, paste0("phase0_decomp_channels_yoy_v",
+ggsave(file.path(OUTPUT_FIG, paste0("phase0_decomp_channels_yoy_v",
        switch(emissions_version, ets_only = "A", imputed = "B", bounds = "C"), ".pdf")),
        p_D, width = 10, height = 7)
 
@@ -561,7 +549,7 @@ cat("tech_effect        = within-firm abatement\n\n")
 print(as.data.frame(summary_table))
 
 write.csv(summary_table,
-          file.path(output_tab, paste0("phase0_decomp_summary_v",
+          file.path(OUTPUT_TAB, paste0("phase0_decomp_summary_v",
                     switch(emissions_version, ets_only = "A", imputed = "B", bounds = "C"), ".csv")),
           row.names = FALSE)
 

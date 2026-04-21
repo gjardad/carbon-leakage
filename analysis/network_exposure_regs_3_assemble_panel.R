@@ -24,25 +24,18 @@ library(dplyr)
 library(stringr)
 
 # ---- Paths ----
-if (Sys.info()[["user"]] == "JARDANG") {
-  # RMD
-  nbb_data     <- "X:/Documents/JARDANG/NBB_data"
-  project_root <- "X:/Documents/JARDANG/carbon-leakage"
-} else {
-  # Local 1
-  nbb_data     <- "c:/Users/jota_/Documents/NBB_data"
-  project_root <- "c:/Users/jota_/Documents/carbon-leakage"
-}
-proc_data    <- file.path(nbb_data, "processed")
-out_data     <- file.path(project_root, "data", "processed")
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
 
 # ---- Load data ----
 cat("Loading data...\n")
-load(file.path(out_data, "frozen_weights_exposure_raw.RData"))
-load(file.path(proc_data, "firm_year_belgian_euets.RData"))
-load(file.path(proc_data, "deployment_panel.RData"))
-load(file.path(proc_data, "deflator_nace4d_2005base.RData"))
-load(file.path(proc_data, "training_sample.RData"))
+load(file.path(OUT_DATA, "frozen_weights_exposure_raw.RData"))
+load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
+load(file.path(PROC_DATA, "deployment_panel.RData"))
+load(file.path(PROC_DATA, "deflator_nace4d_2005base.RData"))
+load(file.path(PROC_DATA, "training_sample.RData"))
 
 # ===========================================================================
 # Assemble panel: merge firm characteristics + deflate revenue
@@ -81,7 +74,7 @@ frozen_exposure_panel <- frozen_exposure_panel %>%
 
 # ---- Save panel ----
 save(frozen_exposure_panel, convergence_df,
-     file = file.path(out_data, "frozen_weights_exposure_panel.RData"))
+     file = file.path(OUT_DATA, "frozen_weights_exposure_panel.RData"))
 cat("\nPanel saved to:",
-    file.path(out_data, "frozen_weights_exposure_panel.RData"), "\n")
+    file.path(OUT_DATA, "frozen_weights_exposure_panel.RData"), "\n")
 cat("Done.\n")

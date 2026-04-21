@@ -23,24 +23,17 @@ library(tidyr)
 library(ggplot2)
 
 # ---- Paths ----
-if (Sys.info()[["user"]] == "JARDANG") {
-  # RMD
-  nbb_data     <- "X:/Documents/JARDANG/NBB_data"
-  project_root <- "X:/Documents/JARDANG/carbon-leakage"
-} else {
-  # Local 1
-  nbb_data     <- "c:/Users/jota_/Documents/NBB_data"
-  project_root <- "c:/Users/jota_/Documents/carbon-leakage"
-}
-proc_data    <- file.path(nbb_data, "processed")
-output_fig   <- file.path(project_root, "output", "figures")
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
 
 base_year <- 2005
 end_year  <- 2021
 
 # ---- Load and prepare data ----
-load(file.path(proc_data, "deflator_nace4d_2005base.RData"))
-load(file.path(proc_data, "firm_year_belgian_euets.RData"))
+load(file.path(PROC_DATA, "deflator_nace4d_2005base.RData"))
+load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
 
 df <- firm_year_belgian_euets %>%
   mutate(nace2d = str_sub(nace5d, 1, 2),
@@ -205,20 +198,20 @@ make_plot <- function(data, color_col, title_suffix, filename) {
 p1 <- make_plot(share_v1, "group", "NACE 2-digit median split",
                 "phase1a_v1_nace2d_split.pdf") +
   scale_color_manual(values = c("High exposure" = "#D6604D", "Low exposure" = "#4393C3"))
-ggsave(file.path(output_fig, "phase1a_v1_nace2d_split.pdf"), p1, width = 10, height = 6)
+ggsave(file.path(OUTPUT_FIG, "phase1a_v1_nace2d_split.pdf"), p1, width = 10, height = 6)
 
 # V2: NACE 4-digit split
 p2 <- make_plot(share_v2, "group", "NACE 4-digit median split (sectors with 3+ firms)",
                 "phase1a_v2_nace4d_split.pdf") +
   scale_color_manual(values = c("High exposure" = "#D6604D", "Low exposure" = "#4393C3"))
-ggsave(file.path(output_fig, "phase1a_v2_nace4d_split.pdf"), p2, width = 10, height = 6)
+ggsave(file.path(OUTPUT_FIG, "phase1a_v2_nace4d_split.pdf"), p2, width = 10, height = 6)
 
 # V3: Terciles
 p3 <- make_plot(share_v3, "tercile_label", "terciles of shortage intensity",
                 "phase1a_v3_terciles.pdf") +
   scale_color_manual(values = c("Low (T1)" = "#4393C3", "Medium (T2)" = "#999999",
                                 "High (T3)" = "#D6604D"))
-ggsave(file.path(output_fig, "phase1a_v3_terciles.pdf"), p3, width = 10, height = 6)
+ggsave(file.path(OUTPUT_FIG, "phase1a_v3_terciles.pdf"), p3, width = 10, height = 6)
 
 # ---- Print key numbers ----
 cat("\n=== V1: NACE 2d median split ===\n")

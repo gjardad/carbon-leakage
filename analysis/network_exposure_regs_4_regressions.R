@@ -16,18 +16,14 @@ rm(list = ls())
 library(dplyr)
 
 # ---- Paths ----
-if (Sys.info()[["user"]] == "JARDANG") {
-  # RMD
-  project_root <- "X:/Documents/JARDANG/carbon-leakage"
-} else {
-  # Local 1
-  project_root <- "c:/Users/jota_/Documents/carbon-leakage"
-}
-out_data <- file.path(project_root, "data", "processed")
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
 
 # ---- Load panel ----
 cat("Loading panel...\n")
-load(file.path(out_data, "frozen_weights_exposure_panel.RData"))
+load(file.path(OUT_DATA, "frozen_weights_exposure_panel.RData"))
 
 # ===========================================================================
 # Regressions (requires fixest)

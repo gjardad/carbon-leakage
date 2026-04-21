@@ -27,19 +27,10 @@ library(dplyr)
 library(Matrix)
 
 # ---- Paths ----
-if (Sys.info()[["user"]] == "JARDANG") {
-  # RMD
-  nbb_data     <- "X:/Documents/JARDANG/NBB_data"
-  project_root <- "X:/Documents/JARDANG/carbon-leakage"
-} else {
-  # Local 1
-  nbb_data     <- "c:/Users/jota_/Documents/NBB_data"
-  project_root <- "c:/Users/jota_/Documents/carbon-leakage"
-}
-proc_data    <- file.path(nbb_data, "processed")
-out_data     <- file.path(project_root, "data", "processed")
-
-dir.create(out_data, recursive = TRUE, showWarnings = FALSE)
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
 
 # ---- EUA prices (annual average, EUR/tCO2) ----
 eua_prices <- data.frame(
@@ -50,9 +41,9 @@ eua_prices <- data.frame(
 
 # ---- Load data ----
 cat("Loading data...\n")
-load(file.path(proc_data, "b2b_selected_sample.RData"))
-load(file.path(proc_data, "firm_year_belgian_euets.RData"))
-load(file.path(proc_data, "annual_accounts_selected_sample_key_variables.RData"))
+load(file.path(PROC_DATA, "b2b_selected_sample.RData"))
+load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
+load(file.path(PROC_DATA, "annual_accounts_selected_sample_key_variables.RData"))
 
 colnames(df_b2b_selected_sample) <- c("vat_supplier", "vat_buyer",
                                        "year", "corr_sales")
@@ -195,6 +186,6 @@ cat(sprintf("  Final max row sum B: %.6f\n", max(rowSums(B_base))))
 
 # ---- Save ----
 save(A_base, B_base, firms_base, avg_costs,
-     file = file.path(out_data, "frozen_weights_matrices.RData"))
-cat("\nMatrices saved to:", file.path(out_data, "frozen_weights_matrices.RData"), "\n")
+     file = file.path(OUT_DATA, "frozen_weights_matrices.RData"))
+cat("\nMatrices saved to:", file.path(OUT_DATA, "frozen_weights_matrices.RData"), "\n")
 cat("Done.\n")

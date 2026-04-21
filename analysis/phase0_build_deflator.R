@@ -30,10 +30,10 @@ library(readxl)
 library(stringr)
 
 # ---- Paths ----
-nbb_data  <- "c:/Users/jota_/Documents/NBB_data"
-raw_data  <- file.path(nbb_data, "raw")
-proc_data <- file.path(nbb_data, "processed")
-dir.create(proc_data, showWarnings = FALSE, recursive = TRUE)
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
 
 base_year <- 2005
 link_year <- 2010  # where Eurostat 2d and Statbel 4d overlap
@@ -42,7 +42,7 @@ link_year <- 2010  # where Eurostat 2d and Statbel 4d overlap
 # STEP 1: Parse Statbel NACE 4-digit PPI (domestic market, 2010=100)
 ###############################################################################
 
-statbel_file <- file.path(raw_data, "Statbel",
+statbel_file <- file.path(RAW_DATA, "Statbel",
                           "TABEL_WEBSITE_AANGEVERS_EN.xlsx")
 
 d <- read_excel(statbel_file, sheet = "Domestic market", col_names = FALSE)
@@ -74,7 +74,7 @@ cat("Statbel PPI:", n_distinct(ppi_statbel$nace4d), "NACE 4d sectors,",
 #         by chain-linking across base years (2010, 2015, 2021)
 ###############################################################################
 
-eurostat_file <- file.path(raw_data, "Eurostat",
+eurostat_file <- file.path(RAW_DATA, "Eurostat",
                            "sts_inppd_a__custom_21089145_linear.csv")
 eu_raw <- read.csv(eurostat_file, stringsAsFactors = FALSE)
 
@@ -282,5 +282,5 @@ print(as.data.frame(deflator_2d_only %>% filter(nace2d == "30")))
 
 # Save
 save(deflator, deflator_2d_only,
-     file = file.path(proc_data, "deflator_nace4d_2005base.RData"))
-cat("\nSaved to:", file.path(proc_data, "deflator_nace4d_2005base.RData"), "\n")
+     file = file.path(PROC_DATA, "deflator_nace4d_2005base.RData"))
+cat("\nSaved to:", file.path(PROC_DATA, "deflator_nace4d_2005base.RData"), "\n")
