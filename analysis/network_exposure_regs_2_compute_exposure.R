@@ -47,7 +47,7 @@ load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
 n_firms_base <- length(firms_base)
 
 # ---- Neumann series ----
-neumann_series <- function(A, v, max_iter = 200, tol = 1e-8) {
+neumann_series <- function(A, v, max_iter = 200, tol = 1e-5) {
   result <- v
   current_power <- as.numeric(A %*% v)
   for (k in seq_len(max_iter)) {
