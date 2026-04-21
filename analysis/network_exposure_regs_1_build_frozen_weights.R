@@ -71,8 +71,9 @@ cat(sprintf("  Base-period firm universe: %d firms\n", n_firms_base))
 exp_sum <- sparseMatrix(i = 1, j = 1, x = 0,
                         dims = c(n_firms_base, n_firms_base))
 
-cost_sum <- rep(0, n_firms_base)
-cost_count <- rep(0, n_firms_base)
+cost_sum    <- rep(0, n_firms_base)
+cost_count  <- rep(0, n_firms_base)
+revenue_sum <- rep(0, n_firms_base)  # used as denominator for B_base (downstream)
 
 for (y in base_years) {
   cat(sprintf("  Processing %d...\n", y))
@@ -94,15 +95,17 @@ for (y in base_years) {
 
   exp_sum <- exp_sum + exp_y
 
-  # Costs: wage_bill + row sums of expenditure + emissions costs
-  wages_y <- df_annual_accounts_selected_sample_key_variables %>%
+  # Pull wages + revenue from annual accounts (one pass)
+  aa_y <- df_annual_accounts_selected_sample_key_variables %>%
     filter(year == y) %>%
-    select(vat, wage_bill)
+    select(vat, wage_bill, revenue)
 
-  ordered_wages <- rep(0, n_firms_base)
-  wm <- match(wages_y$vat, firms_base)
-  valid_w <- !is.na(wm)
-  ordered_wages[wm[valid_w]] <- wages_y$wage_bill[valid_w]
+  ordered_wages   <- rep(0, n_firms_base)
+  ordered_revenue <- rep(0, n_firms_base)
+  am <- match(aa_y$vat, firms_base)
+  valid_a <- !is.na(am)
+  ordered_wages[am[valid_a]]   <- aa_y$wage_bill[valid_a]
+  ordered_revenue[am[valid_a]] <- aa_y$revenue[valid_a]
 
   ordered_inputs <- as.numeric(rowSums(exp_y))
 
@@ -119,8 +122,9 @@ for (y in base_years) {
   }
 
   year_costs <- ordered_inputs + ordered_wages + ordered_emcost
-  cost_sum <- cost_sum + year_costs
-  cost_count <- cost_count + as.numeric(year_costs > 0)
+  cost_sum    <- cost_sum + year_costs
+  cost_count  <- cost_count + as.numeric(year_costs > 0)
+  revenue_sum <- revenue_sum + ordered_revenue
 }
 
 # Average costs over years with positive data
@@ -136,53 +140,41 @@ valid_entries <- !is.na(row_costs_total) & row_costs_total > 0
 A_base@x[valid_entries] <- A_base@x[valid_entries] / row_costs_total[valid_entries]
 A_base@x[!valid_entries] <- 0
 
-# Check and cap row sums
-row_sums_A <- rowSums(A_base)
-max_rowsum <- max(row_sums_A, na.rm = TRUE)
-cat(sprintf("  Max row sum of A_base: %.6f\n", max_rowsum))
-
-if (max_rowsum >= 1) {
-  bad_rows <- which(row_sums_A >= 1)
-  cat(sprintf("  Capping %d rows with rowsum >= 1\n", length(bad_rows)))
-  for (r in bad_rows) {
-    row_start <- A_base@p[r] + 1
-    row_end <- A_base@p[r + 1]
-    if (row_end >= row_start) {
-      A_base@x[row_start:row_end] <- A_base@x[row_start:row_end] * 0.99 / row_sums_A[r]
-    }
-  }
+# Vectorized row-scaling: cap any row with rowsum >= 1 to 0.99.
+# Only bites on data-inconsistency edges (e.g. inputs > total cost, or B2B sales > revenue).
+cap_rows <- function(M, cap = 0.99) {
+  rs <- rowSums(M)
+  bad <- !is.na(rs) & rs >= 1
+  if (!any(bad)) return(list(M = M, max = max(rs, na.rm = TRUE), n_capped = 0L))
+  scale <- rep(1, nrow(M))
+  scale[bad] <- cap / rs[bad]
+  M@x <- M@x * scale[M@i + 1]
+  list(M = M, max = max(rowSums(M), na.rm = TRUE), n_capped = sum(bad))
 }
 
-cat(sprintf("  Final max row sum: %.6f\n", max(rowSums(A_base))))
+cat(sprintf("  Max row sum of A_base (pre-cap): %.6f\n", max(rowSums(A_base), na.rm = TRUE)))
+a_cap <- cap_rows(A_base)
+A_base <- a_cap$M
+if (a_cap$n_capped > 0) cat(sprintf("  Capped %d rows of A_base\n", a_cap$n_capped))
+cat(sprintf("  Final max row sum of A_base: %.6f\n", a_cap$max))
 
-# Also build B_base (downstream: sales matrix)
+# Build B_base (downstream: B[supplier, buyer] = sales / total_revenue_supplier)
+# Denominator is the supplier's TOTAL revenue (from annual accounts), not just its
+# B2B sales -- otherwise every row's sum would be exactly 1 by construction.
 sales_sum <- t(exp_sum)  # rows = suppliers, cols = buyers
-total_sales_base <- as.numeric(rowSums(sales_sum))
-total_sales_base[total_sales_base <= 0] <- NA_real_
 
 B_base <- sales_sum
-row_sales <- total_sales_base[B_base@i + 1]
-valid_s <- !is.na(row_sales) & row_sales > 0
-B_base@x[valid_s] <- B_base@x[valid_s] / row_sales[valid_s]
+row_rev <- revenue_sum[B_base@i + 1]
+valid_s <- !is.na(row_rev) & row_rev > 0
+B_base@x[valid_s] <- B_base@x[valid_s] / row_rev[valid_s]
 B_base@x[!valid_s] <- 0
 
-row_sums_B <- rowSums(B_base)
-max_rowsum_B <- max(row_sums_B, na.rm = TRUE)
-cat(sprintf("  Max row sum of B_base: %.6f\n", max_rowsum_B))
-
-if (max_rowsum_B >= 1) {
-  bad_rows_B <- which(row_sums_B >= 1)
-  cat(sprintf("  Capping %d rows with rowsum >= 1\n", length(bad_rows_B)))
-  for (r in bad_rows_B) {
-    row_start <- B_base@p[r] + 1
-    row_end <- B_base@p[r + 1]
-    if (row_end >= row_start) {
-      B_base@x[row_start:row_end] <- B_base@x[row_start:row_end] * 0.99 / row_sums_B[r]
-    }
-  }
-}
-
-cat(sprintf("  Final max row sum B: %.6f\n", max(rowSums(B_base))))
+cat(sprintf("  Max row sum of B_base (pre-cap): %.6f\n", max(rowSums(B_base), na.rm = TRUE)))
+b_cap <- cap_rows(B_base)
+B_base <- b_cap$M
+if (b_cap$n_capped > 0) cat(sprintf("  Capped %d rows of B_base (sales > revenue in data)\n",
+                                     b_cap$n_capped))
+cat(sprintf("  Final max row sum of B_base: %.6f\n", b_cap$max))
 
 # ---- Save ----
 save(A_base, B_base, firms_base, avg_costs,
