@@ -1,0 +1,520 @@
+================================================================
+ Phase 3, Task 2: PPI pass-through regressions
+================================================================
+
+Panel: Belgian NACE4d domestic PPI (Statbel + Eurostat chained to
+2005=100), merged with sector-level direct and network-adjusted
+carbon cost exposure aggregated from the ETS panel.
+
+Panel size: 2502 rows, 139 NACE4d sectors (52 ever contain an ETS firm)
+Years: 2005-2022
+
+----------------------------------------------------------------
+ [S1a] log(PPI) ~ exposure_direct  |  sector + year FE, all sectors
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,502
+Fixed-effects: nace4d: 139,  year: 18
+Standard-errors: Clustered (nace4d) 
+                       Estimate Std. Error t value   Pr(>|t|)    
+exposure_direct_total -0.597203   0.074608 -8.0046 4.4226e-13 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.085572     Adj. R2: 0.717592
+                 Within R2: 0.004692
+
+----------------------------------------------------------------
+ [S1b] log(PPI) ~ exposure_direct  |  sector + year FE, ever-ETS sectors only
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 936
+Fixed-effects: nace4d: 52,  year: 18
+Standard-errors: Clustered (nace4d) 
+                       Estimate Std. Error  t value   Pr(>|t|)    
+exposure_direct_total -0.642266   0.072066 -8.91219 5.6203e-12 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.089515     Adj. R2: 0.735693
+                 Within R2: 0.012878
+
+----------------------------------------------------------------
+ [S2a] Δ log(PPI) ~ Δ exposure_direct  |  year FE, all sectors
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 2,363
+Fixed-effects: year: 17
+Standard-errors: Clustered (nace4d) 
+          Estimate Std. Error t value Pr(>|t|)    
+d_exp_dir 0.072115   0.023753 3.03608 0.002866 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.05934     Adj. R2: 0.305671
+                Within R2: 1.734e-4
+
+----------------------------------------------------------------
+ [S2b] Δ log(PPI) ~ Δ exposure_direct  |  year FE, ever-ETS sectors only
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 884
+Fixed-effects: year: 17
+Standard-errors: Clustered (nace4d) 
+          Estimate Std. Error t value Pr(>|t|)    
+d_exp_dir 0.068539   0.033594 2.04019 0.046526 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.057952     Adj. R2: 0.306686
+                 Within R2: 4.321e-4
+
+----------------------------------------------------------------
+ [S2c] Δ log(PPI) ~ Δ exp_dir + L1 Δ exp_dir + L2 Δ exp_dir  |  year FE (all sec)
+       (captures delayed pass-through; cumulative = contemporaneous + lagged)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 2,085
+Fixed-effects: year: 15
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error   t value   Pr(>|t|)    
+d_exp_dir     0.133722   0.027768  4.815766 3.8055e-06 ***
+d_exp_dir_L1 -0.027186   0.067213 -0.404479 6.8649e-01    
+d_exp_dir_L2 -0.507402   0.079989 -6.343360 2.9987e-09 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.062107     Adj. R2: 0.311797
+                 Within R2: 0.001492
+
+Cumulative pass-through: -0.4009  (SE 0.0750, z = -5.35, p = 0.0000)
+
+----------------------------------------------------------------
+ [S2d] Δ log(PPI) ~ Δ exp_dir + L1 + L2  |  year FE (ETS sec only)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 780
+Fixed-effects: year: 15
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error   t value   Pr(>|t|)    
+d_exp_dir     0.135339   0.033177  4.079305 1.5884e-04 ***
+d_exp_dir_L1 -0.010647   0.071190 -0.149557 8.8170e-01    
+d_exp_dir_L2 -0.511323   0.105206 -4.860187 1.1604e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.060591     Adj. R2: 0.312684
+                 Within R2: 0.004013
+
+Cumulative pass-through: -0.3866  (SE 0.0843, z = -4.58, p = 0.0000)
+
+----------------------------------------------------------------
+ [S3a] log(PPI) ~ direct + upstream_indirect  |  sector + year FE
+       (2012-2021 panel; network exposure available)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 387
+Fixed-effects: nace4d: 48,  year: 10
+Standard-errors: Clustered (nace4d) 
+                       Estimate Std. Error  t value Pr(>|t|)    
+exposure_direct_total -2.048509   1.190729 -1.72038 0.091942 .  
+net_upstream_ind       0.443014   0.320877  1.38064 0.173921    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.054824     Adj. R2: 0.865136
+                 Within R2: 0.01626 
+
+----------------------------------------------------------------
+ [S3b] log(PPI) ~ direct + upstream (total)  |  sector + year FE
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 387
+Fixed-effects: nace4d: 48,  year: 10
+Standard-errors: Clustered (nace4d) 
+                       Estimate Std. Error  t value Pr(>|t|) 
+exposure_direct_total -2.201297   1.497261 -1.47022  0.14817 
+net_upstream           0.119183   0.097394  1.22372  0.22716 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.054927     Adj. R2: 0.864631
+                 Within R2: 0.012575
+
+----------------------------------------------------------------
+ [S3c] Δ log(PPI) ~ Δ direct + Δ upstream_indirect  |  year FE (contemporaneous)
+----------------------------------------------------------------
+NOTE: Network exposure was built on this machine with the DOWNSAMPLED
+B2B panel; when re-built on RMD with the full B2B file the sample will
+be larger and coefficients more precise. The point estimates here are
+directional only.
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 337
+Fixed-effects: year: 9
+Standard-errors: Clustered (nace4d) 
+           Estimate Std. Error  t value Pr(>|t|) 
+d_exp_dir -1.676360   1.236116 -1.35615  0.18153 
+d_exp_upi  0.314607   0.301580  1.04319  0.30219 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.058587     Adj. R2: 0.187302
+                 Within R2: 0.011797
+
+----------------------------------------------------------------
+ [S3d] Δ log(PPI) ~ Δ direct + L1 + L2, Δ upstream_ind + L1 + L2 | year FE
+       (delayed pass-through through own ETS costs AND supplier costs)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 244
+Fixed-effects: year: 7
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error   t value  Pr(>|t|)    
+d_exp_dir    -3.629000   1.929539 -1.880761 0.0674866 .  
+d_exp_dir_L1  7.301826   4.762593  1.533162 0.1333089    
+d_exp_dir_L2 -5.844181   4.376219 -1.335440 0.1894745    
+d_exp_upi    -0.062211   0.673264 -0.092402 0.9268519    
+d_exp_upi_L1 -3.740383   1.520179 -2.460488 0.0184081 *  
+d_exp_upi_L2  5.581163   1.998487  2.792695 0.0080575 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.059239     Adj. R2: 0.274916
+                 Within R2: 0.121237
+
+Cumulative direct pass-through:  -2.1714  (SE 3.3894, z = -0.64, p = 0.5218)
+Cumulative upstream-indirect:     1.7786  (SE 1.0026, z = 1.77, p = 0.0761)
+
+----------------------------------------------------------------
+ [S3e] Δ log(PPI) ~ Δ upstream_ind + L1 + L2 | year FE
+       (isolating pass-through of supplier carbon costs)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 244
+Fixed-effects: year: 7
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error   t value Pr(>|t|)    
+d_exp_upi    -0.310441   0.703157 -0.441496 0.661293    
+d_exp_upi_L1 -3.326599   1.535940 -2.165839 0.036499 *  
+d_exp_upi_L2  5.284507   2.042391  2.587413 0.013512 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.060247     Adj. R2: 0.259626
+                 Within R2: 0.091055
+
+Cumulative upstream-indirect pass-through: 1.6475  (SE 0.9825, z = 1.68, p = 0.0936)
+
+----------------------------------------------------------------
+ [S4] log(PPI) ~ exposure_direct + L1 + L2  |  sector + year FE
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,224
+Fixed-effects: nace4d: 139,  year: 16
+Standard-errors: Clustered (nace4d) 
+                       Estimate Std. Error   t value   Pr(>|t|)    
+exposure_direct_total -0.283621   0.035986 -7.881366 8.7465e-13 ***
+lag1_exp_dir          -0.733530   0.089265 -8.217424 1.3509e-13 ***
+lag2_exp_dir           0.168283   0.230618  0.729702 4.6681e-01    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.084781     Adj. R2: 0.717394
+                 Within R2: 0.009464
+
+----------------------------------------------------------------
+ [S5a] log(PPI) ~ exp_dir  |  nace4d + nace2d^year FE, all sectors
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,466
+Fixed-effects: nace4d: 137,  nace2d^year: 360
+Standard-errors: Clustered (nace4d) 
+                      Estimate Std. Error  t value   Pr(>|t|)    
+exposure_direct_total -0.43167   0.063922 -6.75308 3.8512e-10 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.061097     Adj. R2: 0.831805
+                 Within R2: 0.003306
+
+----------------------------------------------------------------
+ [S5b] log(PPI) ~ exp_dir  |  nace4d + nace2d^year FE, ETS sectors only
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 846
+Fixed-effects: nace4d: 47,  nace2d^year: 198
+Standard-errors: Clustered (nace4d) 
+                       Estimate Std. Error t value   Pr(>|t|)    
+exposure_direct_total -0.473946   0.062702 -7.5587 1.3324e-09 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.063244     Adj. R2: 0.81926 
+                 Within R2: 0.008086
+
+----------------------------------------------------------------
+ [S5c] log(PPI) ~ exp_dir + L1 + L2  |  nace4d + nace2d^year FE
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,192
+Fixed-effects: nace4d: 137,  nace2d^year: 320
+Standard-errors: Clustered (nace4d) 
+                       Estimate Std. Error  t value   Pr(>|t|)    
+exposure_direct_total -0.370958   0.049711 -7.46229 9.1190e-12 ***
+lag1_exp_dir          -0.505120   0.136420 -3.70268 3.0910e-04 ***
+lag2_exp_dir           0.660240   0.319686  2.06528 4.0796e-02 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.062063     Adj. R2: 0.822456
+                 Within R2: 0.004126
+
+Cumulative (t + L1 + L2): -0.2158  (SE 0.1807, z = -1.19, p = 0.2323)
+
+----------------------------------------------------------------
+ [S5d] Δ log(PPI) ~ Δ exp_dir  |  nace2d^year FE, all sectors
+       (differences out sector FE; nace2d^year absorbs 2d cycles)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 2,329
+Fixed-effects: nace2d^year: 340
+Standard-errors: Clustered (nace4d) 
+           Estimate Std. Error t value   Pr(>|t|)    
+d_exp_dir -0.088153   0.019413 -4.5409 1.2217e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.040807     Adj. R2: 0.621975
+                 Within R2: 3.746e-4
+
+----------------------------------------------------------------
+ [S5e] Δ log(PPI) ~ Δ exp_dir + L1 + L2  |  nace2d^year FE
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 2,055
+Fixed-effects: nace2d^year: 300
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error   t value  Pr(>|t|)    
+d_exp_dir    -0.097721   0.036755 -2.658705 0.0087853 ** 
+d_exp_dir_L1 -0.022102   0.082650 -0.267420 0.7895509    
+d_exp_dir_L2  0.019618   0.056606  0.346569 0.7294508    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.043442     Adj. R2: 0.612376
+                 Within R2: 3.8e-4  
+
+Cumulative pass-through: -0.1002  (SE 0.0806, z = -1.24, p = 0.2139)
+
+----------------------------------------------------------------
+ [S6a] log(PPI) ~ exp_dir  |  nace4d[t] + year FE, all sectors
+       (sector-specific linear trends)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,502
+Fixed-effects: nace4d: 139,  year: 18
+Varying slopes: t (nace4d): 139
+Standard-errors: Clustered (nace4d) 
+                      Estimate Std. Error t value Pr(>|t|) 
+exposure_direct_total 0.065165   0.051347  1.2691  0.20654 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.061688     Adj. R2: 0.843988
+                 Within R2: 7.595e-5
+
+----------------------------------------------------------------
+ [S6b] log(PPI) ~ exp_dir  |  nace4d[t] + year FE, ETS sectors only
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 936
+Fixed-effects: nace4d: 52,  year: 18
+Varying slopes: t (nace4d): 52
+Standard-errors: Clustered (nace4d) 
+                      Estimate Std. Error t value Pr(>|t|) 
+exposure_direct_total 0.065053   0.053371 1.21889   0.2285 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.054502     Adj. R2: 0.895758
+                 Within R2: 2.547e-4
+
+----------------------------------------------------------------
+ [S6c] log(PPI) ~ exp_dir + L1 + L2  |  nace4d[t] + year FE
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,224
+Fixed-effects: nace4d: 139,  year: 16
+Varying slopes: t (nace4d): 139
+Standard-errors: Clustered (nace4d) 
+                       Estimate Std. Error  t value  Pr(>|t|)    
+exposure_direct_total  0.153237   0.056770  2.69926 0.0078184 ** 
+lag1_exp_dir           0.127945   0.088714  1.44222 0.1515058    
+lag2_exp_dir          -0.328787   0.117985 -2.78667 0.0060757 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.063684     Adj. R2: 0.829045
+                 Within R2: 4.848e-4
+
+Cumulative (t + L1 + L2): -0.0476  (SE 0.0807, z = -0.59, p = 0.5552)
+
+
+================================================================
+ DIAGNOSTIC: same specs with base-period-fixed-denominator exposure
+ exposure_alt_{s,t} = (shortage_{s,t} * EUA_t) / mean_cost_{s,2010-12}
+================================================================
+
+----------------------------------------------------------------
+ [A1a] log(PPI) ~ exp_alt  |  sector + year FE, all sectors
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,502
+Fixed-effects: nace4d: 139,  year: 18
+Standard-errors: Clustered (nace4d) 
+                    Estimate Std. Error  t value   Pr(>|t|)    
+exposure_alt_total -0.608024   0.097252 -6.25205 4.7374e-09 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.085576     Adj. R2: 0.717561
+                 Within R2: 0.004582
+
+----------------------------------------------------------------
+ [A1b] log(PPI) ~ exp_alt  |  sector + year FE, ETS sectors only
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 936
+Fixed-effects: nace4d: 52,  year: 18
+Standard-errors: Clustered (nace4d) 
+                    Estimate Std. Error  t value   Pr(>|t|)    
+exposure_alt_total -0.660334      0.088 -7.50379 8.7289e-10 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.089519     Adj. R2: 0.735666
+                 Within R2: 0.012778
+
+----------------------------------------------------------------
+ [A5a] log(PPI) ~ exp_alt  |  nace4d + nace2d^year FE
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,466
+Fixed-effects: nace4d: 137,  nace2d^year: 360
+Standard-errors: Clustered (nace4d) 
+                    Estimate Std. Error  t value   Pr(>|t|)    
+exposure_alt_total -0.434321   0.082835 -5.24321 5.8904e-07 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.061101     Adj. R2: 0.831782
+                 Within R2: 0.003173
+
+----------------------------------------------------------------
+ [A6a] log(PPI) ~ exp_alt  |  nace4d[t] + year FE (sector trends)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,502
+Fixed-effects: nace4d: 139,  year: 18
+Varying slopes: t (nace4d): 139
+Standard-errors: Clustered (nace4d) 
+                   Estimate Std. Error t value Pr(>|t|) 
+exposure_alt_total 0.076528    0.05206    1.47  0.14384 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.061687     Adj. R2: 0.843992
+                 Within R2: 9.761e-5
+
+----------------------------------------------------------------
+ [A2a] Δ log(PPI) ~ Δ exp_alt  |  year FE
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 2,363
+Fixed-effects: year: 17
+Standard-errors: Clustered (nace4d) 
+          Estimate Std. Error t value Pr(>|t|)    
+d_exp_alt 0.070472   0.027636 2.54999 0.011865 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.059341     Adj. R2: 0.305659
+                 Within R2: 1.56e-4 
+
+----------------------------------------------------------------
+ [A2c] Δ log(PPI) ~ Δ exp_alt + L1 + L2  |  year FE
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 2,085
+Fixed-effects: year: 15
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error   t value   Pr(>|t|)    
+d_exp_alt     0.175085   0.043146  4.057953 8.2481e-05 ***
+d_exp_alt_L1  0.003871   0.102153  0.037898 9.6982e-01    
+d_exp_alt_L2 -0.451906   0.073144 -6.178268 6.8378e-09 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.062113     Adj. R2: 0.311665
+                 Within R2: 0.0013  
+
+Cumulative pass-through: -0.2729  (SE 0.1111, z = -2.46, p = 0.0140)
+
+================================================================
+ Coefficient summary (all specifications)
+================================================================
+
+Specification                                           |     coef |      se |      t |     N
+----------------------------------------------------------------------------------------------- 
+[S1a] log(PPI) ~ exp_dir (all sec)                      |  -0.5972 |  0.0746 |  -8.00 |  2502
+[S1b] log(PPI) ~ exp_dir (ETS sec only)                 |  -0.6423 |  0.0721 |  -8.91 |   936
+[S2a] d_log(PPI) ~ d_exp_dir (all sec)                  |   0.0721 |  0.0238 |   3.04 |  2363
+[S2b] d_log(PPI) ~ d_exp_dir (ETS sec only)             |   0.0685 |  0.0336 |   2.04 |   884
+[S2c] d_exp_dir + L1 + L2 (all):  d_exp_dir             |   0.1337 |  0.0278 |   4.82 |  2085
+[S2c] d_exp_dir + L1 + L2 (all):  L1                    |  -0.0272 |  0.0672 |  -0.40 |  2085
+[S2c] d_exp_dir + L1 + L2 (all):  L2                    |  -0.5074 |  0.0800 |  -6.34 |  2085
+[S2d] d_exp_dir + L1 + L2 (ETS): d_exp_dir              |   0.1353 |  0.0332 |   4.08 |   780
+[S2d] d_exp_dir + L1 + L2 (ETS): L1                     |  -0.0106 |  0.0712 |  -0.15 |   780
+[S2d] d_exp_dir + L1 + L2 (ETS): L2                     |  -0.5113 |  0.1052 |  -4.86 |   780
+[S3a] log(PPI) ~ exp_dir + upstr_ind: exp_dir           |  -2.0485 |  1.1907 |  -1.72 |   387
+[S3a] log(PPI) ~ exp_dir + upstr_ind: upstr_ind         |   0.4430 |  0.3209 |   1.38 |   387
+[S3b] log(PPI) ~ exp_dir + upstr_total: exp_dir         |  -2.2013 |  1.4973 |  -1.47 |   387
+[S3b] log(PPI) ~ exp_dir + upstr_total: upstr           |   0.1192 |  0.0974 |   1.22 |   387
+[S3c] d_log(PPI) ~ d_exp_dir + d_upstr_ind: d_exp_dir   |  -1.6764 |  1.2361 |  -1.36 |   337
+[S3c] d_log(PPI) ~ d_exp_dir + d_upstr_ind: d_upstr_ind |   0.3146 |  0.3016 |   1.04 |   337
+[S3d] d_dir + L1 + L2 & d_upi + L1 + L2: d_exp_dir      |  -3.6290 |  1.9295 |  -1.88 |   244
+[S3d] d_dir + L1 + L2 & d_upi + L1 + L2: d_exp_dir_L1   |   7.3018 |  4.7626 |   1.53 |   244
+[S3d] d_dir + L1 + L2 & d_upi + L1 + L2: d_exp_dir_L2   |  -5.8442 |  4.3762 |  -1.34 |   244
+[S3d] d_dir + L1 + L2 & d_upi + L1 + L2: d_exp_upi      |  -0.0622 |  0.6733 |  -0.09 |   244
+[S3d] d_dir + L1 + L2 & d_upi + L1 + L2: d_exp_upi_L1   |  -3.7404 |  1.5202 |  -2.46 |   244
+[S3d] d_dir + L1 + L2 & d_upi + L1 + L2: d_exp_upi_L2   |   5.5812 |  1.9985 |   2.79 |   244
+[S3e] d_upi + L1 + L2 only:  d_exp_upi                  |  -0.3104 |  0.7032 |  -0.44 |   244
+[S3e] d_upi + L1 + L2 only:  d_exp_upi_L1               |  -3.3266 |  1.5359 |  -2.17 |   244
+[S3e] d_upi + L1 + L2 only:  d_exp_upi_L2               |   5.2845 |  2.0424 |   2.59 |   244
+[S4] log(PPI) ~ exp_dir + L1 + L2: exp_dir              |  -0.2836 |  0.0360 |  -7.88 |  2224
+[S4] log(PPI) ~ exp_dir + L1 + L2: L1                   |  -0.7335 |  0.0893 |  -8.22 |  2224
+[S4] log(PPI) ~ exp_dir + L1 + L2: L2                   |   0.1683 |  0.2306 |   0.73 |  2224
+[S5a] log(PPI) ~ exp_dir | nace2d^year (all)            |  -0.4317 |  0.0639 |  -6.75 |  2466
+[S5b] log(PPI) ~ exp_dir | nace2d^year (ETS)            |  -0.4739 |  0.0627 |  -7.56 |   846
+[S5c] exp_dir + L1 + L2 | nace2d^year: exp_dir          |  -0.3710 |  0.0497 |  -7.46 |  2192
+[S5c] exp_dir + L1 + L2 | nace2d^year: L1               |  -0.5051 |  0.1364 |  -3.70 |  2192
+[S5c] exp_dir + L1 + L2 | nace2d^year: L2               |   0.6602 |  0.3197 |   2.07 |  2192
+[S5d] d_log(PPI) ~ d_exp_dir | nace2d^year              |  -0.0882 |  0.0194 |  -4.54 |  2329
+[S5e] d_exp_dir + L1 + L2 | nace2d^year: d_exp_dir      |  -0.0977 |  0.0368 |  -2.66 |  2055
+[S5e] d_exp_dir + L1 + L2 | nace2d^year: L1             |  -0.0221 |  0.0826 |  -0.27 |  2055
+[S5e] d_exp_dir + L1 + L2 | nace2d^year: L2             |   0.0196 |  0.0566 |   0.35 |  2055
+[S6a] log(PPI) ~ exp_dir | nace4d[t]+year (all)         |   0.0652 |  0.0513 |   1.27 |  2502
+[S6b] log(PPI) ~ exp_dir | nace4d[t]+year (ETS)         |   0.0651 |  0.0534 |   1.22 |   936
+[S6c] exp_dir + L1 + L2 | nace4d[t]+year: exp_dir       |   0.1532 |  0.0568 |   2.70 |  2224
+[S6c] exp_dir + L1 + L2 | nace4d[t]+year: L1            |   0.1279 |  0.0887 |   1.44 |  2224
+[S6c] exp_dir + L1 + L2 | nace4d[t]+year: L2            |  -0.3288 |  0.1180 |  -2.79 |  2224
+[A1a] log(PPI) ~ exp_alt (all)                          |  -0.6080 |  0.0973 |  -6.25 |  2502
+[A1b] log(PPI) ~ exp_alt (ETS only)                     |  -0.6603 |  0.0880 |  -7.50 |   936
+[A5a] log(PPI) ~ exp_alt | nace2d^year (all)            |  -0.4343 |  0.0828 |  -5.24 |  2466
+[A6a] log(PPI) ~ exp_alt | nace4d[t]+year               |   0.0765 |  0.0521 |   1.47 |  2502
+[A2a] d_log(PPI) ~ d_exp_alt (all)                      |   0.0705 |  0.0276 |   2.55 |  2363
+[A2c] d_exp_alt + L1 + L2: d_exp_alt                    |   0.1751 |  0.0431 |   4.06 |  2085
+[A2c] d_exp_alt + L1 + L2: L1                           |   0.0039 |  0.1022 |   0.04 |  2085
+[A2c] d_exp_alt + L1 + L2: L2                           |  -0.4519 |  0.0731 |  -6.18 |  2085
+
+----------------------------------------------------------------
+ Cumulative pass-through (sum of contemporaneous + lagged diffs)
+ Joint Wald test of (beta_0 + beta_1 + beta_2) = 0
+----------------------------------------------------------------
+Specification                                           | cum coef |      se |   stat |      p |     N
+----------------------------------------------------------------------------------------------- 
+[S2c] sum direct lags (all sec)                         |  -0.4009 |  0.0750 |  -5.35 | 0.0000 | 2085
+[S2d] sum direct lags (ETS sec only)                    |  -0.3866 |  0.0843 |  -4.58 | 0.0000 | 780
+[S3d] sum direct lags (w/ network)                      |  -2.1714 |  3.3894 |  -0.64 | 0.5218 | 244
+[S3d] sum upstream-indirect lags (w/ direct)            |   1.7786 |  1.0026 |   1.77 | 0.0761 | 244
+[S3e] sum upstream-indirect lags (no direct)            |   1.6475 |  0.9825 |   1.68 | 0.0936 | 244
+[S5c] sum direct (lev) | nace2d^year                    |  -0.2158 |  0.1807 |  -1.19 | 0.2323 | 2192
+[S5e] sum direct (diff) | nace2d^year                   |  -0.1002 |  0.0806 |  -1.24 | 0.2139 | 2055
+[S6c] sum direct (lev) | nace4d[t]+year                 |  -0.0476 |  0.0807 |  -0.59 | 0.5552 | 2224
+[A2c] sum alt-exp lags (first diff)                     |  -0.2729 |  0.1111 |  -2.46 | 0.0140 | 2085
+
+----------------------------------------------------------------
+ Interpretation (coefficient scale)
+----------------------------------------------------------------
+log(PPI) and Δ log(PPI) are unitless. Exposure is in share units
+(fraction of sector total cost). A coefficient of 1.0 on exp_direct
+means a 1-percentage-point rise in sector exposure raises the
+sector PPI by ~1 log point (~1%). Full pass-through would give a
+coefficient near 1; weaker pass-through gives coefficients < 1.
+Negative or noisy near-zero coefficients imply no systematic
+pass-through of the ETS carbon-cost shock into sector prices.

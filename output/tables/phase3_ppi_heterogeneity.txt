@@ -1,0 +1,114 @@
+================================================================
+ Phase 3, Task 2: Heterogeneity in PPI pass-through
+================================================================
+
+Panel: 2502 rows, 139 sectors, years 2005-2022.
+Ever-ETS sectors: 52
+
+Pre-period (2013-2016) shortage-intensity groups:
+
+T0_zero  T1_low  T2_mid T3_high 
+     33      21      21      21 
+
+Tercile thresholds: T1 <= 0.0001, T2 <= 0.0004, T3 > 0.0004
+
+================================================================
+ (1) By-tercile pass-through, spec: S6-alt (sector trends + year FE)
+     log(PPI) ~ exposure_alt × tercile  |  nace4d[t] + year
+================================================================
+
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,502
+Fixed-effects: nace4d: 139,  year: 18
+Varying slopes: t (nace4d): 139
+Standard-errors: Clustered (nace4d) 
+                                   Estimate Std. Error   t value Pr(>|t|)    
+group::T1_low:exposure_alt_total  -7.982546    3.41756 -2.335744 0.020945 *  
+group::T2_mid:exposure_alt_total   0.136376    1.03723  0.131481 0.895586    
+group::T3_high:exposure_alt_total -3.438623    3.07918 -1.116732 0.266050    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.061584     Adj. R2: 0.844375
+                 Within R2: 0.003457
+
+----------------------------------------------------------------
+ (1b) First-difference: Δ log(PPI) ~ Δ exposure_alt × tercile | year FE
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 2,363
+Fixed-effects: year: 17
+Standard-errors: Clustered (nace4d) 
+                         Estimate Std. Error   t value Pr(>|t|)    
+group::T1_low:d_exp_alt  -2.74662   2.332783 -1.177401  0.24106    
+group::T2_mid:d_exp_alt  -1.51213   0.629439 -2.402350  0.01762 *  
+group::T3_high:d_exp_alt  1.90989   4.356861  0.438363  0.66181    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.059309     Adj. R2: 0.305821
+                 Within R2: 0.001242
+
+================================================================
+ (2) Separate S6 regression for each tercile
+     Each tercile's coefficient on exposure_alt, with own sector trends
+================================================================
+
+  T1_low     : coef = 0.0830 (SE 0.0242, t = 3.42, N = 2160, sectors = 120)
+  T2_mid     : coef = 0.1145 (SE 0.0241, t = 4.75, N = 2142, sectors = 119)
+  T3_high    : coef = 0.0792 (SE 0.0406, t = 1.95, N = 2088, sectors = 116)
+
+================================================================
+ (3) NACE2d-specific pass-through
+================================================================
+
+Top ETS-emitting NACE2d sectors (2013-2016 avg):
+   nace2d total_em n_sectors
+1      35 44184370         1
+2      20 40263978        10
+3      23 29508480        12
+4      19 24563013         1
+5      24 21800528         7
+6      10  3936003        11
+7      17  2962780         3
+8      81  1039776         2
+9      21   390047         2
+10     11   361140         3
+11     13   285227         5
+12     22   276561         4
+13     49   269371         1
+14     16   257546         2
+15     29   208700         2
+16     71   155546         1
+17     25   149056         5
+18     28   147926         5
+19     42   132643         1
+20     46   113028         3
+21     38    91716         1
+22     31    39982         1
+23     52    35612         3
+24     33    34828         2
+25     30    34128         2
+26     43    28151         1
+27     27    21274         1
+28     70     9618         1
+29     63     1003         1
+30     45        0         1
+31     68        0         1
+
+
+Running S6-alt for each of the top NACE2d sectors with >= 2 4d sub-sectors:
+  spec: log(PPI) ~ exp_alt | nace4d[t] + year, restricted to sector
+
+Results:
+  nace2d n_sectors n_obs       coef        se           t          p
+1     10        26   468 -5.4865842  3.049112 -1.79940373 0.08403753
+2     11         4    72  0.2191267  3.972358  0.05516289 0.95947687
+3     13         7   126 48.4200198 26.666605  1.81575494 0.11931998
+4     17         4    72 -2.3200215  9.497985 -0.24426460 0.82277877
+5     20         9   162  5.0896616  9.672255  0.52621250 0.61301253
+6     22         7   126 -1.6066825  2.203928 -0.72900876 0.49345841
+7     23        13   234  0.1088870  1.342087  0.08113255 0.93667402
+8     24         7   126 -4.6118690 64.887217 -0.07107515 0.94564780
+
+Writing figures...
+Tercile plot saved.
+NACE2d plot saved.
