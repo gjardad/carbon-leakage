@@ -6,8 +6,8 @@ See `THIS_PROJECT.md` for a full description of the project, its research questi
 
 Three desktops are used in this project: local 1, local 2, and RMD (remote desktop).
 
-- **RMD**: Has the full NBB data (B2B, Customs, Annual Accounts, PRODCOM). Accessible only via VPN through local 2. No web browser, but connected to GitHub.
-- **Local 1**: Personal desktop with Claude Code and Cursor. Has a **downsampled** version of B2B and Annual Accounts data (not all NBB data is downsampled) and the **full training sample** (copied from RMD via local 2 → cloud → local 1).
+- **RMD**: Has the full NBB data for B2B, Customs, and Annual Accounts. Accessible only via VPN through local 2. No web browser, but connected to GitHub. **PRODCOM exception:** `prod.dta` on RMD is a MOCK, not the real PRODCOM data — only the co-author has access to the real PRODCOM dataset. Pipeline work that depends on PRODCOM values (rather than just pipeline correctness) must be run by the co-author or planned around this.
+- **Local 1**: Personal desktop with Claude Code and Cursor. Has a **downsampled** version of B2B and Annual Accounts data (not all NBB data is downsampled) and the **full training sample** (copied from RMD via local 2 → cloud → local 1). Also has the same mock `prod.dta` as RMD.
 - **Local 2**: Bridge machine with VPN access to RMD and regular web browser.
 
 When copying files from RMD to local 1: RMD → local 2 → cloud (Dropbox/Claude) → local 1.

@@ -48,13 +48,13 @@ Compare to a matched control group of low-shortage ETS firms. If abatement is fa
 
 Context: `analysis/prodcom_passthrough_stata/` is a Stata port of the data-cleaning pipeline so the coauthor (Stata-only, on RMD) can reproduce the analysis end-to-end. First pass landed the data-build scripts `00_` through `05_` + `verify_against_R.R`. Regression scripts, sample-selection logic, and local testing are still open.
 
-### Step 1 — Port annual-accounts sample selection
-Write `02a_build_annual_accounts_selected_sample.do` mirroring `inferring_emissions/preprocess/annual_accounts_sample_selection.R`. Two filters: `wage_bill > 0` (v_0001023) and `turnover_VAT > 0`. Save `annual_accounts_selected_sample.dta` with (vat_ano, year). Then wire into `02_build_firm_year_euets.do` to populate the `in_sample` dummy (currently `.`), and into `05_build_prodcom_panel.do` as an optional filter.
+### ~~Step 1 — Port annual-accounts sample selection~~ (done 2026-04-21)
+~~Write `02a_build_annual_accounts_selected_sample.do` mirroring `inferring_emissions/preprocess/annual_accounts_sample_selection.R`. Two filters: `wage_bill > 0` (v_0001023) and `turnover_VAT > 0`. Save `annual_accounts_selected_sample.dta` with (vat_ano, year). Then wire into `02_build_firm_year_euets.do` to populate the `in_sample` dummy (currently `.`), and into `05_build_prodcom_panel.do` as an optional filter.~~
 
-**Decision still open:** apply `keep if in_sample == 1` in `05_` by default (matches the "255 in-sample" convention from the sector-level Phase 3 work) vs. keep all rows (matches MMS 2024). Default proposal: in-sample, switchable via a global flag at the top of `05_`.
+**Resolved:** default to `keep if in_sample == 1` in `05_`, switchable via `global APPLY_IN_SAMPLE` (set to `1` by default; flip to `0` to match MMS 2024). In `05_` the dummy is merged directly from `02a_` output, not via `firm_year_belgian_euets.dta`, so non-ETS firms with positive wage bill + turnover are not incorrectly dropped.
 
-### Step 2 — Find Stata locally and run the pipeline on the mock `prod.dta`
-Stata is not on `C:/`. Either install it on local-1, borrow local-2, or wait for coauthor. Once available: `cd` into `analysis/prodcom_passthrough_stata/` and run `00_` → `05_` in order. Expected: steps 01–04 match the R reference closely (verify via `verify_against_R.R`); step 05 produces a structurally-correct panel with zero merge matches on exposure (mock `prod.dta` uses numeric IDs that don't match real `vat_ano` hashes).
+### Step 2 — Run the pipeline on RMD against the mock `prod.dta` (updated 2026-04-22)
+Local-1 Stata is not available (no install, no license). Local-2 is a bridge-only machine. Testing venue is RMD. On RMD, `cd` into `analysis/prodcom_passthrough_stata/` and run `00_` → `01_` → `02a_` → `02_` → `03_` → `04_` → `05_` in order. Before running, confirm (a) the `jardang` branch of `00_paths.do` points at the right `$DATA_DIR` / `$REPO_DIR`, and (b) the public inputs listed in the README (EUTL CSVs, ICAP CSV, Statbel XLSX, Eurostat CSV) are staged under `$RAW_DATA`. Expected: steps 01–04 match the R reference closely (verify via `verify_against_R.R`, run locally); step 05 produces a structurally-correct panel with zero merge matches on exposure (RMD's `prod.dta` is the same mock as local-1 — numeric IDs don't match real `vat_ano` hashes, since only the coauthor has the real PRODCOM).
 
 ### Step 3 — Port the four regression specs (06–09)
 Once the data pipeline is validated, port:

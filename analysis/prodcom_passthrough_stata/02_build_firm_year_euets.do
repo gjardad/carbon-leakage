@@ -11,21 +11,15 @@
 *!        → firm_year_belgian_euets)
 *!
 *! Inputs
-*!   $OUT_DATA/installation_year_emissions.dta    (from 01_)
-*!   $OUT_DATA/installation_year_in_belgium.dta   (from 01_)
+*!   $OUT_DATA/installation_year_emissions.dta       (from 01_)
+*!   $OUT_DATA/installation_year_in_belgium.dta      (from 01_)
+*!   $OUT_DATA/annual_accounts_selected_sample.dta   (from 02a_)
 *!   $RAW_DATA/EUTL/Oct_2024_version/account.csv
 *!   $RAW_DATA/NBB/EUTL_Belgium.dta
 *!   $RAW_DATA/NBB/Annual_Accounts_MASTER_ANO.dta
 *!
 *! Output
 *!   $OUT_DATA/firm_year_belgian_euets.dta
-*!
-*! NOTE: The R builder also attaches an `in_sample` dummy from
-*! `annual_accounts_selected_sample.RData`. That sample-selection step is
-*! not yet ported; this script sets `in_sample = .` as a placeholder.
-*! The PRODCOM pass-through regressions don't rely on `in_sample`, but
-*! the sector-level analysis does — if you need it, port
-*! `annual_accounts_sample_selection.R` separately.
 
 do "`c(pwd)'/00_paths.do"
 
@@ -225,12 +219,22 @@ replace    emissions_foreign = 0 if !missing(emissions_foreign) & emissions_fore
 *  R's `pmax(NA - 0, 0) = NA`.)
 
 * -----------------------------------------------------------------------------
-* STEP 8. Placeholder for in_sample dummy (annual-accounts sample selection)
+* STEP 8. Annual-accounts in_sample dummy (from 02a_)
 * -----------------------------------------------------------------------------
+* `in_sample == 1` iff the firm-year passes the basic annual-accounts filters
+* (wage_bill > 0 AND turnover_VAT > 0). See 02a_build_annual_accounts_selected_sample.do.
 
-gen byte in_sample = .
+preserve
+    use "$OUT_DATA/annual_accounts_selected_sample.dta", clear
+    gen byte in_sample = 1
+    tempfile sample_dummy
+    save "`sample_dummy'"
+restore
+
+merge m:1 vat_ano year using "`sample_dummy'", keep(master match) nogen
+replace in_sample = 0 if missing(in_sample)
 label variable in_sample ///
-    "Placeholder; port annual_accounts_sample_selection.R to populate."
+    "Firm-year in annual-accounts selected sample (wage_bill>0 & turnover_VAT>0)"
 
 * -----------------------------------------------------------------------------
 * Save

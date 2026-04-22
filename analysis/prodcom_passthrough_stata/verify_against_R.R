@@ -90,6 +90,30 @@ if (file.exists(r_iye_file) && file.exists(s_iye_file)) {
   cat("  skipped — one or both files missing\n")
 }
 
+# ---- 02a annual_accounts_selected_sample ------------------------------------
+
+cat("\n--- 02a annual_accounts_selected_sample ---------------------\n")
+r_aas_file <- file.path(RDATA_DIR, "annual_accounts_selected_sample.RData")
+s_aas_file <- file.path(STATA_OUT, "annual_accounts_selected_sample.dta")
+if (file.exists(r_aas_file) && file.exists(s_aas_file)) {
+  e <- new.env(); load(r_aas_file, envir = e)
+  # R object is `df_annual_accounts_selected_sample` and has all columns;
+  # the Stata port only keeps (vat_ano, year). Restrict R side to match.
+  r_aas <- as_tibble(e$df_annual_accounts_selected_sample) %>%
+    select(vat_ano, year) %>%
+    distinct()
+  s_aas <- read_dta(s_aas_file)
+  cat(sprintf("  rows: R = %d   Stata = %d\n", nrow(r_aas), nrow(s_aas)))
+  cat(sprintf("  distinct firms: R = %d   Stata = %d\n",
+              dplyr::n_distinct(r_aas$vat_ano),
+              dplyr::n_distinct(s_aas$vat_ano)))
+  cat(sprintf("  year range: R = %d-%d   Stata = %d-%d\n",
+              min(r_aas$year), max(r_aas$year),
+              min(s_aas$year), max(s_aas$year)))
+} else {
+  cat("  skipped — one or both files missing\n")
+}
+
 # ---- 02 firm_year_belgian_euets ---------------------------------------------
 
 cat("\n--- 02  firm_year_belgian_euets -----------------------------\n")

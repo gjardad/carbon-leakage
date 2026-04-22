@@ -8,9 +8,10 @@
 *!
 *! Inputs
 *!   $RAW_DATA/NBB/prod.dta
-*!   $OUT_DATA/firm_year_belgian_euets.dta   (from 02_)
-*!   $OUT_DATA/eua_prices_annual.dta         (from 03_)
-*!   $OUT_DATA/deflator_nace4d_2005base.dta  (from 04_)
+*!   $OUT_DATA/firm_year_belgian_euets.dta          (from 02_)
+*!   $OUT_DATA/annual_accounts_selected_sample.dta  (from 02a_)
+*!   $OUT_DATA/eua_prices_annual.dta                (from 03_)
+*!   $OUT_DATA/deflator_nace4d_2005base.dta         (from 04_)
 *!
 *! Output
 *!   $OUT_DATA/prodcom_analysis_panel.dta
@@ -27,6 +28,11 @@ do "`c(pwd)'/00_paths.do"
 
 local base_window_start 2013
 local base_window_end   2016
+
+* Toggle: if 1, restrict panel to firm-years in the annual-accounts selected
+* sample (wage_bill > 0 & turnover_VAT > 0). Matches the sector-level Phase 3
+* "255 in-sample" convention. Set to 0 to keep all rows (matches MMS 2024).
+global APPLY_IN_SAMPLE = 1
 
 * =============================================================================
 * STEP 1. Load PRODCOM and annualise to firm × pc8 × year
@@ -107,6 +113,35 @@ foreach v in emissions allocated_free shortage cost_ivt {
 gen byte ets_firm = shortage > 0 | emissions > 0
 
 * =============================================================================
+* STEP 2b. Attach annual-accounts in_sample dummy
+* =============================================================================
+* Merged directly from 02a_ output (not via firm_year_belgian_euets), so that
+* non-ETS firms with positive wage bill + turnover are correctly flagged
+* `in_sample = 1` instead of being dropped to 0 by the non-ETS zero-fill above.
+
+preserve
+    use "$OUT_DATA/annual_accounts_selected_sample.dta", clear
+    gen byte in_sample = 1
+    tempfile sample_dummy
+    save "`sample_dummy'"
+restore
+
+merge m:1 vat_ano year using "`sample_dummy'", keep(master match) nogen
+replace in_sample = 0 if missing(in_sample)
+label variable in_sample ///
+    "Firm-year in annual-accounts selected sample (wage_bill>0 & turnover_VAT>0)"
+
+if $APPLY_IN_SAMPLE == 1 {
+    local n_before = _N
+    keep if in_sample == 1
+    display as text "APPLY_IN_SAMPLE=1: kept " _N " of `n_before' rows " ///
+        "(" %4.1f 100*_N/`n_before' "% of pre-filter panel)"
+}
+else {
+    display as text "APPLY_IN_SAMPLE=0: no sample-selection filter applied"
+}
+
+* =============================================================================
 * STEP 3. Attach annual EUA price and build exposure_{i,t}
 * =============================================================================
 
@@ -154,7 +189,7 @@ gen double d_log_price_real = log_price_real - log_price_real[_n-1] if panelid =
 
 order vat_ano pc8 nace4d year panelid v q price log_price d_log_price ///
       price_real log_price_real d_log_price_real ///
-      ets_firm emissions allocated_free shortage cost_ivt eua_price ///
+      ets_firm in_sample emissions allocated_free shortage cost_ivt eua_price ///
       exposure base_shortage bartik_exposure phase ppi ppi_source
 
 compress

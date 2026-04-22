@@ -27,6 +27,7 @@ The four "public" inputs are small enough to ship with the repo if they aren't a
 ```stata
 do 00_paths.do        // sets globals; no output file
 do 01_build_installation_year_emissions.do
+do 02a_build_annual_accounts_selected_sample.do
 do 02_build_firm_year_euets.do
 do 03_build_eua_prices.do
 do 04_build_deflator.do
@@ -38,6 +39,7 @@ Each script `do 00_paths.do`s at the top, so they can be run individually once t
 Outputs land in `$OUT_DATA` (= `$REPO_DIR/data/processed/`):
 
 - `installation_year_emissions.dta`
+- `annual_accounts_selected_sample.dta`
 - `firm_year_belgian_euets.dta`
 - `eua_prices_annual.dta`
 - `deflator_nace4d_2005base.dta`
@@ -52,6 +54,7 @@ The Gabriel-local `jota_` branch of `00_paths.do` points at a directory tree whe
 | Stata | R source |
 |---|---|
 | `01_build_installation_year_emissions.do` | `inferring_emissions/preprocess/build_firm_year_emissions.R` (the part that builds `installation_year_emissions.RData`) |
+| `02a_build_annual_accounts_selected_sample.do` | `inferring_emissions/preprocess/annual_accounts_sample_selection.R` (basic `selected_sample` only) |
 | `02_build_firm_year_euets.do` | `inferring_emissions/preprocess/build_firm_year_euets.R` |
 | `03_build_eua_prices.do` | `carbon-leakage/analysis/phase3_eua_prices.R` |
 | `04_build_deflator.do` | `carbon-leakage/analysis/phase0_build_deflator.R` |
