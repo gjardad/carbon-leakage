@@ -1,0 +1,56 @@
+=== Within-ETS cross-sector: log(real_rev) ~ shock | firm + year ===
+
+=== Window A: 2005-2022 (full) ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 3,608
+Fixed-effects: vat: 241,  year: 18
+Standard-errors: Clustered (nace4d) 
+       Estimate Std. Error  t value   Pr(>|t|)    
+shock -0.035894   0.009023 -3.97801 0.00014032 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.6937     Adj. R2: 0.841363
+               Within R2: 0.007503
+
+=== Window B: 2013-2022 (Phase 3 onward) ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 1,985
+Fixed-effects: vat: 217,  year: 10
+Standard-errors: Clustered (nace4d) 
+       Estimate Std. Error  t value  Pr(>|t|)    
+shock -0.031057   0.010169 -3.05423 0.0030326 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.456188     Adj. R2: 0.925737
+                 Within R2: 0.020117
+
+=== Window C: 2017-2022 (post-base) ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 1,174
+Fixed-effects: vat: 202,  year: 6
+Standard-errors: Clustered (nace4d) 
+       Estimate Std. Error t value Pr(>|t|)    
+shock -0.020563    0.01029 -1.9984 0.049299 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.36329     Adj. R2: 0.949752
+                Within R2: 0.015605
+
+=== Robustness: 2d x year FE, full panel ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 3,564
+Fixed-effects: vat: 239,  nace2d^year: 294
+Standard-errors: Clustered (nace4d) 
+       Estimate Std. Error  t value  Pr(>|t|)    
+shock -0.040448   0.011965 -3.38063 0.0010848 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.637079     Adj. R2: 0.854069
+                 Within R2: 0.006969
+
+=== Summary across specs ===
+                           spec n_obs    beta     se     t     p
+1           A: 2005-2022 (full)  3608 -0.0359 0.0090 -3.98 0.000
+2 B: 2013-2022 (Phase 3 onward)  1985 -0.0311 0.0102 -3.05 0.002
+3      C: 2017-2022 (post-base)  1174 -0.0206 0.0103 -2.00 0.046
+4      Full panel, 2d x year FE  3564 -0.0404 0.0120 -3.38 0.001

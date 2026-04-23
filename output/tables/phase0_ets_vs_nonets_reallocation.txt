@@ -1,4 +1,4 @@
-=== Main spec: log(real_rev) ~ ETS x shock + ETS x EUA | firm + 4d*year ===
+=== Window A: 2005-2022 (full panel) ===
 OLS estimation, Dep. Var.: log_real_rev
 Observations: 80,932
 Fixed-effects: vat: 9,107,  nace4d^year: 1,615
@@ -11,7 +11,33 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 RMSE: 0.50382     Adj. R2: 0.929499
                 Within R2: 1.986e-4
 
-=== Robustness 4d+year FE (no firm FE) ===
+=== Window B: 2013-2022 (Phase 3 onward) ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 43,448
+Fixed-effects: vat: 6,272,  nace4d^year: 902
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error   t value Pr(>|t|) 
+is_ets:shock     -0.024800   0.016866 -1.470415  0.14494 
+is_ets:eua_price  0.000911   0.000984  0.925546  0.35716 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.436     Adj. R2: 0.945494
+              Within R2: 3.507e-4
+
+=== Window C: 2017-2022 (post-base, cleanest Bartik) ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 25,906
+Fixed-effects: vat: 5,336,  nace4d^year: 544
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error  t value Pr(>|t|) 
+is_ets:shock     -0.012117    0.01176 -1.03038  0.30559 
+is_ets:eua_price  0.001201    0.00103  1.16537  0.24695 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.373808     Adj. R2: 0.956882
+                 Within R2: 1.804e-4
+
+=== Robustness (full panel): 4d + year FE, no firm FE ===
 OLS estimation, Dep. Var.: log_real_rev
 Observations: 81,972
 Fixed-effects: nace4d: 92,  year: 18
@@ -25,7 +51,7 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 RMSE: 1.72903     Adj. R2: 0.286315
                 Within R2: 0.122492
 
-=== Robustness first differences ===
+=== Robustness (full panel): first differences ===
 OLS estimation, Dep. Var.: d_log_real_rev
 Observations: 70,848
 Fixed-effects: vat: 8,137,  nace4d^year: 1,518
@@ -38,14 +64,8 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 RMSE: 0.427943     Adj. R2: 0.095374
                  Within R2: 2.956e-4
 
-=== Simpler spec: ETS x EUA only ===
-OLS estimation, Dep. Var.: log_real_rev
-Observations: 80,932
-Fixed-effects: vat: 9,107,  nace4d^year: 1,615
-Standard-errors: Clustered (nace4d) 
-                  Estimate Std. Error   t value Pr(>|t|) 
-is_ets:eua_price -0.000866    0.00116 -0.747042  0.45696 
----
-Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-RMSE: 0.503862     Adj. R2: 0.929488
-                 Within R2: 3.13e-5 
+=== Summary of ETS x shock across windows ===
+                           spec n_obs    beta     se     t     p
+1           A: 2005-2022 (full) 80932 -0.0256 0.0170 -1.50 0.132
+2 B: 2013-2022 (Phase 3 onward) 43448 -0.0248 0.0169 -1.47 0.141
+3      C: 2017-2022 (post-base) 25906 -0.0121 0.0118 -1.03 0.303

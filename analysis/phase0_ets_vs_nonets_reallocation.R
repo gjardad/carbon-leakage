@@ -183,30 +183,47 @@ cat("Non-ETS firm-years:", sum(firm_panel$is_ets == 0), "\n\n")
 # Standard errors clustered on NACE 4d.
 ###############################################################################
 
-m_main <- feols(
-  log_real_rev ~ is_ets:shock + is_ets:eua_price
-  | vat + nace4d^year,
-  cluster = ~ nace4d,
-  data = firm_panel
+# ---- Main spec run across three sample windows ----
+# A: 2005-2022 (full panel, includes pre-Phase-3 years with idiosyncratic NAP
+#    allocations so the Bartik exposure is not really pre-determined for them)
+# B: 2013-2022 (Phase 3 onward; allocation regime consistent with base period)
+# C: 2017-2022 (post-base; cleanest Bartik pre-determination)
+windows <- list(
+  full     = list(label = "A: 2005-2022 (full)",           lo = 2005, hi = 2022),
+  phase3   = list(label = "B: 2013-2022 (Phase 3 onward)", lo = 2013, hi = 2022),
+  post2016 = list(label = "C: 2017-2022 (post-base)",      lo = 2017, hi = 2022)
 )
 
-cat("\n=== Main spec: log(real_rev) ~ ETS:shock + ETS:EUA | firm + 4d*year ===\n")
-print(summary(m_main))
+run_main <- function(df, w) {
+  df_w <- df %>% filter(year >= w$lo, year <= w$hi)
+  cat("\n===", w$label, "| n =", nrow(df_w), "firm-years, firms =",
+      n_distinct(df_w$vat), "===\n")
+  m <- feols(
+    log_real_rev ~ is_ets:shock + is_ets:eua_price
+    | vat + nace4d^year,
+    cluster = ~ nace4d,
+    data = df_w
+  )
+  print(summary(m))
+  m
+}
 
-# Robustness 1: swap firm FE for 4d FE (identifies off cross-firm within sector,
-# not within firm over time). Expect different magnitudes because ETS firms
-# are systematically larger.
+m_full     <- run_main(firm_panel, windows$full)
+m_phase3   <- run_main(firm_panel, windows$phase3)
+m_post2016 <- run_main(firm_panel, windows$post2016)
+
+# Robustness: 4d + year FE (no firm FE) on the full panel, for the magnitude
+# comparison previously reported
 m_sectorFE <- feols(
   log_real_rev ~ is_ets + is_ets:shock + is_ets:eua_price
   | nace4d + year,
   cluster = ~ nace4d,
   data = firm_panel
 )
-
-cat("\n=== Robustness: 4d + year FE (no firm FE) ===\n")
+cat("\n=== Robustness (full panel): 4d + year FE (no firm FE) ===\n")
 print(summary(m_sectorFE))
 
-# Robustness 2: first differences at annual horizon
+# Robustness: first differences on the full panel
 firm_panel <- firm_panel %>%
   group_by(vat) %>%
   arrange(year, .by_group = TRUE) %>%
@@ -222,33 +239,48 @@ m_fd <- feols(
   data = firm_panel %>% filter(!is.na(d_log_real_rev))
 )
 
-cat("\n=== Robustness: first differences ===\n")
+cat("\n=== Robustness (full panel): first differences ===\n")
 print(summary(m_fd))
 
-# Simpler spec: just the ETS x EUA interaction (no sector heterogeneity).
-# Tests whether ETS firms broadly respond differently from non-ETS as EUA rises,
-# independent of sector dirtiness.
-m_simple <- feols(
-  log_real_rev ~ is_ets:eua_price
-  | vat + nace4d^year,
-  cluster = ~ nace4d,
-  data = firm_panel
+# Compact coefficient summary across windows
+extract_beta <- function(m, label) {
+  co <- coef(m)["is_ets:shock"]
+  se <- sqrt(diag(vcov(m)))["is_ets:shock"]
+  t <- co / se
+  p <- 2 * pt(abs(t), df = m$nobs, lower.tail = FALSE)
+  tibble(spec = label, n_obs = m$nobs, beta = co, se = se, t = t, p = p)
+}
+
+summary_tbl <- bind_rows(
+  extract_beta(m_full,     windows$full$label),
+  extract_beta(m_phase3,   windows$phase3$label),
+  extract_beta(m_post2016, windows$post2016$label)
 )
 
-cat("\n=== Simpler spec: log(real_rev) ~ ETS:EUA | firm + 4d*year ===\n")
-print(summary(m_simple))
+cat("\n=== Summary across windows (ETS x shock coefficient) ===\n")
+print(as.data.frame(summary_tbl %>%
+  mutate(beta = round(beta, 4), se = round(se, 4), t = round(t, 2), p = round(p, 3))))
 
 # ---- Save a compact output table ----
 out_path <- file.path(OUTPUT_TAB, "phase0_ets_vs_nonets_reallocation.txt")
 sink(out_path)
-cat("=== Main spec: log(real_rev) ~ ETS x shock + ETS x EUA | firm + 4d*year ===\n")
-print(summary(m_main))
-cat("\n=== Robustness 4d+year FE (no firm FE) ===\n")
+cat("=== Window A: 2005-2022 (full panel) ===\n")
+print(summary(m_full))
+cat("\n=== Window B: 2013-2022 (Phase 3 onward) ===\n")
+print(summary(m_phase3))
+cat("\n=== Window C: 2017-2022 (post-base, cleanest Bartik) ===\n")
+print(summary(m_post2016))
+cat("\n=== Robustness (full panel): 4d + year FE, no firm FE ===\n")
 print(summary(m_sectorFE))
-cat("\n=== Robustness first differences ===\n")
+cat("\n=== Robustness (full panel): first differences ===\n")
 print(summary(m_fd))
-cat("\n=== Simpler spec: ETS x EUA only ===\n")
-print(summary(m_simple))
+cat("\n=== Summary of ETS x shock across windows ===\n")
+print(as.data.frame(summary_tbl %>%
+  mutate(beta = round(beta, 4), se = round(se, 4), t = round(t, 2), p = round(p, 3))))
 sink()
+
+write.csv(summary_tbl,
+          file.path(OUTPUT_TAB, "phase0_ets_vs_nonets_reallocation.csv"),
+          row.names = FALSE)
 
 cat("\nSaved:", out_path, "\n")
