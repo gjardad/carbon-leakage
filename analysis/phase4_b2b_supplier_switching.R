@@ -99,10 +99,31 @@ eua_prices <- tibble(
 load(file.path(PROC_DATA, "b2b_selected_sample.RData"))
 load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
 load(file.path(PROC_DATA, "deflator_nace4d_2005base.RData"))
-load(file.path(OUT_DATA,  "phase3_firm_exposure.RData"))    # firm_exposure
 
 b2b_df <- df_b2b_selected_sample
 rm(df_b2b_selected_sample)
+
+# ---- Build firm_exposure from raw ETS panel (self-contained) ----
+# Previously sourced from phase3_firm_exposure.RData built by
+# phase3_build_exposure_panel.R. Rebuild directly here so the script does
+# not depend on the phase3 pipeline having been run on RMD.
+# Definitions match phase3_build_exposure_panel.R lines 58-69:
+#   shortage    = pmax(emissions - allocated_free, 0)
+#   carbon_cost = shortage * eua_price
+#   mat_inputs  = revenue - value_added
+#   total_cost  = mat_inputs + wage_bill
+
+firm_exposure <- firm_year_belgian_euets %>%
+  filter(in_sample == 1) %>%
+  left_join(eua_prices, by = "year") %>%
+  mutate(shortage    = pmax(emissions - allocated_free, 0),
+         carbon_cost = shortage * eua_price,
+         mat_inputs  = revenue - value_added,
+         total_cost  = mat_inputs + wage_bill)
+
+cat(sprintf("Built firm_exposure: %d firm-years, %d firms, %d-%d\n",
+            nrow(firm_exposure), n_distinct(firm_exposure$vat),
+            min(firm_exposure$year), max(firm_exposure$year)))
 
 # ---- Rebuild ETS firm treatment on 2013-2015 window ----
 # This replaces the 2013-2016 window used in Spec 1.A's phase4_firm_treatment.rds.

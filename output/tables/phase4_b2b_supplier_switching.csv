@@ -1,24 +1,24 @@
 "spec","horizon","n","n_pairs","n_ets_pairs","beta","se","t","p"
-"BENCH: Spec 4.A-annual EUA-Bartik",NA,107179,NA,NA,-0.00137,0.00161,-0.85629,0.39184
-"BENCH: Spec 4.B-annual EUA-Bartik w-sec",NA,27466,NA,NA,2e-04,0.00018,1.06247,0.28803
-"PRIMARY: Spec 4.A-event firm_cost_share h=1",1,1487,5912,2420,-1.42232,4.40302,-0.32303,0.74672
-"PRIMARY: Spec 4.A-event firm_cost_share h=2",2,1348,5401,2251,0.17412,0.43557,0.39975,0.6894
-"PRIMARY: Spec 4.A-event firm_cost_share h=3",3,1269,5142,2100,1.39378,1.79156,0.77797,0.43673
-"PRIMARY: Spec 4.A-event firm_cost_share h=4",4,1144,4763,1970,-2.86263,3.82188,-0.74901,0.45401
-"PRIMARY: Spec 4.A-event firm_cost_share h=5",5,1065,4450,1848,6.20007,1.08131,5.73387,0
-"PRIMARY: Spec 4.A-event firm_cost_share h=6",6,1032,4252,1793,-1.6301,7.56016,-0.21562,0.82933
-"PRIMARY: Spec 4.A-event firm_cost_share h=7",7,918,4021,1655,15.8885,12.82895,1.23849,0.21585
-"PRIMARY: Spec 4.B-event firm_cost_share h=1",1,1487,5912,2420,1.76537,0.86136,2.04951,0.04059
-"PRIMARY: Spec 4.B-event firm_cost_share h=2",2,1348,5401,2251,0.10216,0.09877,1.03429,0.30119
-"PRIMARY: Spec 4.B-event firm_cost_share h=3",3,1269,5142,2100,0.15883,0.42483,0.37387,0.70856
-"PRIMARY: Spec 4.B-event firm_cost_share h=4",4,1144,4763,1970,0.08713,0.63155,0.13796,0.8903
-"PRIMARY: Spec 4.B-event firm_cost_share h=5",5,1065,4450,1848,1.48846,0.21135,7.04277,0
-"PRIMARY: Spec 4.B-event firm_cost_share h=6",6,1032,4252,1793,0.38374,0.79789,0.48094,0.63066
-"PRIMARY: Spec 4.B-event firm_cost_share h=7",7,918,4021,1655,0.20203,2.80355,0.07206,0.94257
-"Ext. margin firm_cost_share h=1",1,1970,7354,2896,-1.6574,0.54129,-3.06195,0.00223
-"Ext. margin firm_cost_share h=2",2,1970,7354,2896,0.32779,0.792,0.41388,0.67901
-"Ext. margin firm_cost_share h=3",3,1970,7354,2896,-1.20688,0.9783,-1.23365,0.21748
-"Ext. margin firm_cost_share h=4",4,1970,7354,2896,-1.18092,0.99257,-1.18976,0.23428
-"Ext. margin firm_cost_share h=5",5,1970,7354,2896,0.27142,0.62842,0.43191,0.66586
-"Ext. margin firm_cost_share h=6",6,1970,7354,2896,-0.86948,1.20788,-0.71984,0.47171
-"Ext. margin firm_cost_share h=7",7,1970,7354,2896,-0.95952,1.08851,-0.8815,0.37815
+"BENCH: Spec 4.A-annual EUA-Bartik",NA,107179,NA,NA,-0.00138,0.0016,-0.86543,0.3868
+"BENCH: Spec 4.B-annual EUA-Bartik w-sec",NA,27466,NA,NA,0.00019,0.00018,1.0578,0.29016
+"PRIMARY: Spec 4.A-event firm_cost_share h=1",1,1487,5912,2420,-1.42293,4.38194,-0.32472,0.74543
+"PRIMARY: Spec 4.A-event firm_cost_share h=2",2,1348,5401,2251,0.17182,0.44053,0.39002,0.69658
+"PRIMARY: Spec 4.A-event firm_cost_share h=3",3,1269,5142,2100,1.37779,1.79248,0.76865,0.44224
+"PRIMARY: Spec 4.A-event firm_cost_share h=4",4,1144,4763,1970,-2.85878,3.81204,-0.74994,0.45345
+"PRIMARY: Spec 4.A-event firm_cost_share h=5",5,1065,4450,1848,6.2041,1.09596,5.66087,0
+"PRIMARY: Spec 4.A-event firm_cost_share h=6",6,1032,4252,1793,-1.62081,7.51698,-0.21562,0.82933
+"PRIMARY: Spec 4.A-event firm_cost_share h=7",7,918,4021,1655,15.85438,12.72953,1.24548,0.21327
+"PRIMARY: Spec 4.B-event firm_cost_share h=1",1,1487,5912,2420,1.75539,0.85717,2.04788,0.04075
+"PRIMARY: Spec 4.B-event firm_cost_share h=2",2,1348,5401,2251,0.10291,0.09951,1.03418,0.30124
+"PRIMARY: Spec 4.B-event firm_cost_share h=3",3,1269,5142,2100,0.15779,0.42339,0.37268,0.70945
+"PRIMARY: Spec 4.B-event firm_cost_share h=4",4,1144,4763,1970,0.08845,0.62895,0.14064,0.88818
+"PRIMARY: Spec 4.B-event firm_cost_share h=5",5,1065,4450,1848,1.49055,0.21419,6.95899,0
+"PRIMARY: Spec 4.B-event firm_cost_share h=6",6,1032,4252,1793,0.38076,0.795,0.47895,0.63207
+"PRIMARY: Spec 4.B-event firm_cost_share h=7",7,918,4021,1655,0.20661,2.78962,0.07406,0.94098
+"Ext. margin firm_cost_share h=1",1,1970,7354,2896,-1.65518,0.54663,-3.02796,0.00249
+"Ext. margin firm_cost_share h=2",2,1970,7354,2896,0.33023,0.79701,0.41433,0.67867
+"Ext. margin firm_cost_share h=3",3,1970,7354,2896,-1.20279,0.98465,-1.22154,0.22203
+"Ext. margin firm_cost_share h=4",4,1970,7354,2896,-1.17589,0.99925,-1.17677,0.23943
+"Ext. margin firm_cost_share h=5",5,1970,7354,2896,0.2723,0.63201,0.43084,0.66663
+"Ext. margin firm_cost_share h=6",6,1970,7354,2896,-0.86314,1.21457,-0.71066,0.47738
+"Ext. margin firm_cost_share h=7",7,1970,7354,2896,-0.95387,1.095,-0.87112,0.3838
