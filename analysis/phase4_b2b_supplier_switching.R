@@ -181,16 +181,99 @@ pairs_ets <- pairs_ets %>%
 cat("\nPair-year observations with non-missing d_log_real_flow:",
     sum(!is.na(pairs_ets$d_log_real_flow)), "\n")
 
-# ---- Build non-ETS flow totals per (buyer, 4d sector, year) for Spec 4.B denominator ----
-# Need: total flow from ALL sellers (ETS + non-ETS) in sector s to buyer b in year t.
-# We don't have non-ETS seller sector codes in the downsampled B2B directly;
-# approximate using all b2b flows grouped by buyer x year, then restrict seller
-# sector via the firm-level seller-sector map for the ETS side.
-# For a cleaner Spec 4.B denominator we need non-ETS seller sector attribution,
-# which requires joining to annual accounts or similar. Deferring to RMD where
-# the full firm-sector map is available and stable.
+# ---- Build Spec 4.B panel: share among all sellers in same seller-4d sector ----
+#
+# Need a vat -> nace5d map covering all sellers in the B2B data (ETS + non-ETS).
+# On RMD this comes from annual_accounts_selected_sample_key_variables.RData.
+# On local 1 the non-ETS map is thinner (downsampled), so Spec 4.B will be less
+# informative here; the code still runs either way.
+#
+# Denominator: sum of flow from ALL sellers in nace4d(j) to buyer b in year t.
+# Share:       flow_{j,b,t} / denominator.
 
-spec4b_feasible <- FALSE
+spec4b_feasible <- TRUE
+aa_path <- file.path(PROC_DATA, "annual_accounts_selected_sample_key_variables.RData")
+if (!file.exists(aa_path)) {
+  aa_path <- file.path(PROC_DATA, "annual_accounts_selected_sample.RData")
+}
+
+vat_sector_map <- NULL
+if (file.exists(aa_path)) {
+  loaded_names <- load(aa_path)
+  obj_name <- loaded_names[grepl("^df_annual_accounts", loaded_names)][1]
+  if (!is.na(obj_name)) {
+    aa <- get(obj_name)
+    # Some vintages use `vat`, others use `vat_ano`. Handle both.
+    vat_col <- if ("vat" %in% names(aa)) "vat" else if ("vat_ano" %in% names(aa)) "vat_ano" else NA
+    if (!is.na(vat_col) && "nace5d" %in% names(aa)) {
+      aa <- aa %>% rename(vat = !!sym(vat_col))
+      vat_sector_map <- aa %>%
+        filter(!is.na(nace5d)) %>%
+        select(vat, year, nace5d) %>%
+        mutate(nace4d = str_sub(nace5d, 1, 4),
+               nace2d = str_sub(nace5d, 1, 2)) %>%
+        group_by(vat) %>%
+        arrange(desc(year), .by_group = TRUE) %>%
+        slice(1) %>%
+        ungroup() %>%
+        select(vat, seller_nace4d = nace4d, seller_nace2d = nace2d)
+      cat("Loaded vat -> sector map from", basename(aa_path),
+          ":", nrow(vat_sector_map), "firms\n")
+    } else {
+      warning("annual_accounts file found but missing nace5d or vat/vat_ano: ", aa_path)
+    }
+    rm(aa); rm(list = obj_name)
+  } else {
+    warning("No df_annual_accounts_* object in ", aa_path)
+  }
+} else {
+  warning("annual_accounts file not found at ", aa_path)
+}
+
+if (is.null(vat_sector_map)) {
+  spec4b_feasible <- FALSE
+  cat("Spec 4.B will be skipped (no vat -> sector map available).\n")
+}
+
+# Build the all-seller pair panel for the denominator, with seller sector
+all_pairs <- pairs %>%
+  {if (!is.null(vat_sector_map)) left_join(., vat_sector_map, by = c("seller" = "vat"))
+   else mutate(., seller_nace4d = NA_character_, seller_nace2d = NA_character_)} %>%
+  filter(!is.na(seller_nace4d))
+
+# Buyer-sector-year total flow (denominator for share)
+buyer_sec_year_flow <- all_pairs %>%
+  group_by(buyer, seller_nace4d, year) %>%
+  summarise(total_sector_flow = sum(corr_sales, na.rm = TRUE), .groups = "drop")
+
+cat("\n=== Spec 4.B panel: buyer x seller-4d x year cells ===\n")
+cat("rows:", nrow(buyer_sec_year_flow), "\n")
+cat("buyer x seller-4d cells with >= 2 distinct sellers (any ETS + non-ETS):",
+    all_pairs %>% group_by(buyer, seller_nace4d, year) %>%
+      summarise(n_sellers = n_distinct(seller), .groups = "drop") %>%
+      filter(n_sellers >= 2) %>% nrow(), "\n")
+
+# Merge total-sector flow onto the ETS-seller panel, compute share
+pairs_ets_4b <- pairs_ets %>%
+  mutate(seller_nace4d = nace4d) %>%
+  left_join(buyer_sec_year_flow, by = c("buyer", "seller_nace4d", "year")) %>%
+  mutate(share_jbt = corr_sales / total_sector_flow) %>%
+  filter(!is.na(share_jbt))
+
+# First-difference share
+pairs_ets_4b <- pairs_ets_4b %>%
+  arrange(seller, buyer, year) %>%
+  group_by(seller, buyer) %>%
+  mutate(d_share = share_jbt - lag(share_jbt)) %>%
+  ungroup() %>%
+  mutate(shock_eua_dev      = 100 * firm_dev_share * eua_price,
+         shock_cps_surp_dev = 100 * firm_dev_share * cpshock_surprise,
+         shock_cps_shock_dev= 100 * firm_dev_share * cpshock_shock)
+
+cat("\n=== Spec 4.B feasibility ===\n")
+cat("spec4b_feasible:", spec4b_feasible, "\n")
+cat("pair-years with d_share non-missing:",
+    sum(!is.na(pairs_ets_4b$d_share)), "\n")
 
 # ---- Spec 4.A: Delta log(flow) ~ shock x firm_cost_share, pair + buyer*year FE ----
 run_4A <- function(df, signal_var, label) {
@@ -238,6 +321,49 @@ m_full   <- run_window(pairs_ets, 2005, 2022, "2005-2022")
 m_phase3 <- run_window(pairs_ets, 2013, 2022, "2013-2022")
 m_post16 <- run_window(pairs_ets, 2017, 2022, "2017-2022 (post-base)")
 
+# ---- Spec 4.B: within-seller-sector share ----
+m_4b_eua      <- m_4b_cps_surp <- m_4b_cps_shock <- NULL
+if (spec4b_feasible) {
+  cat("\n=== Spec 4.B: within-seller-sector share ===\n")
+
+  reg_4b <- pairs_ets_4b %>% filter(!is.na(d_share))
+
+  # EUA-Bartik
+  m_4b_eua <- feols(d_share ~ shock_eua_dev
+                    | seller^buyer + buyer^seller_nace4d^year,
+                    cluster = ~ seller + buyer, data = reg_4b)
+  cat("\n--- Spec 4.B, EUA-Bartik ---\n"); print(summary(m_4b_eua))
+
+  # CPShock surprise
+  m_4b_cps_surp <- feols(d_share ~ shock_cps_surp_dev
+                         | seller^buyer + buyer^seller_nace4d^year,
+                         cluster = ~ seller + buyer, data = reg_4b)
+  cat("\n--- Spec 4.B, CPShock surprise ---\n"); print(summary(m_4b_cps_surp))
+
+  # CPShock shock
+  m_4b_cps_shock <- feols(d_share ~ shock_cps_shock_dev
+                          | seller^buyer + buyer^seller_nace4d^year,
+                          cluster = ~ seller + buyer, data = reg_4b)
+  cat("\n--- Spec 4.B, CPShock shock ---\n"); print(summary(m_4b_cps_shock))
+} else {
+  cat("\n=== Spec 4.B skipped (no vat -> sector map available) ===\n")
+}
+
+# ---- Extensive margin: relationship continuation LPM ----
+cat("\n=== Extensive margin: P(pair active next year | active this year) ===\n")
+
+ext <- pairs_ets %>%
+  arrange(seller, buyer, year) %>%
+  group_by(seller, buyer) %>%
+  mutate(active_next = as.integer(!is.na(lead(year)) & lead(year) == year + 1)) %>%
+  ungroup() %>%
+  filter(!is.na(active_next))
+
+m_ext_eua <- feols(active_next ~ shock_eua
+                   | seller^buyer + buyer^year,
+                   cluster = ~ seller + buyer, data = ext)
+cat("\n--- Extensive margin, EUA-Bartik ---\n"); print(summary(m_ext_eua))
+
 # ---- Save output ----
 extract_beta <- function(m, label, varname = "shock_eua") {
   if (is.null(m)) return(NULL)
@@ -252,7 +378,11 @@ summary_tbl <- bind_rows(
   extract_beta(m_cps_shk$model,   "Spec 4.A CPShock shock,    full", "shock_cps_shock"),
   extract_beta(m_full,            "Spec 4.A EUA-Bartik, 2005-2022"),
   extract_beta(m_phase3,          "Spec 4.A EUA-Bartik, 2013-2022"),
-  extract_beta(m_post16,          "Spec 4.A EUA-Bartik, 2017-2022")
+  extract_beta(m_post16,          "Spec 4.A EUA-Bartik, 2017-2022"),
+  extract_beta(m_4b_eua,          "Spec 4.B EUA-Bartik",             "shock_eua_dev"),
+  extract_beta(m_4b_cps_surp,     "Spec 4.B CPShock surprise",       "shock_cps_surp_dev"),
+  extract_beta(m_4b_cps_shock,    "Spec 4.B CPShock shock",          "shock_cps_shock_dev"),
+  extract_beta(m_ext_eua,         "Ext. margin (P active next) EUA-Bartik")
 ) %>% filter(!is.na(beta))
 
 cat("\n=== Coefficient summary ===\n")
@@ -290,5 +420,7 @@ print(as.data.frame(summary_tbl %>%
 sink()
 
 cat("\nSaved tables to", OUTPUT_TAB, "\n")
-cat("\nSpec 4.B not implemented on local 1: requires non-ETS seller sector\n")
-cat("attribution for the share denominator, which is cleaner on RMD.\n")
+cat("\nAll specs (4.A, 4.B, extensive margin) run end-to-end. On local 1 the\n")
+cat("downsampled B2B and downsampled annual accounts make estimates thinner\n")
+cat("than on RMD, so results should be validated on the full RMD sample before\n")
+cat("reporting.\n")
