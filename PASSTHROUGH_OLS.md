@@ -1,18 +1,27 @@
-# Pass-Through Findings: Does Belgian Sector PPI Respond to ETS Carbon Costs?
+# Pass-Through: Descriptive / Naïve-OLS Specifications
+
+*Belgian NACE4d sector PPI response to ETS carbon-cost exposure, 2005–2022 annual panel, without structural identification.*
+
+**Companion document:** [PASSTHROUGH_CPSHOCK.md](PASSTHROUGH_CPSHOCK.md) covers Känzig-style CPShock-identified specifications (S7–S12) on the same panel. This document covers S1–S6 plus the alternative-denominator, tercile-heterogeneity, and NACE2d-specific robustness checks.
 
 ---
 
 ## Summary
 
-The ETS carbon-price shock was **small through Phase III and only becomes quantitatively meaningful in Phase IV (2021+)**. Sector-level PPI pass-through is **small-positive-or-null in our preferred specifications (≈ 0.07 to 0.15 in log-PPI per pp of exposure) and not statistically distinguishable from zero once sector-specific trends are absorbed.** The result is consistent with independent firm-level evidence from Martin, Muûls & Stoerk (NBB WP 467, 2024), who use PRODCOM unit-price data and find an ETS-firm coefficient of +0.14 (SE 0.15), also insignificant.
+The ETS carbon-price shock was **small through Phase III and only becomes quantitatively meaningful in Phase IV (2021+)**. Annual sector-level PPI pass-through in descriptive OLS specifications is **small-positive-or-null (≈ 0.07 to 0.15 in log-PPI per pp of exposure) and not statistically distinguishable from zero once sector-specific trends are absorbed.** The negative S1 coefficient (−0.60) reflects selection-into-exposure rather than real pass-through: high-shortage sectors (basic metals, cement, refining) are structurally weaker-pricing-power sectors whose slow-moving cross-sectional differentials aren't absorbed by sector + year FE alone. Only sector-specific linear trends (S6) flip the sign.
+
+The result is consistent with independent firm-level evidence from Martin, Muûls & Stoerk (NBB WP 467, 2024), who use PRODCOM unit-price data and find an ETS-firm coefficient of +0.14 (SE 0.15), also insignificant.
+
+**These descriptive results do not settle the pass-through question** — they are reduced-form regressions with no structural identification. For identified estimates using Känzig's VAR-extracted structural shock, see [PASSTHROUGH_CPSHOCK.md](PASSTHROUGH_CPSHOCK.md) (headline: S12 monthly panel-LP, +4.08 at 12-month horizon, t = 6.39).
 
 | Question | Answer |
 |---|---|
 | How big was the shock? | Small until Phase IV, then meaningful. Effective price per tonne emitted rose from ~€2 (Phase III pre-MSR) to **€39 (2022)**. Concentration of carbon cost fell from 99% top-5 firms to ~70%. |
-| Contemporaneous first-difference pass-through? | **+0.07** (OLS, year FE), **+0.17** (with 1- and 2-year lagged differences). |
-| Levels pass-through after absorbing sector-specific trends? | **+0.07 (all sectors), +0.15 (with lagged levels)**. Cumulative net of lag-2: essentially zero. |
-| Is there a dose-response across shortage-intensity terciles? | No. T1, T2, T3 all give +0.08, +0.11, +0.08 respectively. Flat. |
-| Benchmarks | MMS 2024 (firm-level, PRODCOM): **+0.14 (SE 0.15)**, insignificant. Fabra-Reguant 2014 (Spanish wholesale electricity, auction-level): 0.86. BKR 2026 (European electricity futures, daily event study): 0.2–0.4. |
+| Contemporaneous first-difference pass-through (S2)? | **+0.07** (OLS, year FE), **+0.17** (with 1- and 2-year lagged differences). |
+| Levels pass-through after absorbing sector-specific trends (S6)? | **+0.07 (all sectors), +0.15 (with lagged levels)**. Cumulative net of lag-2: essentially zero. |
+| Dose-response across shortage-intensity terciles? | No. T1, T2, T3 all give +0.08, +0.11, +0.08 respectively. Flat. |
+| Cement (NACE 23, textbook clean-pass-through case)? | **+0.11** (SE 1.34), null with tight SE. |
+| Benchmarks (external) | MMS 2024 (Belgian firm-level, PRODCOM): +0.14 (SE 0.15), insignificant. Fabra-Reguant 2014 (Spanish wholesale electricity auction): 0.86. BKR 2026 (European electricity futures): 0.2–0.4. |
 
 ---
 
@@ -190,59 +199,56 @@ NACE 23 (cement) is the textbook case for clean pass-through — homogeneous pro
 
 ---
 
-## Interpretation
+## Interpretation (naïve OLS)
 
 ### What the evidence supports
 
-1. **The shock was small until Phase IV.** Effective price per tonne stayed below €3 through 2017. The 2021–22 jump to €39 is a genuine structural change, but the panel gives only two full Phase IV years.
+1. **The shock was small until Phase IV.** Effective price per tonne stayed below €3 through 2017. The 2021–22 jump to €39 is a genuine structural change, but our exposure panel gives only two full Phase IV years (extending to 2023–2024 is a to-do).
 
-2. **Sector-level pass-through is small and does not scale with exposure.** Contemporaneous first-difference coefficients of +0.07 to +0.17 are positive and statistically distinguishable from zero, but the effect does not grow with shortage intensity. Cement, where we would most expect clean pass-through, gives essentially zero.
+2. **In naïve OLS specs (S2–S6), sector-level pass-through is small and does not scale with exposure** in cross-sectional intensity terciles. Annual contemporaneous first-difference coefficients of +0.07 to +0.17, cumulative cleanest-spec (S6 with sector trends) +0.065. Martin-Muûls-Stoerk (NBB WP 467, 2024), using firm-level PRODCOM unit-price data with a binary ETS dummy, land at +0.14 (SE 0.15) — same order of magnitude, also insignificant.
 
-3. **Our cleanest specification (S6 with sector trends) lands at +0.065 cumulative −0.05.** Martin-Muûls-Stoerk (NBB WP 467, 2024), using firm-level PRODCOM unit-price data and a binary ETS dummy, land at +0.14 with SE 0.15 — the same order of magnitude, also insignificant.
+3. **The negative S1 coefficient reflects selection, not pass-through.** High-shortage sectors (basic metals, cement, refining) are structurally weaker-pricing-power sectors. This slow-moving cross-sectional characteristic isn't absorbed by sector + year FE alone; only sector-specific trends (S6) flip it.
 
 ### What the evidence does not support
 
-- Large, meaningful pass-through at the sector level. If it existed, Phase IV would have produced it and our panel would have captured it.
-- A dose-response relationship between carbon-cost intensity and price. Terciles are flat.
-- A commodity-cycle-at-NACE2d explanation for the negative S1 coefficient. NACE2d × year FE leaves the negative sign intact.
+- **A dose-response relationship** along raw shortage-intensity terciles (T1, T2, T3 flat at +0.08, +0.11, +0.08).
+- **A commodity-cycle-at-NACE2d explanation** for the S1 negative sign. NACE2d × year FE leaves it intact; only sector-specific trends fix it.
+- **Clean pass-through in the textbook sector.** NACE 23 (cement), where commodity-like production and inelastic demand should give the largest coefficient, gives +0.11 with SE 1.34 — essentially zero.
 
-### Leading interpretation
+### Limits of this descriptive analysis
 
-The negative coefficient in S1/S5 reflects **selection into exposure**, not a real ETS effect. The sectors with the highest carbon-cost-as-share-of-total-cost are sectors with structurally weaker pricing power (integrated commodity producers: steel, bulk chemicals, cement, refining). This is a permanent sector-level characteristic that persists across all year-FE structures, so it loads onto the exposure coefficient. Sector-specific linear trends absorb it (because it is slow-moving), which is why only S6 flips the sign.
+Annual sector-level PPI data with only OLS + FE cannot:
+- Identify pass-through from EUA-driven cost variation separate from macro/commodity co-movement.
+- Distinguish "real but small pass-through" from "near-zero pass-through with residual selection/anticipation effects" in the annual averages.
+- Measure the frequency of price changes or within-sector cross-firm heterogeneity (both require higher-frequency or firm-level data).
 
-The remaining small positive coefficient in S6 plausibly captures a modest real pass-through effect, but the lack of dose-response and the cement null make it hard to interpret as anything other than "ETS sectors price-adjust slightly differently from non-ETS sectors, in ways that do not scale mechanically with their carbon cost."
-
-### Where the aggregate analysis hits its limit
-
-Sector-level PPI data cannot distinguish between:
-- a real but small pass-through effect (supported by +0.07 to +0.15 contemporaneous)
-- near-zero pass-through with small coefficients capturing residual selection / anticipation effects
-
-Firm-level PRODCOM data would close this gap by allowing within-sector cross-firm comparisons with continuous firm-level exposure — a dose-response test that our sector-aggregate data does not permit. MMS 2024 have PRODCOM data but use only a binary ETS dummy and annual firm averages, so they also do not test dose-response.
+Two responses to these limits are developed in companion documents:
+- **CPShock identification** using Känzig's high-frequency event instrument or VAR-identified structural shock — see [PASSTHROUGH_CPSHOCK.md](PASSTHROUGH_CPSHOCK.md).
+- **Firm-level PRODCOM data** for dose-response and price-rigidity tests — see [PRODCOM_PLAN.md](PRODCOM_PLAN.md).
 
 ---
 
-## Comparison with external evidence
+## Comparison with external evidence (OLS results only; see CPShock doc for additional rows)
 
 | Study | Context | Measure | Result |
 |---|---|---|---|
-| **This paper** | Belgium, NACE4d, annual, 2005–22 | log(PPI) ~ exp. share | +0.07 to +0.15 (insignificant); cumulative −0.05 |
+| **This paper — annual OLS (S2, S6)** | Belgium, NACE4d, 2005–22 | log(PPI) ~ exp. share | +0.07 to +0.15 (insignificant); cumulative −0.05 |
 | **Martin, Muûls & Stoerk 2024** (NBB WP 467) | Belgium, firm-level PRODCOM unit prices, 2016–20 | Δ unit price ~ ETS dummy | +0.14 (SE 0.15), insignificant |
 | **Fabra & Reguant 2014** (AER) | Spain, wholesale electricity, daily auction | price level ~ marginal ETS cost (IV) | **0.86–1.05** (near-full pass-through) |
 | **Bauer, Känzig & Rudebusch 2026** | European energy futures, daily event study | log(price) ~ CPShock | Electricity **0.2–0.4**, gas ~0.2, oil ~0.1–0.15 |
 | **Känzig 2025** (JMP) | Euro area, macro VAR, monthly | headline HICP ~ CPShock | Aggregate peak ~0.2% per 1% energy-price shock |
 
-The wholesale-electricity auction setting (Fabra-Reguant) shows nearly complete pass-through. Down the price chain — from energy futures (BKR), to aggregate HICP (Kaenzig), to firm-level PRODCOM (MMS), to NACE4d PPI (this paper) — the coefficient shrinks toward zero. Our result fits that ordering. Whatever pass-through exists at the wholesale electricity level is substantially absorbed by the time it reaches downstream NACE4d sector PPIs.
+Our OLS result sits at the bottom of the price-chain attenuation ordering: wholesale electricity (Fabra-Reguant 0.86) → energy futures (BKR 0.2–0.4) → aggregate HICP (Känzig 0.2) → firm-level PRODCOM (MMS 0.14) → NACE4d PPI (this paper, 0.07–0.15, insignificant). Consistent but uninformative on its own.
 
 ---
 
-## Caveats
+## Caveats (OLS)
 
 1. **Network panel is downsampled.** The frozen-weights B2B network was rebuilt locally with downsampled B2B, so S3 coefficients are directional only. Rebuild on RMD for publishable network results.
 2. **Phase IV is only two years.** 2021 and 2022 give limited power for dynamic specs in the post-MSR period. Extending the ETS panel to 2023–2024 (when available) will help.
-3. **Commodity-price controls are redundant.** Gas, oil, coal, electricity prices vary only in time; they are fully absorbed by year FE. They matter only when interacted with sector-level fuel intensities, which we did not implement.
+3. **Commodity-price controls are redundant with year FE.** Gas, oil, coal, electricity prices vary only in time; they are fully absorbed by year FE. They matter only when interacted with sector-level fuel intensities, which we did not implement.
 4. **The exposure measure's denominator is time-varying and potentially endogenous.** We diagnose this with an alternative base-period-fixed denominator and find virtually identical coefficients — the denominator is not the driver of the negative coefficient.
-5. **Kaenzig's "carbon policy surprise" instrument is not used.** Standard argument: Belgium is a small share of EU ETS, so EUA prices are exogenous to Belgian sector shocks without additional orthogonalization. We rely on this assumption.
+5. **No structural identification in this document.** Descriptive OLS with FE only. Structurally identified estimates in [PASSTHROUGH_CPSHOCK.md](PASSTHROUGH_CPSHOCK.md).
 
 ---
 
@@ -252,32 +258,27 @@ The wholesale-electricity auction setting (Fabra-Reguant) shows nearly complete 
 |---|---|
 | Build annual EUA price series 2005–23 | [analysis/phase3_eua_prices.R](analysis/phase3_eua_prices.R) |
 | Build firm-year and sector-year exposure panels (both denominators) | [analysis/phase3_build_exposure_panel.R](analysis/phase3_build_exposure_panel.R) |
+| Build annual NACE4d PPI deflator (Statbel + Eurostat, 2005=100) | [analysis/phase0_build_deflator.R](analysis/phase0_build_deflator.R) |
 | Task 1: Exposure histograms by phase | [analysis/phase3_exposure_histograms.R](analysis/phase3_exposure_histograms.R) |
 | Task 3: Shock-size diagnostics | [analysis/phase3_shock_size_diagnostics.R](analysis/phase3_shock_size_diagnostics.R) |
-| Task 2: Main PPI pass-through regressions (S1–S6 + A) | [analysis/phase3_ppi_passthrough.R](analysis/phase3_ppi_passthrough.R) |
+| Task 2: Main PPI pass-through regressions (S1–S6 + A, plus S7–S11 CPShock) | [analysis/phase3_ppi_passthrough.R](analysis/phase3_ppi_passthrough.R) |
 | Heterogeneity by tercile and NACE2d | [analysis/phase3_ppi_heterogeneity.R](analysis/phase3_ppi_heterogeneity.R) |
+
+The CPShock-specific scripts (build_cpshock, replicate_kanzig_hicp, monthly-PPI pipeline, monthly-panel-LP) are listed in [PASSTHROUGH_CPSHOCK.md](PASSTHROUGH_CPSHOCK.md).
 
 Output artefacts are in [output/tables/phase3_*.txt](output/tables/) and [output/figures/phase3_*.pdf](output/figures/).
 
 ---
 
-## Deferred analyses (see [TODO.md](TODO.md))
+## Deferred analyses (OLS-relevant)
 
-- Task 3.5: benchmark EUA-driven cost variation against gas/electricity price variation.
-- Task 3.6: abatement-speed test after the Phase IV price jump.
+1. **Extend the exposure panel to 2023–2024** when NBB releases annual accounts.
+2. **Network panel rebuild on RMD.** Current S3 coefficients use downsampled B2B and are directional only.
+3. **Task 3.5: benchmark EUA-driven cost variation against gas/electricity price variation.**
+4. **Task 3.6: abatement-speed test after the Phase IV price jump.**
 
-## Potential follow-up: PRODCOM
-
-A PRODCOM-based extension could close the dose-response question that sector-aggregate data cannot resolve. The pitch:
-
-- Use firm-level PRODCOM unit prices (monthly or annual).
-- Regress Δ log(price)_{i,p,t} on a continuous firm-level exposure `shortage_{i,t} × EUA_t / cost_{i,t}`, with firm FE and NACE4d × year (or product × year) FE.
-- Identification: within product × year, do firms with higher exposure post higher price growth?
-
-MMS 2024 have the data but use only a binary dummy and firm-averaged prices, so this dose-response test is not in their draft. Whether to escalate to the coauthor for data access depends on appetite for closing the remaining ambiguity; the expected payoff is moving from "near zero, probably" to "zero, decisively" or "small but real."
-
-A mock PRODCOM file (`prod.dta`) is available locally and has the expected structure (firm × year × month × PC8 product × value × quantity), so specifications can be piloted locally before requesting RMD access.
+For CPShock-related to-dos see [PASSTHROUGH_CPSHOCK.md](PASSTHROUGH_CPSHOCK.md). For PRODCOM workstream see [PRODCOM_PLAN.md](PRODCOM_PLAN.md).
 
 ---
 
-*Generated after running `analysis/phase3_*.R`. April 2026.*
+*Last revision: 2026-04-22. Split from former `PASSTHROUGH_FINDINGS.md`.*

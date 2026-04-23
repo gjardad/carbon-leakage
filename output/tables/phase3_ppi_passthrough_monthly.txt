@@ -1,0 +1,112 @@
+================================================================
+ Monthly panel-LP: Belgian NACE4d PPI on CPShock × intensity
+================================================================
+
+Sample: 2005-01 to 2019-12 (Kaenzig CPShock coverage)
+Spec  : log(PPI_{s,m+h}) - log(PPI_{s,m-1}) = gamma_h * (CPShock_m * intensity_base_s) + alpha_s + delta_m + eps
+FE    : nace4d + year_month  |  SE clustered on nace4d
+
+intensity_base_s = mean exposure_alt over 2013-16 (pre-MSR, post-auctioning)
+
+
+--- All sectors, Shock RHS ---
+                        rhs sample  h      coef        se        lo95     hi95
+Estimate  cpshock_shk_x_int    all  0 0.7622647 0.2876233  0.19852310 1.326006
+Estimate1 cpshock_shk_x_int    all  1 0.8602266 0.4466242 -0.01515681 1.735610
+Estimate2 cpshock_shk_x_int    all  3 0.8696649 0.5892580 -0.28528085 2.024611
+Estimate3 cpshock_shk_x_int    all  6 1.6606690 0.5759699  0.53176809 2.789570
+Estimate4 cpshock_shk_x_int    all 12 4.0833864 0.6392825  2.83039268 5.336380
+Estimate5 cpshock_shk_x_int    all 24 3.8360838 0.9603326  1.95383196 5.718336
+              n
+Estimate  23986
+Estimate1 23852
+Estimate2 23584
+Estimate3 23182
+Estimate4 22378
+Estimate5 20770
+
+--- ETS-only, Shock RHS ---
+                        rhs   sample  h      coef        se        lo95
+Estimate  cpshock_shk_x_int ETS-only  0 0.5897235 0.2747118  0.05128843
+Estimate1 cpshock_shk_x_int ETS-only  1 0.5885897 0.3940044 -0.18365887
+Estimate2 cpshock_shk_x_int ETS-only  3 0.7319003 0.6158902 -0.47524446
+Estimate3 cpshock_shk_x_int ETS-only  6 1.7131307 0.5804515  0.57544585
+Estimate4 cpshock_shk_x_int ETS-only 12 4.4950453 0.7005585  3.12195075
+Estimate5 cpshock_shk_x_int ETS-only 24 4.2807785 1.0661694  2.19108657
+              hi95    n
+Estimate  1.128159 9308
+Estimate1 1.360838 9256
+Estimate2 1.939045 9152
+Estimate3 2.850816 8996
+Estimate4 5.868140 8684
+Estimate5 6.370470 8060
+
+--- All sectors, Surprise RHS ---
+                    rhs sample  h       coef       se       lo95     hi95     n
+Estimate  cpshock_x_int    all  0  0.7673439 1.024196  -1.240080 2.774768 23986
+Estimate1 cpshock_x_int    all  1  0.5611767 1.646057  -2.665095 3.787449 23852
+Estimate2 cpshock_x_int    all  3 -2.1686084 2.210382  -6.500957 2.163741 23584
+Estimate3 cpshock_x_int    all  6 -3.9952003 3.471363 -10.799072 2.808671 23182
+Estimate4 cpshock_x_int    all 12 -4.4194876 3.601107 -11.477658 2.638683 22378
+Estimate5 cpshock_x_int    all 24 -3.3226555 4.853202 -12.834931 6.189620 20770
+
+--- ETS-only, Surprise RHS ---
+                    rhs   sample  h       coef       se       lo95      hi95
+Estimate  cpshock_x_int ETS-only  0  0.4721377 1.021813  -1.530615 2.4748904
+Estimate1 cpshock_x_int ETS-only  1  0.6571575 1.826874  -2.923516 4.2378309
+Estimate2 cpshock_x_int ETS-only  3 -2.3508824 2.227069  -6.715937 2.0141720
+Estimate3 cpshock_x_int ETS-only  6 -3.9934417 3.299366 -10.460200 2.4733160
+Estimate4 cpshock_x_int ETS-only 12 -5.9521306 3.416658 -12.648780 0.7445189
+Estimate5 cpshock_x_int ETS-only 24 -6.5740834 5.113759 -16.597050 3.4488835
+             n
+Estimate  9308
+Estimate1 9256
+Estimate2 9152
+Estimate3 8996
+Estimate4 8684
+Estimate5 8060
+
+
+Annual-spec comparison (from phase3_ppi_passthrough.R):
+  S7a-shk (annual, h=0, all):      +1.28 (SE 1.72)
+  S7d-shk cumulative (annual):    +9.22 (SE 3.68), p=0.012
+  S10-shk LP h=1yr (all):         +5.09 (SE 1.71), t=2.98
+  S10-shk LP h=2yr (all):         +4.77 (SE 1.19), t=4.00
+
+
+=== S12b Phase IV extension, 2020m1-2024m12 ===
+RHS = our log-return surprise (from 45 BKR events), NOT Kaenzig's series
+Different scaling from S12 2005-2019 (electricity-scaled Surprise or Shock),
+so coefficient magnitudes are NOT directly comparable across periods.
+
+--- All sectors ---
+                       rhs sample  h       coef        se       lo95
+Estimate  cpshock_p4_x_int    all  0 -0.4134278 0.1859013 -0.7777942
+Estimate1 cpshock_p4_x_int    all  1 -0.2471459 0.4314821 -1.0928509
+Estimate2 cpshock_p4_x_int    all  3 -0.1490109 0.4569251 -1.0445841
+Estimate3 cpshock_p4_x_int    all  6 -0.4696490 0.8032158 -2.0439520
+Estimate4 cpshock_p4_x_int    all 12 -1.4228198 1.5924791 -4.5440789
+Estimate5 cpshock_p4_x_int    all 24  0.6492620 3.7454717 -6.6918626
+                 hi95    n
+Estimate  -0.04906131 7102
+Estimate1  0.59855908 6968
+Estimate2  0.74656232 6700
+Estimate3  1.10465396 6298
+Estimate4  1.69843922 5494
+Estimate5  7.99038665 3886
+
+--- ETS only ---
+                       rhs   sample  h       coef        se      lo95
+Estimate  cpshock_p4_x_int ETS-only  0 -0.6582583 0.2373536 -1.123471
+Estimate1 cpshock_p4_x_int ETS-only  1 -0.5552194 0.4259525 -1.390086
+Estimate2 cpshock_p4_x_int ETS-only  3 -0.5464699 0.5097328 -1.545546
+Estimate3 cpshock_p4_x_int ETS-only  6 -0.8922928 0.9018858 -2.659989
+Estimate4 cpshock_p4_x_int ETS-only 12 -1.5819744 1.6796722 -4.874132
+Estimate5 cpshock_p4_x_int ETS-only 24  0.2647426 3.8869541 -7.353687
+                hi95    n
+Estimate  -0.1930452 2756
+Estimate1  0.2796475 2704
+Estimate2  0.4526064 2600
+Estimate3  0.8754034 2444
+Estimate4  1.7101832 2132
+Estimate5  7.8831727 1508

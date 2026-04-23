@@ -341,6 +341,667 @@ RMSE: 0.063684     Adj. R2: 0.829045
 Cumulative (t + L1 + L2): -0.0476  (SE 0.0807, z = -0.59, p = 0.5552)
 
 
+CPShock panel: 2085 rows, 139 NACE4d, years 2005-2019; 31 sectors with intensity_base > 0
+----------------------------------------------------------------
+ [S7a] log(PPI) ~ CPShock_t × intensity_base_s  |  nace4d + year (all sec)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,085
+Fixed-effects: nace4d: 139,  year: 15
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error   t value Pr(>|t|) 
+cpshock_x_int  -3.1556    4.63901 -0.680232   0.4975 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.064496     Adj. R2: 0.701609
+                 Within R2: 6.303e-5
+
+----------------------------------------------------------------
+ [S7b] log(PPI) ~ CPShock × intensity  |  nace4d + year (ETS sec only)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 780
+Fixed-effects: nace4d: 52,  year: 15
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error   t value Pr(>|t|) 
+cpshock_x_int -2.10978    4.54711 -0.463982  0.64464 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.075125     Adj. R2: 0.684838
+                 Within R2: 4.893e-5
+
+----------------------------------------------------------------
+ [S7c] Δ log(PPI) ~ Δ (CPShock × intensity)  |  year FE (all sec)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 1,946
+Fixed-effects: year: 14
+Standard-errors: Clustered (nace4d) 
+                Estimate Std. Error   t value Pr(>|t|) 
+d_cpshock_x_int -2.00696    2.87774 -0.697407  0.48672 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.042135     Adj. R2: 0.142125
+                 Within R2: 1.687e-4
+
+----------------------------------------------------------------
+ [S7d] log(PPI) ~ CPShock × int + L1 + L2  |  nace4d + year
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 1,807
+Fixed-effects: nace4d: 139,  year: 13
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error   t value Pr(>|t|) 
+cpshock_x_int     6.748462    11.0447  0.611012  0.54220 
+l1_cpshock_x_int  0.365925    14.3275  0.025540  0.97966 
+l2_cpshock_x_int -4.358290    10.2855 -0.423732  0.67242 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.062513     Adj. R2: 0.703974
+                 Within R2: 3.99e-4 
+
+Cumulative (t + L1 + L2): 2.7561  (SE 34.3928, z = 0.08, p = 0.9361)
+
+----------------------------------------------------------------
+ First-stage diagnostic: does CPShock × intensity predict exp_direct?
+   exp_direct_{s,t} ~ CPShock × intensity | nace4d + year
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: exposure_direct_total
+Observations: 2,085
+Fixed-effects: nace4d: 139,  year: 15
+Standard-errors: Clustered (nace4d) 
+               Estimate Std. Error   t value Pr(>|t|) 
+cpshock_x_int -0.002157   0.113696 -0.018972  0.98489 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.004459     Adj. R2: 0.00598 
+                 Within R2: 6.161e-9
+
+----------------------------------------------------------------
+ [S8a] log(PPI) ~ exp_direct  (IV: CPShock × intensity)  |  nace4d + year
+       Additionally purges EUA_t of euro-area macro/oil co-movement.
+----------------------------------------------------------------
+S8a failed: in feols(env = current_env, xwx = UXtUX, xwy = UXty,...: 
+The only variable, 'fit_exposure_direct_total', is collinear with the fixed
+effects. Without doubt, your model is misspecified. 
+
+----------------------------------------------------------------
+ [S8b] IV same as S8a, ETS sectors only
+----------------------------------------------------------------
+TSLS estimation
+|- D.V.   : log_ppi
+|- Endo.  : exposure_direct_total
+|- Instr. : cpshock_x_int
+|
+|=> Second Stage
+|   Dep. Var.: log_ppi
+Observations: 780
+Fixed-effects: nace4d: 52,  year: 15
+Standard-errors: Clustered (nace4d) 
+                          Estimate Std. Error   t value Pr(>|t|) 
+fit_exposure_direct_total -74.1509    327.384 -0.226495  0.82172 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.533892     Adj. R2: 0.684838
+                 Within R2: 4.893e-5
+F-test (1st stage), exposure_direct_total: stat = 0.00074, p = 0.978369, on 1 and 764 DoF.
+                               Wu-Hausman: stat = 0.03423, p = 0.853262, on 1 and 712 DoF.
+
+----------------------------------------------------------------
+ First-stage for Δexposure: Δ exp_direct ~ CPShock × int  |  year FE
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_exp_dir
+Observations: 1,946
+Fixed-effects: year: 14
+Standard-errors: Clustered (nace4d) 
+               Estimate Std. Error  t value Pr(>|t|)    
+cpshock_x_int -0.098764   0.047296 -2.08821 0.038617 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.004762     Adj. R2: 8.784e-4
+                 Within R2: 1.02e-5 
+
+----------------------------------------------------------------
+ [S8c] Δ log(PPI) ~ Δ exp_direct  (IV: CPShock × intensity)  |  year FE
+       Flow-on-flow match; should improve over S8 levels IV
+----------------------------------------------------------------
+TSLS estimation
+|- D.V.   : d_log_ppi
+|- Endo.  : d_exp_dir
+|- Instr. : cpshock_x_int
+|
+|=> Second Stage
+|   Dep. Var.: d_log_ppi
+Observations: 1,946
+Fixed-effects: year: 14
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error t value Pr(>|t|)    
+fit_d_exp_dir  168.808    82.8551 2.03739 0.043523 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.805295     Adj. R2: 0.145165
+                 Within R2: 0.003712
+F-test (1st stage), d_exp_dir: stat = 0.01969, p = 0.888411, on 1 and 1,931 DoF.
+                   Wu-Hausman: stat = 7.19590, p = 0.007369, on 1 and 1,930 DoF.
+
+----------------------------------------------------------------
+ First-stage: exp_direct ~ cum_CPShock × int  |  nace4d + year
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: exposure_direct_total
+Observations: 2,085
+Fixed-effects: nace4d: 139,  year: 15
+Standard-errors: Clustered (nace4d) 
+                   Estimate Std. Error  t value Pr(>|t|) 
+cum_cpshock_x_int -0.162048   0.140788 -1.15101  0.25172 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.004459     Adj. R2: 0.006006
+                 Within R2: 2.617e-5
+
+----------------------------------------------------------------
+ [S9a] log(PPI) ~ cum_CPShock × intensity  (RF)  |  nace4d + year (all)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,085
+Fixed-effects: nace4d: 139,  year: 15
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error  t value  Pr(>|t|)    
+cum_cpshock_x_int -48.5681    14.7064 -3.30251 0.0012204 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.064134     Adj. R2: 0.704944
+                 Within R2: 0.011239
+
+----------------------------------------------------------------
+ [S9b] log(PPI) ~ cum_CPShock × intensity  (RF)  |  nace4d + year (ETS)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 780
+Fixed-effects: nace4d: 52,  year: 15
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error  t value  Pr(>|t|)    
+cum_cpshock_x_int -51.3776    15.5579 -3.30234 0.0017565 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.074302     Adj. R2: 0.691706
+                 Within R2: 0.02184 
+
+----------------------------------------------------------------
+ [S9c] log(PPI) ~ exp_direct  (IV: cum_CPShock × int)  |  nace4d + year
+----------------------------------------------------------------
+TSLS estimation
+|- D.V.   : log_ppi
+|- Endo.  : exposure_direct_total
+|- Instr. : cum_cpshock_x_int
+|
+|=> Second Stage
+|   Dep. Var.: log_ppi
+Observations: 2,085
+Fixed-effects: nace4d: 139,  year: 15
+Standard-errors: Clustered (nace4d) 
+                          Estimate Std. Error t value Pr(>|t|) 
+fit_exposure_direct_total  299.715    233.051 1.28605  0.20058 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 1.34199     Adj. R2: 0.704944
+                Within R2: 0.011239
+F-test (1st stage), exposure_direct_total: stat =  0.05415, p = 0.816011, on 1 and 2,069 DoF.
+                               Wu-Hausman: stat = 22.14958, p = 2.701e-6, on 1 and 1,930 DoF.
+
+----------------------------------------------------------------
+ [S9d] log(PPI) ~ exp_direct  (IV: cum_CPShock × int)  |  nace4d + year (ETS)
+----------------------------------------------------------------
+TSLS estimation
+|- D.V.   : log_ppi
+|- Endo.  : exposure_direct_total
+|- Instr. : cum_cpshock_x_int
+|
+|=> Second Stage
+|   Dep. Var.: log_ppi
+Observations: 780
+Fixed-effects: nace4d: 52,  year: 15
+Standard-errors: Clustered (nace4d) 
+                          Estimate Std. Error  t value Pr(>|t|) 
+fit_exposure_direct_total  662.037    1555.97 0.425481  0.67228 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 4.78874     Adj. R2: 0.691706
+                Within R2: 0.02184 
+F-test (1st stage), exposure_direct_total: stat =  0.00412, p = 0.948841, on 1 and 764 DoF.
+                               Wu-Hausman: stat = 16.08257, p = 6.704e-5, on 1 and 712 DoF.
+
+----------------------------------------------------------------
+ [S10] Local projections (Kaenzig 2025 eq 10 panel):
+       log_ppi_{s,t+h} ~ CPShock_t × intensity_base_s | nace4d + year
+----------------------------------------------------------------
+
+  sample = all, h = 0
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,085
+Fixed-effects: nace4d: 139,  year: 15
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error   t value Pr(>|t|) 
+cpshock_x_int  -3.1556    4.63901 -0.680232   0.4975 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.064496     Adj. R2: 0.701609
+                 Within R2: 6.303e-5
+
+  sample = all, h = 1
+OLS estimation, Dep. Var.: log_ppi_h1
+Observations: 1,946
+Fixed-effects: nace4d: 139,  year: 14
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error  t value   Pr(>|t|)    
+cpshock_x_int -11.7082    2.77831 -4.21416 4.5044e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.063404     Adj. R2: 0.700851
+                 Within R2: 9.61e-4 
+
+  sample = all, h = 2
+OLS estimation, Dep. Var.: log_ppi_h2
+Observations: 1,807
+Fixed-effects: nace4d: 139,  year: 13
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error   t value Pr(>|t|) 
+cpshock_x_int -4.04855    5.74861 -0.704266  0.48245 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.062521     Adj. R2: 0.70425 
+                 Within R2: 1.205e-4
+
+  sample = all, h = 3
+OLS estimation, Dep. Var.: log_ppi_h3
+Observations: 1,668
+Fixed-effects: nace4d: 139,  year: 12
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error  t value  Pr(>|t|)    
+cpshock_x_int -9.78342    3.30135 -2.96346 0.0035841 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.060037     Adj. R2: 0.731678
+                 Within R2: 8.194e-4
+
+  sample = ETS-only, h = 0
+OLS estimation, Dep. Var.: log_ppi
+Observations: 780
+Fixed-effects: nace4d: 52,  year: 15
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error   t value Pr(>|t|) 
+cpshock_x_int -2.10978    4.54711 -0.463982  0.64464 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.075125     Adj. R2: 0.684838
+                 Within R2: 4.893e-5
+
+  sample = ETS-only, h = 1
+OLS estimation, Dep. Var.: log_ppi_h1
+Observations: 728
+Fixed-effects: nace4d: 52,  year: 14
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error  t value   Pr(>|t|)    
+cpshock_x_int  -11.215    2.82022 -3.97663 0.00022109 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.073675     Adj. R2: 0.690934
+                 Within R2: 0.001538
+
+  sample = ETS-only, h = 2
+OLS estimation, Dep. Var.: log_ppi_h2
+Observations: 676
+Fixed-effects: nace4d: 52,  year: 13
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error  t value Pr(>|t|) 
+cpshock_x_int -6.35419    6.31496 -1.00621  0.31906 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.0721     Adj. R2: 0.702984
+               Within R2: 5.255e-4
+
+  sample = ETS-only, h = 3
+OLS estimation, Dep. Var.: log_ppi_h3
+Observations: 624
+Fixed-effects: nace4d: 52,  year: 12
+Standard-errors: Clustered (nace4d) 
+              Estimate Std. Error t value  Pr(>|t|)    
+cpshock_x_int -12.5516    3.89524 -3.2223 0.0022176 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.068541     Adj. R2: 0.738368
+                 Within R2: 0.002434
+
+Local projections summary:
+          h       coef       se        lo        hi    n   sample
+Estimate  0  -3.155598 4.639005 -12.24805  5.936852 2085      all
+Estimate1 1 -11.708247 2.778313 -17.15374 -6.262753 1946      all
+Estimate2 2  -4.048549 5.748609 -15.31582  7.218725 1807      all
+Estimate3 3  -9.783416 3.301349 -16.25406 -3.312771 1668      all
+Estimate4 0  -2.109778 4.547111 -11.02212  6.802560  780 ETS-only
+Estimate5 1 -11.214960 2.820218 -16.74259 -5.687333  728 ETS-only
+Estimate6 2  -6.354187 6.314962 -18.73151  6.023139  676 ETS-only
+Estimate7 3 -12.551621 3.895236 -20.18628 -4.916958  624 ETS-only
+
+
+================================================================
+ S7-S10 Shock-based robustness  (RHS = Kaenzig structural Shock)
+================================================================
+
+----------------------------------------------------------------
+ [S7a-shk] log(PPI) ~ Shock × intensity  |  nace4d + year (all)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,085
+Fixed-effects: nace4d: 139,  year: 15
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error  t value Pr(>|t|) 
+cpshock_shk_x_int  1.27558    1.72149 0.740973  0.45997 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.06449     Adj. R2: 0.701657
+                Within R2: 2.247e-4
+
+----------------------------------------------------------------
+ [S7b-shk] log(PPI) ~ Shock × intensity  |  nace4d + year (ETS)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 780
+Fixed-effects: nace4d: 52,  year: 15
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error  t value Pr(>|t|) 
+cpshock_shk_x_int 0.364116    1.53694 0.236909  0.81368 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.075126     Adj. R2: 0.684832
+                 Within R2: 3.179e-5
+
+----------------------------------------------------------------
+ [S7c-shk] Δ log(PPI) ~ Δ(Shock × intensity)  |  year FE (all)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: d_log_ppi
+Observations: 1,946
+Fixed-effects: year: 14
+Standard-errors: Clustered (nace4d) 
+                    Estimate Std. Error  t value Pr(>|t|)    
+d_cpshock_shk_x_int -1.34824   0.542013 -2.48747 0.014057 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.042112     Adj. R2: 0.143062
+                 Within R2: 0.001261
+
+----------------------------------------------------------------
+ [S7d-shk] log(PPI) ~ Shock × int + L1 + L2  |  nace4d + year
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 1,807
+Fixed-effects: nace4d: 139,  year: 13
+Standard-errors: Clustered (nace4d) 
+                      Estimate Std. Error   t value   Pr(>|t|)    
+cpshock_shk_x_int    -0.253668    1.39299 -0.182103 8.5577e-01    
+l1_cpshock_shk_x_int  4.870193    1.67974  2.899373 4.3517e-03 ** 
+l2_cpshock_shk_x_int  4.607390    1.11312  4.139183 6.0337e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.0623     Adj. R2: 0.70599 
+               Within R2: 0.007204
+
+Cumulative (t + L1 + L2): 9.2239  (SE 3.6798, z = 2.51, p = 0.0122)
+
+----------------------------------------------------------------
+ [S10-shk] Local projections with Shock RHS (h = 0, 1, 2, 3)
+----------------------------------------------------------------
+
+  sample = all, h = 0
+OLS estimation, Dep. Var.: log_ppi
+Observations: 2,085
+Fixed-effects: nace4d: 139,  year: 15
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error  t value Pr(>|t|) 
+cpshock_shk_x_int  1.27558    1.72149 0.740973  0.45997 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.06449     Adj. R2: 0.701657
+                Within R2: 2.247e-4
+
+  sample = all, h = 1
+OLS estimation, Dep. Var.: log_ppi_h1
+Observations: 1,946
+Fixed-effects: nace4d: 139,  year: 14
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error t value  Pr(>|t|)    
+cpshock_shk_x_int  5.08911     1.7098 2.97644 0.0034447 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.06331     Adj. R2: 0.701741
+                Within R2: 0.003931
+
+  sample = all, h = 2
+OLS estimation, Dep. Var.: log_ppi_h2
+Observations: 1,807
+Fixed-effects: nace4d: 139,  year: 13
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error t value   Pr(>|t|)    
+cpshock_shk_x_int  4.77283    1.19466 3.99515 0.00010473 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.062425     Adj. R2: 0.705162
+                 Within R2: 0.003204
+
+  sample = all, h = 3
+OLS estimation, Dep. Var.: log_ppi_h3
+Observations: 1,668
+Fixed-effects: nace4d: 139,  year: 12
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error t value   Pr(>|t|)    
+cpshock_shk_x_int  3.85304   0.964864 3.99335 0.00010544 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.059992     Adj. R2: 0.732085
+                 Within R2: 0.002338
+
+  sample = ETS-only, h = 0
+OLS estimation, Dep. Var.: log_ppi
+Observations: 780
+Fixed-effects: nace4d: 52,  year: 15
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error  t value Pr(>|t|) 
+cpshock_shk_x_int 0.364116    1.53694 0.236909  0.81368 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.075126     Adj. R2: 0.684832
+                 Within R2: 3.179e-5
+
+  sample = ETS-only, h = 1
+OLS estimation, Dep. Var.: log_ppi_h1
+Observations: 728
+Fixed-effects: nace4d: 52,  year: 14
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error t value  Pr(>|t|)    
+cpshock_shk_x_int  4.91364    1.60919 3.05349 0.0035895 ** 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.073496     Adj. R2: 0.692436
+                 Within R2: 0.006391
+
+  sample = ETS-only, h = 2
+OLS estimation, Dep. Var.: log_ppi_h2
+Observations: 676
+Fixed-effects: nace4d: 52,  year: 13
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error t value   Pr(>|t|)    
+cpshock_shk_x_int   5.1529    1.24976  4.1231 0.00013779 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.07188     Adj. R2: 0.704793
+                Within R2: 0.006613
+
+  sample = ETS-only, h = 3
+OLS estimation, Dep. Var.: log_ppi_h3
+Observations: 624
+Fixed-effects: nace4d: 52,  year: 12
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error t value Pr(>|t|)    
+cpshock_shk_x_int  5.11813    1.27299 4.02057 0.000192 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.068369     Adj. R2: 0.739682
+                 Within R2: 0.007443
+
+Shock-based LP summary:
+          h      coef        se        lo       hi    n   sample
+Estimate  0 1.2755785 1.7214924 -2.098547 4.649704 2085      all
+Estimate1 1 5.0891128 1.7098004  1.737904 8.440322 1946      all
+Estimate2 2 4.7728345 1.1946583  2.431304 7.114365 1807      all
+Estimate3 3 3.8530373 0.9648637  1.961905 5.744170 1668      all
+Estimate4 0 0.3641162 1.5369449 -2.648296 3.376528  780 ETS-only
+Estimate5 1 4.9136372 1.6091856  1.759633 8.067641  728 ETS-only
+Estimate6 2 5.1528992 1.2497630  2.703364 7.602435  676 ETS-only
+Estimate7 3 5.1181307 1.2729871  2.623076 7.613185  624 ETS-only
+
+
+================================================================
+ S11 — Phase IV CPShock on 2020-2024 panel
+================================================================
+Annual CPShock_y (Phase IV, log-return normalization):
+# A tibble: 5 × 4
+   year cpshock_logret cpshock_pct n_events
+  <dbl>          <dbl>       <dbl>    <dbl>
+1  2020         17.1        17.5         13
+2  2021          8.25        8.47        10
+3  2022         -0.320      -0.210        6
+4  2023         -2.81       -2.31        13
+5  2024          0.264       0.284        3
+
+Panel P4: 695 rows, 139 sectors, years 2020-2024; 31 sectors with intensity > 0
+----------------------------------------------------------------
+ [S11a] log(PPI) ~ CPShock_p4(log-ret) × intensity  |  nace4d + year (all)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 695
+Fixed-effects: nace4d: 139,  year: 5
+Standard-errors: Clustered (nace4d) 
+                 Estimate Std. Error  t value Pr(>|t|)    
+cpshock_x_int_p4 -2.20141    1.26889 -1.73491 0.084989 .  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.098061     Adj. R2: 0.802821
+                 Within R2: 0.002699
+
+----------------------------------------------------------------
+ [S11b] log(PPI) ~ CPShock_p4(log-ret) × intensity  |  nace4d + year (ETS)
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 260
+Fixed-effects: nace4d: 52,  year: 5
+Standard-errors: Clustered (nace4d) 
+                 Estimate Std. Error  t value Pr(>|t|)    
+cpshock_x_int_p4 -2.39299     1.2678 -1.88752 0.064787 .  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.096853     Adj. R2: 0.839289
+                 Within R2: 0.007662
+
+----------------------------------------------------------------
+ [S11c] log(PPI) ~ CPShock_p4(%-change) × intensity  |  nace4d + year (all)
+        BKR Figure B.3 alternative scaling
+----------------------------------------------------------------
+OLS estimation, Dep. Var.: log_ppi
+Observations: 695
+Fixed-effects: nace4d: 139,  year: 5
+Standard-errors: Clustered (nace4d) 
+                    Estimate Std. Error  t value Pr(>|t|)    
+cpshock_x_int_p4pct  -2.1678    1.26233 -1.71729 0.088169 .  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.098063     Adj. R2: 0.802811
+                 Within R2: 0.002647
+
+----------------------------------------------------------------
+ [S11d] LP Phase IV: log(PPI)_{t+h} ~ CPShock_p4 × int  (h = 0, 1, 2)
+----------------------------------------------------------------
+
+  sample = all, h = 0
+OLS estimation, Dep. Var.: log_ppi
+Observations: 695
+Fixed-effects: nace4d: 139,  year: 5
+Standard-errors: Clustered (nace4d) 
+                 Estimate Std. Error  t value Pr(>|t|)    
+cpshock_x_int_p4 -2.20141    1.26889 -1.73491 0.084989 .  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.098061     Adj. R2: 0.802821
+                 Within R2: 0.002699
+
+  sample = all, h = 1
+OLS estimation, Dep. Var.: log_ppi_h1
+Observations: 556
+Fixed-effects: nace4d: 139,  year: 4
+Standard-errors: Clustered (nace4d) 
+                 Estimate Std. Error  t value Pr(>|t|)    
+cpshock_x_int_p4 -2.49041    1.32108 -1.88513 0.061514 .  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.086157     Adj. R2: 0.838397
+                 Within R2: 0.005112
+
+  sample = all, h = 2
+OLS estimation, Dep. Var.: log_ppi_h2
+Observations: 417
+Fixed-effects: nace4d: 139,  year: 3
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error   t value Pr(>|t|) 
+cpshock_x_int_p4 -0.574774    2.14956 -0.267392  0.78957 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.07889     Adj. R2: 0.851859
+                Within R2: 2.694e-4
+
+  sample = ETS-only, h = 0
+OLS estimation, Dep. Var.: log_ppi
+Observations: 260
+Fixed-effects: nace4d: 52,  year: 5
+Standard-errors: Clustered (nace4d) 
+                 Estimate Std. Error  t value Pr(>|t|)    
+cpshock_x_int_p4 -2.39299     1.2678 -1.88752 0.064787 .  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.096853     Adj. R2: 0.839289
+                 Within R2: 0.007662
+
+  sample = ETS-only, h = 1
+OLS estimation, Dep. Var.: log_ppi_h1
+Observations: 208
+Fixed-effects: nace4d: 52,  year: 4
+Standard-errors: Clustered (nace4d) 
+                 Estimate Std. Error  t value Pr(>|t|)    
+cpshock_x_int_p4 -2.51935    1.34774 -1.86932 0.067326 .  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.093451     Adj. R2: 0.844792
+                 Within R2: 0.01042 
+
+  sample = ETS-only, h = 2
+OLS estimation, Dep. Var.: log_ppi_h2
+Observations: 156
+Fixed-effects: nace4d: 52,  year: 3
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error  t value Pr(>|t|) 
+cpshock_x_int_p4 -0.212606     2.1404 -0.09933  0.92127 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.081877     Adj. R2: 0.871992
+                 Within R2: 8.064e-5
+
+Phase IV LP summary:
+          h       coef       se        lo         hi   n   sample
+Estimate  0 -2.2014117 1.268890 -4.688435 0.28561215 695      all
+Estimate1 1 -2.4904080 1.321078 -5.079721 0.09890516 556      all
+Estimate2 2 -0.5747741 2.149558 -4.787908 3.63836015 417      all
+Estimate3 0 -2.3929867 1.267796 -4.877867 0.09189321 260 ETS-only
+Estimate4 1 -2.5193498 1.347739 -5.160918 0.12221814 208 ETS-only
+Estimate5 2 -0.2126063 2.140403 -4.407797 3.98258457 156 ETS-only
+
+
 ================================================================
  DIAGNOSTIC: same specs with base-period-fixed-denominator exposure
  exposure_alt_{s,t} = (shortage_{s,t} * EUA_t) / mean_cost_{s,2010-12}
@@ -483,6 +1144,49 @@ Specification                                           |     coef |      se |  
 [S6c] exp_dir + L1 + L2 | nace4d[t]+year: exp_dir       |   0.1532 |  0.0568 |   2.70 |  2224
 [S6c] exp_dir + L1 + L2 | nace4d[t]+year: L1            |   0.1279 |  0.0887 |   1.44 |  2224
 [S6c] exp_dir + L1 + L2 | nace4d[t]+year: L2            |  -0.3288 |  0.1180 |  -2.79 |  2224
+[S7a] log(PPI) ~ CPShock*int (all)                      |  -3.1556 |  4.6390 |  -0.68 |  2085
+[S7b] log(PPI) ~ CPShock*int (ETS only)                 |  -2.1098 |  4.5471 |  -0.46 |   780
+[S7c] d_log(PPI) ~ d(CPShock*int)                       |  -2.0070 |  2.8777 |  -0.70 |  1946
+[S7d] CPShock*int + L1 + L2: t                          |   6.7485 | 11.0447 |   0.61 |  1807
+[S7d] CPShock*int + L1 + L2: L1                         |   0.3659 | 14.3275 |   0.03 |  1807
+[S7d] CPShock*int + L1 + L2: L2                         |  -4.3583 | 10.2855 |  -0.42 |  1807
+[S8b] IV exp_dir ~ CPShock*int (ETS only)               | -74.1509 | 327.3841 |  -0.23 |   780
+[S8c] d_log(PPI) IV d_exp (CPShock*int)                 | 168.8079 | 82.8551 |   2.04 |  1946
+[S9a] log(PPI) ~ cum_CPShock*int (all)                  | -48.5681 | 14.7064 |  -3.30 |  2085
+[S9b] log(PPI) ~ cum_CPShock*int (ETS)                  | -51.3776 | 15.5579 |  -3.30 |   780
+[S9c] IV exp_dir ~ cum_CPShock*int (all)                | 299.7153 | 233.0513 |   1.29 |  2085
+[S9d] IV exp_dir ~ cum_CPShock*int (ETS)                | 662.0366 | 1555.9716 |   0.43 |   780
+[S10] LP h=0 (all)                                      |  -3.1556 |  4.6390 |  -0.68 |  2085
+[S10] LP h=1 (all)                                      | -11.7082 |  2.7783 |  -4.21 |  1946
+[S10] LP h=2 (all)                                      |  -4.0485 |  5.7486 |  -0.70 |  1807
+[S10] LP h=3 (all)                                      |  -9.7834 |  3.3013 |  -2.96 |  1668
+[S10] LP h=0 (ETS-only)                                 |  -2.1098 |  4.5471 |  -0.46 |   780
+[S10] LP h=1 (ETS-only)                                 | -11.2150 |  2.8202 |  -3.98 |   728
+[S10] LP h=2 (ETS-only)                                 |  -6.3542 |  6.3150 |  -1.01 |   676
+[S10] LP h=3 (ETS-only)                                 | -12.5516 |  3.8952 |  -3.22 |   624
+[S7a-shk] log(PPI) ~ Shock*int (all)                    |   1.2756 |  1.7215 |   0.74 |  2085
+[S7b-shk] log(PPI) ~ Shock*int (ETS)                    |   0.3641 |  1.5369 |   0.24 |   780
+[S7c-shk] d_log(PPI) ~ d(Shock*int)                     |  -1.3482 |  0.5420 |  -2.49 |  1946
+[S7d-shk] Shock*int + L1 + L2: t                        |  -0.2537 |  1.3930 |  -0.18 |  1807
+[S7d-shk] Shock*int + L1 + L2: L1                       |   4.8702 |  1.6797 |   2.90 |  1807
+[S7d-shk] Shock*int + L1 + L2: L2                       |   4.6074 |  1.1131 |   4.14 |  1807
+[S10-shk] LP h=0 (all)                                  |   1.2756 |  1.7215 |   0.74 |  2085
+[S10-shk] LP h=1 (all)                                  |   5.0891 |  1.7098 |   2.98 |  1946
+[S10-shk] LP h=2 (all)                                  |   4.7728 |  1.1947 |   4.00 |  1807
+[S10-shk] LP h=3 (all)                                  |   3.8530 |  0.9649 |   3.99 |  1668
+[S10-shk] LP h=0 (ETS-only)                             |   0.3641 |  1.5369 |   0.24 |   780
+[S10-shk] LP h=1 (ETS-only)                             |   4.9136 |  1.6092 |   3.05 |   728
+[S10-shk] LP h=2 (ETS-only)                             |   5.1529 |  1.2498 |   4.12 |   676
+[S10-shk] LP h=3 (ETS-only)                             |   5.1181 |  1.2730 |   4.02 |   624
+[S11a] log(PPI) ~ CPShock_p4*int (all)                  |  -2.2014 |  1.2689 |  -1.73 |   695
+[S11b] log(PPI) ~ CPShock_p4*int (ETS)                  |  -2.3930 |  1.2678 |  -1.89 |   260
+[S11c] log(PPI) ~ CPShock_p4(%)*int (all)               |  -2.1678 |  1.2623 |  -1.72 |   695
+[S11d] LP-P4 h=0 (all)                                  |  -2.2014 |  1.2689 |  -1.73 |   695
+[S11d] LP-P4 h=1 (all)                                  |  -2.4904 |  1.3211 |  -1.89 |   556
+[S11d] LP-P4 h=2 (all)                                  |  -0.5748 |  2.1496 |  -0.27 |   417
+[S11d] LP-P4 h=0 (ETS-only)                             |  -2.3930 |  1.2678 |  -1.89 |   260
+[S11d] LP-P4 h=1 (ETS-only)                             |  -2.5193 |  1.3477 |  -1.87 |   208
+[S11d] LP-P4 h=2 (ETS-only)                             |  -0.2126 |  2.1404 |  -0.10 |   156
 [A1a] log(PPI) ~ exp_alt (all)                          |  -0.6080 |  0.0973 |  -6.25 |  2502
 [A1b] log(PPI) ~ exp_alt (ETS only)                     |  -0.6603 |  0.0880 |  -7.50 |   936
 [A5a] log(PPI) ~ exp_alt | nace2d^year (all)            |  -0.4343 |  0.0828 |  -5.24 |  2466
@@ -506,6 +1210,8 @@ Specification                                           | cum coef |      se |  
 [S5c] sum direct (lev) | nace2d^year                    |  -0.2158 |  0.1807 |  -1.19 | 0.2323 | 2192
 [S5e] sum direct (diff) | nace2d^year                   |  -0.1002 |  0.0806 |  -1.24 | 0.2139 | 2055
 [S6c] sum direct (lev) | nace4d[t]+year                 |  -0.0476 |  0.0807 |  -0.59 | 0.5552 | 2224
+[S7d] sum CPShock*int lags (lev)                        |   2.7561 | 34.3928 |   0.08 | 0.9361 | 1807
+[S7d-shk] sum Shock*int lags (lev)                      |   9.2239 |  3.6798 |   2.51 | 0.0122 | 1807
 [A2c] sum alt-exp lags (first diff)                     |  -0.2729 |  0.1111 |  -2.46 | 0.0140 | 2085
 
 ----------------------------------------------------------------

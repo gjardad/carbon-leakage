@@ -457,6 +457,557 @@ cat(sprintf("\nCumulative (t + L1 + L2): %.4f  (SE %.4f, z = %.2f, p = %.4f)\n",
 cat("\n")
 
 # ===========================================================================
+# S7 / S8: Känzig (2025 JMP) CPShock identification
+#
+# Motivation: even though EUA_t is exogenous to Belgian-sector-specific
+# shocks (small-country argument), it may still correlate with euro-area-
+# wide macro variables (gas, oil, demand) that also affect Belgian PPIs.
+# Känzig's refined carbon policy surprise orthogonalizes daily EUA moves
+# against pre-event macro/financial/oil news, so its variation reflects
+# ETS regulatory decisions (cap changes, NAP approvals, MSR) rather than
+# macro co-movement.
+#
+# Identification: interact aggregate CPShock_t (Känzig 2025) with each
+# NACE4d sector's base-period shortage intensity. Sector FE absorb the
+# time-invariant intensity; year FE absorb the aggregate CPShock_t and
+# all other aggregate confounders. γ is identified purely from within-
+# year cross-sector variation in how much the shock bites into costs.
+#
+# Reduced-form specs:
+#   S7a. log(PPI) ~ CPShock × intensity | nace4d + year (all sec)
+#   S7b. same, ETS sectors only
+#   S7c. Δ log(PPI) ~ Δ(CPShock × intensity) | year FE
+#   S7d. distributed lag in levels: t + L1 + L2
+#
+# IV spec (Strategy B, synthesis doc):
+#   S8a. log(PPI) ~ exp_direct  |  nace4d + year  |  exp_direct ~ CPShock×int
+#   S8b. same, ETS sectors only
+#
+# Base period for sector intensity: 2013-2016 (post-auctioning, pre-MSR).
+# Uses exposure_alt so the base-period cost denominator is already fixed
+# to 2010-2012 — no mechanical drift in the intensity weights.
+#
+# Sample: 2005-2019 (Känzig JMP window; Surprise series ends 2019M12).
+# BKR 2024 extension deferred; will revisit if S7/S8 results are promising.
+# ===========================================================================
+
+# Load Kaenzig annual surprise series
+load(file.path(OUT_DATA, "cpshock_annual.RData"))
+
+# Base-period shortage intensity per NACE4d sector
+intensity_base_df <- panel %>%
+  filter(year %in% 2013:2016) %>%
+  group_by(nace4d) %>%
+  summarise(intensity_base = mean(exposure_alt_total, na.rm = TRUE),
+            .groups = "drop")
+
+# Merge, build interaction, restrict to Kaenzig window.
+# Two RHS variants:
+#   cpshock_surprise = raw refined event-day surprise (external instrument)
+#   cpshock_shock    = VAR-identified structural shock (Kaenzig Step 5 output)
+# Our Kaenzig-HICP replication (separate script) shows that the Shock column
+# reproduces his published IRF magnitudes very closely, while Surprise is
+# noisier. We run both variants for our sector-PPI specs.
+panel_cp <- panel %>%
+  left_join(cpshock_annual %>% select(year, cpshock_surprise, cpshock_shock),
+            by = "year") %>%
+  left_join(intensity_base_df, by = "nace4d") %>%
+  mutate(
+    intensity_base     = coalesce(intensity_base, 0),
+    cpshock_x_int      = cpshock_surprise * intensity_base,
+    cpshock_shk_x_int  = cpshock_shock    * intensity_base
+  ) %>%
+  filter(year >= 2005, year <= 2019) %>%
+  arrange(nace4d, year) %>%
+  group_by(nace4d) %>%
+  mutate(
+    # Surprise-based lags/diffs
+    d_cpshock_x_int       = cpshock_x_int - lag(cpshock_x_int),
+    l1_cpshock_x_int      = lag(cpshock_x_int, 1),
+    l2_cpshock_x_int      = lag(cpshock_x_int, 2),
+    # Shock-based lags/diffs
+    d_cpshock_shk_x_int   = cpshock_shk_x_int - lag(cpshock_shk_x_int),
+    l1_cpshock_shk_x_int  = lag(cpshock_shk_x_int, 1),
+    l2_cpshock_shk_x_int  = lag(cpshock_shk_x_int, 2)
+  ) %>%
+  ungroup()
+
+cat(sprintf(
+  "\nCPShock panel: %d rows, %d NACE4d, years %d-%d; %d sectors with intensity_base > 0\n",
+  nrow(panel_cp), n_distinct(panel_cp$nace4d),
+  min(panel_cp$year), max(panel_cp$year),
+  n_distinct(panel_cp$nace4d[panel_cp$intensity_base > 0])))
+
+# --- S7a. Reduced form, levels, all sectors ---
+cat("----------------------------------------------------------------\n")
+cat(" [S7a] log(PPI) ~ CPShock_t × intensity_base_s  |  nace4d + year (all sec)\n")
+cat("----------------------------------------------------------------\n")
+m7a <- feols(log_ppi ~ cpshock_x_int | nace4d + year,
+             data = panel_cp %>% filter(!is.na(log_ppi)),
+             cluster = ~nace4d)
+print(summary(m7a))
+cat("\n")
+
+# --- S7b. Reduced form, levels, ETS sectors only ---
+cat("----------------------------------------------------------------\n")
+cat(" [S7b] log(PPI) ~ CPShock × intensity  |  nace4d + year (ETS sec only)\n")
+cat("----------------------------------------------------------------\n")
+m7b <- feols(log_ppi ~ cpshock_x_int | nace4d + year,
+             data = panel_cp %>%
+               filter(!is.na(log_ppi), nace4d %in% ets_sectors),
+             cluster = ~nace4d)
+print(summary(m7b))
+cat("\n")
+
+# --- S7c. Reduced form, first differences, all sectors ---
+cat("----------------------------------------------------------------\n")
+cat(" [S7c] Δ log(PPI) ~ Δ (CPShock × intensity)  |  year FE (all sec)\n")
+cat("----------------------------------------------------------------\n")
+m7c <- feols(d_log_ppi ~ d_cpshock_x_int | year,
+             data = panel_cp %>% filter(!is.na(d_log_ppi),
+                                         !is.na(d_cpshock_x_int)),
+             cluster = ~nace4d)
+print(summary(m7c))
+cat("\n")
+
+# --- S7d. Distributed lag in levels, h = 0, 1, 2 ---
+cat("----------------------------------------------------------------\n")
+cat(" [S7d] log(PPI) ~ CPShock × int + L1 + L2  |  nace4d + year\n")
+cat("----------------------------------------------------------------\n")
+m7d <- feols(log_ppi ~ cpshock_x_int + l1_cpshock_x_int + l2_cpshock_x_int
+                     | nace4d + year,
+             data = panel_cp %>% filter(!is.na(log_ppi),
+                                         !is.na(l1_cpshock_x_int),
+                                         !is.na(l2_cpshock_x_int)),
+             cluster = ~nace4d)
+print(summary(m7d))
+cum_7d <- linear_combo(m7d,
+  c("cpshock_x_int", "l1_cpshock_x_int", "l2_cpshock_x_int"))
+cat(sprintf("\nCumulative (t + L1 + L2): %.4f  (SE %.4f, z = %.2f, p = %.4f)\n",
+            cum_7d$estimate, cum_7d$std.error, cum_7d$statistic, cum_7d$p.value))
+cat("\n")
+
+# --- First-stage diagnostic for the IV design ---
+cat("----------------------------------------------------------------\n")
+cat(" First-stage diagnostic: does CPShock × intensity predict exp_direct?\n")
+cat("   exp_direct_{s,t} ~ CPShock × intensity | nace4d + year\n")
+cat("----------------------------------------------------------------\n")
+m_fs <- feols(exposure_direct_total ~ cpshock_x_int | nace4d + year,
+              data = panel_cp %>% filter(!is.na(log_ppi)),
+              cluster = ~nace4d)
+print(summary(m_fs))
+cat("\n")
+
+# --- S8. IV: exp_direct instrumented by CPShock × intensity ---
+# Guarded with tryCatch because very weak first stage can make the fitted
+# endogenous collinear with FE.
+cat("----------------------------------------------------------------\n")
+cat(" [S8a] log(PPI) ~ exp_direct  (IV: CPShock × intensity)  |  nace4d + year\n")
+cat("       Additionally purges EUA_t of euro-area macro/oil co-movement.\n")
+cat("----------------------------------------------------------------\n")
+m8a <- tryCatch(
+  feols(log_ppi ~ 1 | nace4d + year |
+          exposure_direct_total ~ cpshock_x_int,
+        data = panel_cp %>% filter(!is.na(log_ppi)),
+        cluster = ~nace4d),
+  error = function(e) { cat("S8a failed:", conditionMessage(e), "\n"); NULL })
+if (!is.null(m8a)) print(summary(m8a))
+cat("\n")
+
+cat("----------------------------------------------------------------\n")
+cat(" [S8b] IV same as S8a, ETS sectors only\n")
+cat("----------------------------------------------------------------\n")
+m8b <- tryCatch(
+  feols(log_ppi ~ 1 | nace4d + year |
+          exposure_direct_total ~ cpshock_x_int,
+        data = panel_cp %>%
+          filter(!is.na(log_ppi), nace4d %in% ets_sectors),
+        cluster = ~nace4d),
+  error = function(e) { cat("S8b failed:", conditionMessage(e), "\n"); NULL })
+if (!is.null(m8b)) print(summary(m8b))
+cat("\n")
+
+# ===========================================================================
+# Weak-first-stage diagnosis: because exposure_direct is a LEVEL and
+# CPShock is an annual aggregate of daily SURPRISES (mean-zero, non-trending),
+# the first stage of exp_direct on CPShock × intensity is near zero after
+# year FE absorb the EUA-price trend. Three fixes, each addressing the
+# mismatch in a different way:
+#
+#   Fix 1 (S8c): Use Δexposure as the endogenous variable (flow-on-flow).
+#   Fix 2 (S9):  Use cumulative CPShock as proxy for the EUA level.
+#   Fix 3 (S10): Local projections at h = 0, 1, 2, 3 (Kaenzig eq 10 panel).
+# ===========================================================================
+
+# ---- Fix 1 (S8c): Δexposure IV with CPShock × intensity ----
+cat("----------------------------------------------------------------\n")
+cat(" First-stage for Δexposure: Δ exp_direct ~ CPShock × int  |  year FE\n")
+cat("----------------------------------------------------------------\n")
+m_fs_dx <- feols(d_exp_dir ~ cpshock_x_int | year,
+                 data = panel_cp %>%
+                   filter(!is.na(d_log_ppi),
+                          !is.na(d_exp_dir),
+                          !is.na(cpshock_x_int)),
+                 cluster = ~nace4d)
+print(summary(m_fs_dx))
+cat("\n")
+
+cat("----------------------------------------------------------------\n")
+cat(" [S8c] Δ log(PPI) ~ Δ exp_direct  (IV: CPShock × intensity)  |  year FE\n")
+cat("       Flow-on-flow match; should improve over S8 levels IV\n")
+cat("----------------------------------------------------------------\n")
+m8c <- tryCatch(
+  feols(d_log_ppi ~ 1 | year | d_exp_dir ~ cpshock_x_int,
+        data = panel_cp %>% filter(!is.na(d_log_ppi),
+                                   !is.na(d_exp_dir),
+                                   !is.na(cpshock_x_int)),
+        cluster = ~nace4d),
+  error = function(e) { cat("S8c failed:", conditionMessage(e), "\n"); NULL })
+if (!is.null(m8c)) print(summary(m8c))
+cat("\n")
+
+# ---- Fix 2 (S9): Cumulative CPShock as proxy for EUA level ----
+# Build cumulative shocks within the 2005-2019 window
+panel_cp <- panel_cp %>%
+  left_join(
+    cpshock_annual %>%
+      filter(year >= 2005, year <= 2019) %>%
+      arrange(year) %>%
+      mutate(cum_cpshock = cumsum(cpshock_surprise)) %>%
+      select(year, cum_cpshock),
+    by = "year"
+  ) %>%
+  mutate(cum_cpshock_x_int = cum_cpshock * intensity_base)
+
+cat("----------------------------------------------------------------\n")
+cat(" First-stage: exp_direct ~ cum_CPShock × int  |  nace4d + year\n")
+cat("----------------------------------------------------------------\n")
+m_fs_cum <- feols(exposure_direct_total ~ cum_cpshock_x_int | nace4d + year,
+                  data = panel_cp %>% filter(!is.na(log_ppi)),
+                  cluster = ~nace4d)
+print(summary(m_fs_cum))
+cat("\n")
+
+cat("----------------------------------------------------------------\n")
+cat(" [S9a] log(PPI) ~ cum_CPShock × intensity  (RF)  |  nace4d + year (all)\n")
+cat("----------------------------------------------------------------\n")
+m9a <- feols(log_ppi ~ cum_cpshock_x_int | nace4d + year,
+             data = panel_cp %>% filter(!is.na(log_ppi)),
+             cluster = ~nace4d)
+print(summary(m9a))
+cat("\n")
+
+cat("----------------------------------------------------------------\n")
+cat(" [S9b] log(PPI) ~ cum_CPShock × intensity  (RF)  |  nace4d + year (ETS)\n")
+cat("----------------------------------------------------------------\n")
+m9b <- feols(log_ppi ~ cum_cpshock_x_int | nace4d + year,
+             data = panel_cp %>%
+               filter(!is.na(log_ppi), nace4d %in% ets_sectors),
+             cluster = ~nace4d)
+print(summary(m9b))
+cat("\n")
+
+cat("----------------------------------------------------------------\n")
+cat(" [S9c] log(PPI) ~ exp_direct  (IV: cum_CPShock × int)  |  nace4d + year\n")
+cat("----------------------------------------------------------------\n")
+m9c <- tryCatch(
+  feols(log_ppi ~ 1 | nace4d + year |
+          exposure_direct_total ~ cum_cpshock_x_int,
+        data = panel_cp %>% filter(!is.na(log_ppi)),
+        cluster = ~nace4d),
+  error = function(e) { cat("S9c failed:", conditionMessage(e), "\n"); NULL })
+if (!is.null(m9c)) print(summary(m9c))
+cat("\n")
+
+cat("----------------------------------------------------------------\n")
+cat(" [S9d] log(PPI) ~ exp_direct  (IV: cum_CPShock × int)  |  nace4d + year (ETS)\n")
+cat("----------------------------------------------------------------\n")
+m9d <- tryCatch(
+  feols(log_ppi ~ 1 | nace4d + year |
+          exposure_direct_total ~ cum_cpshock_x_int,
+        data = panel_cp %>%
+          filter(!is.na(log_ppi), nace4d %in% ets_sectors),
+        cluster = ~nace4d),
+  error = function(e) { cat("S9d failed:", conditionMessage(e), "\n"); NULL })
+if (!is.null(m9d)) print(summary(m9d))
+cat("\n")
+
+# ---- Fix 3 (S10): Local projections, h = 0, 1, 2, 3 ----
+# Builds lead variables of log_ppi for the LP.
+panel_cp <- panel_cp %>%
+  arrange(nace4d, year) %>%
+  group_by(nace4d) %>%
+  mutate(
+    log_ppi_h1 = lead(log_ppi, 1),
+    log_ppi_h2 = lead(log_ppi, 2),
+    log_ppi_h3 = lead(log_ppi, 3)
+  ) %>%
+  ungroup()
+
+cat("----------------------------------------------------------------\n")
+cat(" [S10] Local projections (Kaenzig 2025 eq 10 panel):\n")
+cat("       log_ppi_{s,t+h} ~ CPShock_t × intensity_base_s | nace4d + year\n")
+cat("----------------------------------------------------------------\n")
+lp_results <- data.frame(h = integer(), coef = numeric(), se = numeric(),
+                         lo = numeric(), hi = numeric(), n = integer(),
+                         sample = character())
+run_lp <- function(sample_label, sample_filter) {
+  for (h in 0:3) {
+    y_col <- if (h == 0) "log_ppi" else paste0("log_ppi_h", h)
+    dat <- panel_cp %>%
+      filter(!is.na(.data[[y_col]])) %>%
+      (\(d) if (sample_filter == "ets") d %>% filter(nace4d %in% ets_sectors) else d)()
+    frm <- as.formula(sprintf("%s ~ cpshock_x_int | nace4d + year", y_col))
+    m_lp <- feols(frm, data = dat, cluster = ~nace4d)
+    cat(sprintf("\n  sample = %s, h = %d\n", sample_label, h))
+    print(summary(m_lp))
+    ct <- coeftable(m_lp)["cpshock_x_int", ]
+    lp_results <<- rbind(lp_results, data.frame(
+      h = h, coef = ct[1], se = ct[2],
+      lo = ct[1] - 1.96 * ct[2],
+      hi = ct[1] + 1.96 * ct[2],
+      n = m_lp$nobs,
+      sample = sample_label
+    ))
+  }
+}
+run_lp("all",         "all")
+run_lp("ETS-only",    "ets")
+
+cat("\nLocal projections summary:\n")
+print(lp_results)
+cat("\n")
+
+# ===========================================================================
+# Shock-based robustness (following Kaenzig 2025 Appendix C.6)
+#
+# Rationale: our HICP replication (phase3_replicate_kanzig_hicp.R) shows
+# that regressing outcomes on the VAR-identified Shock column gives
+# headline IRFs that match Kaenzig's published benchmark almost exactly
+# (+0.19% vs his +0.2%). Surprise-based reduced form is noisier. Re-run
+# S7a/b/c/d and LP at h=0..3 with Shock for a cleaner validation of our
+# sector-PPI pass-through estimates.
+#
+# Important caveat: using `cpshock_shock` imports Kaenzig's VAR
+# identification assumptions; it is not a purely reduced-form exercise.
+# The Surprise-based specs remain our primary analysis.
+# ===========================================================================
+
+cat("\n================================================================\n")
+cat(" S7-S10 Shock-based robustness  (RHS = Kaenzig structural Shock)\n")
+cat("================================================================\n\n")
+
+# --- S7a-shk ---
+cat("----------------------------------------------------------------\n")
+cat(" [S7a-shk] log(PPI) ~ Shock × intensity  |  nace4d + year (all)\n")
+cat("----------------------------------------------------------------\n")
+m7a_shk <- feols(log_ppi ~ cpshock_shk_x_int | nace4d + year,
+                 data = panel_cp %>% filter(!is.na(log_ppi)),
+                 cluster = ~nace4d)
+print(summary(m7a_shk))
+cat("\n")
+
+# --- S7b-shk ---
+cat("----------------------------------------------------------------\n")
+cat(" [S7b-shk] log(PPI) ~ Shock × intensity  |  nace4d + year (ETS)\n")
+cat("----------------------------------------------------------------\n")
+m7b_shk <- feols(log_ppi ~ cpshock_shk_x_int | nace4d + year,
+                 data = panel_cp %>%
+                   filter(!is.na(log_ppi), nace4d %in% ets_sectors),
+                 cluster = ~nace4d)
+print(summary(m7b_shk))
+cat("\n")
+
+# --- S7c-shk ---
+cat("----------------------------------------------------------------\n")
+cat(" [S7c-shk] Δ log(PPI) ~ Δ(Shock × intensity)  |  year FE (all)\n")
+cat("----------------------------------------------------------------\n")
+m7c_shk <- feols(d_log_ppi ~ d_cpshock_shk_x_int | year,
+                 data = panel_cp %>% filter(!is.na(d_log_ppi),
+                                             !is.na(d_cpshock_shk_x_int)),
+                 cluster = ~nace4d)
+print(summary(m7c_shk))
+cat("\n")
+
+# --- S7d-shk: distributed lag ---
+cat("----------------------------------------------------------------\n")
+cat(" [S7d-shk] log(PPI) ~ Shock × int + L1 + L2  |  nace4d + year\n")
+cat("----------------------------------------------------------------\n")
+m7d_shk <- feols(log_ppi ~ cpshock_shk_x_int + l1_cpshock_shk_x_int +
+                           l2_cpshock_shk_x_int
+                       | nace4d + year,
+                 data = panel_cp %>% filter(!is.na(log_ppi),
+                                             !is.na(l1_cpshock_shk_x_int),
+                                             !is.na(l2_cpshock_shk_x_int)),
+                 cluster = ~nace4d)
+print(summary(m7d_shk))
+cum_7d_shk <- linear_combo(m7d_shk,
+  c("cpshock_shk_x_int", "l1_cpshock_shk_x_int", "l2_cpshock_shk_x_int"))
+cat(sprintf("\nCumulative (t + L1 + L2): %.4f  (SE %.4f, z = %.2f, p = %.4f)\n",
+            cum_7d_shk$estimate, cum_7d_shk$std.error,
+            cum_7d_shk$statistic, cum_7d_shk$p.value))
+cat("\n")
+
+# --- LP-shk at h = 0, 1, 2, 3 ---
+cat("----------------------------------------------------------------\n")
+cat(" [S10-shk] Local projections with Shock RHS (h = 0, 1, 2, 3)\n")
+cat("----------------------------------------------------------------\n")
+lp_results_shk <- data.frame(h = integer(), coef = numeric(), se = numeric(),
+                             lo = numeric(), hi = numeric(), n = integer(),
+                             sample = character())
+run_lp_shk <- function(sample_label, sample_filter) {
+  for (h in 0:3) {
+    y_col <- if (h == 0) "log_ppi" else paste0("log_ppi_h", h)
+    dat <- panel_cp %>%
+      filter(!is.na(.data[[y_col]])) %>%
+      (\(d) if (sample_filter == "ets") d %>% filter(nace4d %in% ets_sectors) else d)()
+    frm <- as.formula(sprintf("%s ~ cpshock_shk_x_int | nace4d + year", y_col))
+    m_lp <- feols(frm, data = dat, cluster = ~nace4d)
+    cat(sprintf("\n  sample = %s, h = %d\n", sample_label, h))
+    print(summary(m_lp))
+    ct <- coeftable(m_lp)["cpshock_shk_x_int", ]
+    lp_results_shk <<- rbind(lp_results_shk, data.frame(
+      h = h, coef = ct[1], se = ct[2],
+      lo = ct[1] - 1.96 * ct[2],
+      hi = ct[1] + 1.96 * ct[2],
+      n = m_lp$nobs,
+      sample = sample_label
+    ))
+  }
+}
+run_lp_shk("all",      "all")
+run_lp_shk("ETS-only", "ets")
+
+cat("\nShock-based LP summary:\n")
+print(lp_results_shk)
+cat("\n")
+
+# ===========================================================================
+# S11 — Phase IV CPShock (2020-2024) using our own rebuilt surprise series
+#
+# Motivation: Kaenzig's CPShock ends 2019. Phase IV (EUA €25 → €98) is where
+# the carbon shock becomes quantitatively meaningful. We rebuild the annual
+# shock from BKR (2026) Appendix A.1 (45 events, 2020-2024) + ICE EUA front-
+# month futures (investing.com CFI2), using log-return normalization (BKR
+# Figure B.7 / B.3 robustness). Sample extends to 2024 because the interaction
+# spec only needs base-period intensity (time-invariant) + PPI + CPShock.
+#
+# Specs:
+#   S11a. log(PPI) ~ CPShock_p4 × intensity_base | nace4d + year (all)
+#   S11b. same, ETS sectors only
+#   S11c. Percent-change CPShock (BKR Fig B.3) — robustness
+#   S11d. Local projections h = 0, 1, 2
+# ===========================================================================
+
+load(file.path(OUT_DATA, "cpshock_phase4_annual.RData"))
+
+cat("\n================================================================\n")
+cat(" S11 — Phase IV CPShock on 2020-2024 panel\n")
+cat("================================================================\n")
+cat("Annual CPShock_y (Phase IV, log-return normalization):\n")
+print(cpshock_phase4_annual)
+cat("\n")
+
+# Build 2020-2024 panel with base-period intensity from earlier block
+# Reuses intensity_base_df computed for S7-S10
+panel_p4 <- deflator %>%
+  select(nace4d, nace2d, year, ppi) %>%
+  filter(year >= 2020, year <= 2024) %>%
+  left_join(intensity_base_df, by = "nace4d") %>%
+  left_join(cpshock_phase4_annual %>%
+              select(year, cpshock_logret, cpshock_pct, n_events),
+            by = "year") %>%
+  mutate(
+    intensity_base      = coalesce(intensity_base, 0),
+    log_ppi             = log(ppi),
+    cpshock_x_int_p4    = cpshock_logret * intensity_base,
+    cpshock_x_int_p4pct = cpshock_pct    * intensity_base
+  )
+
+cat(sprintf("Panel P4: %d rows, %d sectors, years %d-%d; %d sectors with intensity > 0\n",
+            nrow(panel_p4), n_distinct(panel_p4$nace4d),
+            min(panel_p4$year), max(panel_p4$year),
+            n_distinct(panel_p4$nace4d[panel_p4$intensity_base > 0])))
+
+# --- S11a. Levels RF, all sectors ---
+cat("----------------------------------------------------------------\n")
+cat(" [S11a] log(PPI) ~ CPShock_p4(log-ret) × intensity  |  nace4d + year (all)\n")
+cat("----------------------------------------------------------------\n")
+m11a <- feols(log_ppi ~ cpshock_x_int_p4 | nace4d + year,
+              data = panel_p4 %>% filter(!is.na(log_ppi)),
+              cluster = ~nace4d)
+print(summary(m11a))
+cat("\n")
+
+# --- S11b. Levels RF, ETS sectors only ---
+cat("----------------------------------------------------------------\n")
+cat(" [S11b] log(PPI) ~ CPShock_p4(log-ret) × intensity  |  nace4d + year (ETS)\n")
+cat("----------------------------------------------------------------\n")
+m11b <- feols(log_ppi ~ cpshock_x_int_p4 | nace4d + year,
+              data = panel_p4 %>%
+                filter(!is.na(log_ppi), nace4d %in% ets_sectors),
+              cluster = ~nace4d)
+print(summary(m11b))
+cat("\n")
+
+# --- S11c. Percent-change robustness (BKR Figure B.3 formula) ---
+cat("----------------------------------------------------------------\n")
+cat(" [S11c] log(PPI) ~ CPShock_p4(%-change) × intensity  |  nace4d + year (all)\n")
+cat("        BKR Figure B.3 alternative scaling\n")
+cat("----------------------------------------------------------------\n")
+m11c <- feols(log_ppi ~ cpshock_x_int_p4pct | nace4d + year,
+              data = panel_p4 %>% filter(!is.na(log_ppi)),
+              cluster = ~nace4d)
+print(summary(m11c))
+cat("\n")
+
+# --- S11d. Local projections h = 0, 1, 2 (LP at longer h hits panel end) ---
+cat("----------------------------------------------------------------\n")
+cat(" [S11d] LP Phase IV: log(PPI)_{t+h} ~ CPShock_p4 × int  (h = 0, 1, 2)\n")
+cat("----------------------------------------------------------------\n")
+panel_p4 <- panel_p4 %>%
+  arrange(nace4d, year) %>%
+  group_by(nace4d) %>%
+  mutate(
+    log_ppi_h1 = lead(log_ppi, 1),
+    log_ppi_h2 = lead(log_ppi, 2)
+  ) %>%
+  ungroup()
+
+lp_p4 <- data.frame(h = integer(), coef = numeric(), se = numeric(),
+                    lo = numeric(), hi = numeric(), n = integer(),
+                    sample = character())
+run_lp_p4 <- function(sample_label, sample_filter) {
+  for (h in 0:2) {
+    y_col <- if (h == 0) "log_ppi" else paste0("log_ppi_h", h)
+    dat <- panel_p4 %>%
+      filter(!is.na(.data[[y_col]])) %>%
+      (\(d) if (sample_filter == "ets") d %>% filter(nace4d %in% ets_sectors) else d)()
+    frm <- as.formula(sprintf("%s ~ cpshock_x_int_p4 | nace4d + year", y_col))
+    m_lp <- feols(frm, data = dat, cluster = ~nace4d)
+    cat(sprintf("\n  sample = %s, h = %d\n", sample_label, h))
+    print(summary(m_lp))
+    ct <- coeftable(m_lp)
+    if ("cpshock_x_int_p4" %in% rownames(ct)) {
+      r <- ct["cpshock_x_int_p4", ]
+      lp_p4 <<- rbind(lp_p4, data.frame(
+        h = h, coef = r[1], se = r[2],
+        lo = r[1] - 1.96 * r[2],
+        hi = r[1] + 1.96 * r[2],
+        n = m_lp$nobs,
+        sample = sample_label
+      ))
+    }
+  }
+}
+run_lp_p4("all",      "all")
+run_lp_p4("ETS-only", "ets")
+
+cat("\nPhase IV LP summary:\n")
+print(lp_p4)
+cat("\n")
+
+# ===========================================================================
 # DIAGNOSTIC: Headline specs re-run with base-period-fixed-denominator
 # exposure (exposure_alt_total). All time variation comes from
 # shortage_{s,t} * EUA_t, not from current cost inflation.
@@ -595,6 +1146,55 @@ summ("[S6b] log(PPI) ~ exp_dir | nace4d[t]+year (ETS)", m6b, "exposure_direct_to
 summ("[S6c] exp_dir + L1 + L2 | nace4d[t]+year: exp_dir", m6c, "exposure_direct_total")
 summ("[S6c] exp_dir + L1 + L2 | nace4d[t]+year: L1", m6c, "lag1_exp_dir")
 summ("[S6c] exp_dir + L1 + L2 | nace4d[t]+year: L2", m6c, "lag2_exp_dir")
+# Kaenzig CPShock identification (2005-2019 window)
+summ("[S7a] log(PPI) ~ CPShock*int (all)            ", m7a, "cpshock_x_int")
+summ("[S7b] log(PPI) ~ CPShock*int (ETS only)       ", m7b, "cpshock_x_int")
+summ("[S7c] d_log(PPI) ~ d(CPShock*int)             ", m7c, "d_cpshock_x_int")
+summ("[S7d] CPShock*int + L1 + L2: t                ", m7d, "cpshock_x_int")
+summ("[S7d] CPShock*int + L1 + L2: L1               ", m7d, "l1_cpshock_x_int")
+summ("[S7d] CPShock*int + L1 + L2: L2               ", m7d, "l2_cpshock_x_int")
+if (!is.null(m8a))
+  summ("[S8a] IV exp_dir ~ CPShock*int (all)          ", m8a, "fit_exposure_direct_total")
+if (!is.null(m8b))
+  summ("[S8b] IV exp_dir ~ CPShock*int (ETS only)     ", m8b, "fit_exposure_direct_total")
+if (!is.null(m8c))
+  summ("[S8c] d_log(PPI) IV d_exp (CPShock*int)       ", m8c, "fit_d_exp_dir")
+summ("[S9a] log(PPI) ~ cum_CPShock*int (all)        ", m9a, "cum_cpshock_x_int")
+summ("[S9b] log(PPI) ~ cum_CPShock*int (ETS)        ", m9b, "cum_cpshock_x_int")
+if (!is.null(m9c))
+  summ("[S9c] IV exp_dir ~ cum_CPShock*int (all)      ", m9c, "fit_exposure_direct_total")
+if (!is.null(m9d))
+  summ("[S9d] IV exp_dir ~ cum_CPShock*int (ETS)      ", m9d, "fit_exposure_direct_total")
+# Local projections (one row per sample × horizon)
+for (i in seq_len(nrow(lp_results))) {
+  r <- lp_results[i, ]
+  cat(sprintf("%-55s | %8.4f | %7.4f | %6.2f | %5d\n",
+              sprintf("[S10] LP h=%d (%s)", r$h, r$sample),
+              r$coef, r$se, r$coef / r$se, r$n))
+}
+# Shock-based robustness
+summ("[S7a-shk] log(PPI) ~ Shock*int (all)           ", m7a_shk, "cpshock_shk_x_int")
+summ("[S7b-shk] log(PPI) ~ Shock*int (ETS)           ", m7b_shk, "cpshock_shk_x_int")
+summ("[S7c-shk] d_log(PPI) ~ d(Shock*int)            ", m7c_shk, "d_cpshock_shk_x_int")
+summ("[S7d-shk] Shock*int + L1 + L2: t               ", m7d_shk, "cpshock_shk_x_int")
+summ("[S7d-shk] Shock*int + L1 + L2: L1              ", m7d_shk, "l1_cpshock_shk_x_int")
+summ("[S7d-shk] Shock*int + L1 + L2: L2              ", m7d_shk, "l2_cpshock_shk_x_int")
+for (i in seq_len(nrow(lp_results_shk))) {
+  r <- lp_results_shk[i, ]
+  cat(sprintf("%-55s | %8.4f | %7.4f | %6.2f | %5d\n",
+              sprintf("[S10-shk] LP h=%d (%s)", r$h, r$sample),
+              r$coef, r$se, r$coef / r$se, r$n))
+}
+# Phase IV CPShock
+summ("[S11a] log(PPI) ~ CPShock_p4*int (all)         ", m11a, "cpshock_x_int_p4")
+summ("[S11b] log(PPI) ~ CPShock_p4*int (ETS)         ", m11b, "cpshock_x_int_p4")
+summ("[S11c] log(PPI) ~ CPShock_p4(%)*int (all)      ", m11c, "cpshock_x_int_p4pct")
+for (i in seq_len(nrow(lp_p4))) {
+  r <- lp_p4[i, ]
+  cat(sprintf("%-55s | %8.4f | %7.4f | %6.2f | %5d\n",
+              sprintf("[S11d] LP-P4 h=%d (%s)", r$h, r$sample),
+              r$coef, r$se, r$coef / r$se, r$n))
+}
 # Alt-exposure (base-period-fixed denominator) diagnostic
 summ("[A1a] log(PPI) ~ exp_alt (all)              ", mA1a, "exposure_alt_total")
 summ("[A1b] log(PPI) ~ exp_alt (ETS only)         ", mA1b, "exposure_alt_total")
@@ -626,6 +1226,8 @@ print_cum("[S3e] sum upstream-indirect lags (no direct)", cum_3e,    m3e$nobs)
 print_cum("[S5c] sum direct (lev) | nace2d^year",      cum_5c,     m5c$nobs)
 print_cum("[S5e] sum direct (diff) | nace2d^year",     cum_5e,     m5e$nobs)
 print_cum("[S6c] sum direct (lev) | nace4d[t]+year",   cum_6c,     m6c$nobs)
+print_cum("[S7d] sum CPShock*int lags (lev)",          cum_7d,     m7d$nobs)
+print_cum("[S7d-shk] sum Shock*int lags (lev)",        cum_7d_shk, m7d_shk$nobs)
 print_cum("[A2c] sum alt-exp lags (first diff)",      cum_A2c,    mA2c$nobs)
 cat("\n")
 
@@ -717,5 +1319,31 @@ ggsave(file.path(OUTPUT_FIG, "phase3_task2_event_study.pdf"), p_es,
 
 cat("Event study saved to:",
     file.path(OUTPUT_FIG, "phase3_task2_event_study.pdf"), "\n")
+
+# ===========================================================================
+# Local-projection IRF plot (S10)
+# ===========================================================================
+p_lp <- ggplot(lp_results, aes(x = h, y = coef, color = sample, fill = sample)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
+  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.20, color = NA) +
+  geom_line(linewidth = 0.9) +
+  geom_point(size = 2.5) +
+  scale_color_manual(values = c("all" = "#08306b", "ETS-only" = "#cb181d")) +
+  scale_fill_manual(values  = c("all" = "#3182bd", "ETS-only" = "#fb6a4a")) +
+  labs(
+    title = "Local projection: PPI response to carbon policy surprise × sector intensity",
+    subtitle = "log(PPI)_{s,t+h} regressed on CPShock_t × base-period intensity (2005-2019, NACE4d + year FE)",
+    x = "Horizon (years since shock)",
+    y = expression(gamma[h]),
+    color = NULL, fill = NULL
+  ) +
+  theme_bw(base_size = 10) +
+  theme(plot.title = element_text(face = "bold"),
+        legend.position = "bottom")
+
+ggsave(file.path(OUTPUT_FIG, "phase3_task2_cpshock_lp.pdf"), p_lp,
+       width = 8, height = 5)
+cat("LP IRF saved to:",
+    file.path(OUTPUT_FIG, "phase3_task2_cpshock_lp.pdf"), "\n")
 
 cat("\nDone.\n")
