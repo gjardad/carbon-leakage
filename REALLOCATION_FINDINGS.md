@@ -463,18 +463,17 @@ Six-channel pp columns sum to **Total**. `z_ent` and `z_exit` report group-avera
 | 2005 → 2007 | 154 | 8  | 8  | −4.1  | +18.2 | +11.5 | +3.3  | **−38.1** | +1.0  | −0.1 | 183 | 130 |
 | 2005 → 2012 | 127 | 37 | 35 | −16.4 | +10.8 | +7.4  | +10.5 | **−49.6** | +10.8 | −6.4 | 671 | 382 |
 | 2005 → 2020 | 105 | 55 | 57 | −20.3 | +1.6  | −14.3 | +11.1 | −21.5     | +10.3 | −7.4 | 466 | 298 |
-| 2005 → 2022 ⚠︎ | 100 | 49 | 62 | −37.3 | +15.6 | −31.7 | +4.5  | −25.6     | +8.5  | −8.5 | 372 | 234 |
+| 2005 → 2022 ᶜ | 99 | 49 | 61 | **−24.9** | +15.9 | −35.1 | +4.9  | **−11.6** | +10.2 | −9.2 | 369 | 286 |
 | 2007 → 2012 | 129 | 35 | 33 | −12.8 | −6.6  | −3.9  | +4.0  | −10.4     | +10.8 | −6.7 | 804 | 362 |
 | 2007 → 2020 | 109 | 51 | 53 | −16.8 | −12.6 | −18.5 | +9.3  | **+2.6**  | +9.5  | −7.1 | 534 | 231 |
+| 2007 → 2022 ᶜ | 103 | 45 | 57 | **−21.1** | +0.7  | −32.0 | +5.0  | **+4.8**  | +9.4  | −9.0 | 442 | 227 |
 | 2012 → 2020 | 126 | 34 | 38 | −4.7  | −7.0  | −17.1 | +14.5 | **+4.2**  | +3.1  | −2.3 | 383 | 158 |
+| 2012 → 2022 ᶜ | 120 | 28 | 41 | **−12.6** | +6.8  | −29.5 | +11.1 | **−0.9**  | +2.9  | −2.9 | 334 | 170 |
 | **2005 → 2012 [triple-bal]** | **101** | 0 | 0 | **−22.2** | +12.5 | +9.2  | +9.8  | **−53.7** | 0 | 0 | — | — |
 | **2012 → 2020 [triple-bal]** | **101** | 0 | 0 | **−3.3**  | −9.1  | −16.2 | +12.5 | **+9.5**  | 0 | 0 | — | — |
 | **2005 → 2020 [triple-bal]** | **101** | 0 | 0 | **−24.8** | +2.2  | −15.9 | +12.0 | −23.1     | 0 | 0 | — | — |
-| **2005 → 2022 [ex. 3 VATs]** | 99  | 49 | 61 | **−24.9** | +15.9 | −35.1 | +4.9  | **−11.6** | +10.2 | −9.2 | 369 | 286 |
-| **2007 → 2022 [ex. 3 VATs]** | 103 | 45 | 57 | **−21.1** | +0.7  | −32.0 | +5.0  | **+4.8**  | +9.4  | −9.0 | 442 | 227 |
-| **2012 → 2022 [ex. 3 VATs]** | 120 | 28 | 41 | **−12.6** | +6.8  | −29.5 | +11.1 | **−0.9**  | +2.9  | −2.9 | 334 | 170 |
 
-**⚠︎ The 2005 → 2022 unrestricted row is contaminated** by three installations that came off EUTL reporting in 2021 while their Annual Accounts revenue continued or grew (one in NACE 24, two in NACE 20 — see below). Their $\sim$8 Mt of 2020 emissions dropping to $\sim$0.1 Mt in 2022 register in the decomposition as $\sim -14$ pp of spurious Technique. Use the `[ex. 3 VATs]` rows for any claim about 2022.
+ᶜ **Rows ending in 2022 exclude three contaminated VATs from every year.** One NACE 24 installation (likely ArcelorMittal Gent) and two NACE 20 installations come off EUTL reporting in 2021 while their Annual Accounts revenue continues or grows — diagnosed as installation-level reclassification, not real abatement (see finding 5 below). The unrestricted 2005→2022 row was Total $-37.3$ with Technique $-25.6$; excluding the three VATs yields Total $-24.9$ with Technique $-11.6$, i.e.\ $\sim 12$ pp of Total and $\sim 14$ pp of Technique in the unrestricted row were artefact. The unrestricted 2007→2022 and 2012→2022 rows are not reported.
 
 ### Key findings
 
