@@ -48,9 +48,61 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 RMSE: 0.637079     Adj. R2: 0.854069
                  Within R2: 0.006969
 
+=== CPShock surprise, 2005-2019 ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 3,020
+Fixed-effects: vat: 239,  year: 15
+Standard-errors: Clustered (nace4d) 
+                    Estimate Std. Error  t value Pr(>|t|) 
+shock_cps_surprise -0.049786    0.13352 -0.37287  0.71015 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.696544     Adj. R2: 0.838274
+                 Within R2: 9.951e-6
+
+=== CPShock surprise, 2013-2019 ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 1,395
+Fixed-effects: vat: 213,  year: 7
+Standard-errors: Clustered (nace4d) 
+                   Estimate Std. Error t value Pr(>|t|) 
+shock_cps_surprise 0.461936   0.386895 1.19396  0.23602 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.423048     Adj. R2: 0.931478
+                 Within R2: 9.435e-4
+
+=== CPShock shock, 2005-2019 ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 3,020
+Fixed-effects: vat: 239,  year: 15
+Standard-errors: Clustered (nace4d) 
+                Estimate Std. Error  t value Pr(>|t|) 
+shock_cps_shock  0.06492   0.079267 0.819003  0.41502 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.696418     Adj. R2: 0.838332
+                 Within R2: 3.703e-4
+
+=== CPShock shock, 2013-2019 ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 1,395
+Fixed-effects: vat: 213,  year: 7
+Standard-errors: Clustered (nace4d) 
+                 Estimate Std. Error   t value Pr(>|t|) 
+shock_cps_shock -0.010829   0.053239 -0.203404  0.83934 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.423241     Adj. R2: 0.931416
+                 Within R2: 3.449e-5
+
 === Summary across specs ===
                            spec n_obs    beta     se     t     p
 1           A: 2005-2022 (full)  3608 -0.0359 0.0090 -3.98 0.000
 2 B: 2013-2022 (Phase 3 onward)  1985 -0.0311 0.0102 -3.05 0.002
 3      C: 2017-2022 (post-base)  1174 -0.0206 0.0103 -2.00 0.046
 4      Full panel, 2d x year FE  3564 -0.0404 0.0120 -3.38 0.001
+5      CPS-A surprise (2005-19)  3020 -0.0498 0.1335 -0.37 0.709
+6      CPS-B surprise (2013-19)  1395  0.4619 0.3869  1.19 0.233
+7         CPS-A shock (2005-19)  3020  0.0649 0.0793  0.82 0.413
+8         CPS-B shock (2013-19)  1395 -0.0108 0.0532 -0.20 0.839
