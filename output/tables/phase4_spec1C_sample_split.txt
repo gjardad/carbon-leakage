@@ -1,0 +1,127 @@
+==============================================================
+ Spec 1.C: Sample split of Spec 1.A by per-sector pass-through
+==============================================================
+Panel: ETS firms, 2005-2019 (post first-differencing), ≥3 years.
+Spec  : d_h ~ (Signal_t × firm_dev_share) | vat + nace4d^year
+Cluster: firm and sector-year.
+
+
+--- class_shock_sign__cpshock_surprise__hi ---
+h=0  beta=-9.493  SE=7.840  t=-1.21  p=0.229  N=1167
+h=1  beta=-12.831  SE=11.751  t=-1.09  p=0.277  N=1069
+h=2  beta=-37.667  SE=14.709  t=-2.56  p=0.012  N=970
+h=3  beta=-35.849  SE=14.306  t=-2.51  p=0.014  N=870
+
+--- class_shock_sign__cpshock_surprise__lo ---
+h=0  beta=+2.122  SE=101.545  t=+0.02  p=0.984  N=70
+h=1  beta=+225.540  SE=126.005  t=+1.79  p=0.148  N=65
+h=2  beta=+162.610  SE=261.135  t=+0.62  p=0.567  N=60
+h=3  beta=+150.045  SE=303.203  t=+0.49  p=0.647  N=55
+
+--- class_shock_sign__cpshock_shock__hi ---
+h=0  beta=+1.632  SE=0.984  t=+1.66  p=0.100  N=1167
+h=1  beta=+1.022  SE=1.325  t=+0.77  p=0.443  N=1069
+h=2  beta=+4.138  SE=1.352  t=+3.06  p=0.003  N=970
+h=3  beta=+2.905  SE=1.402  t=+2.07  p=0.041  N=870
+
+--- class_shock_sign__cpshock_shock__lo ---
+h=0  beta=-31.811  SE=9.475  t=-3.36  p=0.028  N=70
+h=1  beta=-64.989  SE=28.655  t=-2.27  p=0.086  N=65
+h=2  beta=-132.036  SE=18.273  t=-7.23  p=0.002  N=60
+h=3  beta=-124.845  SE=21.382  t=-5.84  p=0.004  N=55
+
+--- class_shock_tercile__cpshock_surprise__hi ---
+h=0  beta=-9.136  SE=7.840  t=-1.17  p=0.248  N=662
+h=1  beta=-12.848  SE=11.815  t=-1.09  p=0.281  N=605
+h=2  beta=-37.588  SE=14.804  t=-2.54  p=0.013  N=545
+h=3  beta=-35.860  SE=14.386  t=-2.49  p=0.015  N=485
+
+--- class_shock_tercile__cpshock_surprise__lo ---
+h=0  beta=-145.637  SE=111.647  t=-1.30  p=0.198  N=573
+h=1  beta=+8.156  SE=39.808  t=+0.20  p=0.839  N=529
+h=2  beta=-50.259  SE=89.322  t=-0.56  p=0.576  N=485
+h=3  beta=-16.960  SE=74.551  t=-0.23  p=0.821  N=440
+
+--- class_shock_tercile__cpshock_shock__hi ---
+h=0  beta=+1.617  SE=0.992  t=+1.63  p=0.108  N=662
+h=1  beta=+1.003  SE=1.337  t=+0.75  p=0.456  N=605
+h=2  beta=+4.100  SE=1.367  t=+3.00  p=0.004  N=545
+h=3  beta=+2.880  SE=1.416  t=+2.03  p=0.046  N=485
+
+--- class_shock_tercile__cpshock_shock__lo ---
+h=0  beta=+9.731  SE=13.161  t=+0.74  p=0.463  N=573
+h=1  beta=+10.202  SE=19.832  t=+0.51  p=0.609  N=529
+h=2  beta=+21.776  SE=25.893  t=+0.84  p=0.405  N=485
+h=3  beta=+11.859  SE=26.718  t=+0.44  p=0.659  N=440
+
+--- class_shock_10__cpshock_surprise__hi ---
+h=0  beta=-27.246  SE=62.001  t=-0.44  p=0.667  N=120
+h=1  beta=-52.573  SE=87.784  t=-0.60  p=0.558  N=108
+h=2  beta=-36.270  SE=67.567  t=-0.54  p=0.600  N=93
+h=3  beta=-1.655  SE=0.000  t=-165457720.18  p=0.000  N=78
+
+--- class_shock_10__cpshock_surprise__lo ---
+h=0  beta=-8.965  SE=7.851  t=-1.14  p=0.256  N=1115
+h=1  beta=-11.673  SE=12.043  t=-0.97  p=0.335  N=1026
+h=2  beta=-37.465  SE=15.069  t=-2.49  p=0.015  N=937
+h=3  beta=-36.288  SE=14.534  t=-2.50  p=0.014  N=846
+
+--- class_shock_10__cpshock_shock__hi ---
+h=0  beta=+1.650  SE=9.165  t=+0.18  p=0.860  N=120
+h=1  beta=-1.636  SE=6.471  t=-0.25  p=0.804  N=108
+h=2  beta=+3.529  SE=6.461  t=+0.55  p=0.594  N=93
+h=3  beta=+5.755  SE=14.016  t=+0.41  p=0.689  N=78
+
+--- class_shock_10__cpshock_shock__lo ---
+h=0  beta=+1.659  SE=0.983  t=+1.69  p=0.095  N=1115
+h=1  beta=+1.112  SE=1.313  t=+0.85  p=0.399  N=1026
+h=2  beta=+4.185  SE=1.351  t=+3.10  p=0.003  N=937
+h=3  beta=+2.917  SE=1.385  t=+2.11  p=0.038  N=846
+
+--- class_surprise_sign__cpshock_surprise__hi ---
+h=0  beta=-41.441  SE=33.986  t=-1.22  p=0.230  N=452
+h=1  beta=+10.260  SE=54.377  t=+0.19  p=0.851  N=413
+h=2  beta=-78.714  SE=62.744  t=-1.25  p=0.217  N=372
+h=3  beta=-61.825  SE=52.767  t=-1.17  p=0.248  N=330
+
+--- class_surprise_sign__cpshock_surprise__lo ---
+h=0  beta=-7.783  SE=7.840  t=-0.99  p=0.324  N=783
+h=1  beta=-14.033  SE=12.011  t=-1.17  p=0.247  N=721
+h=2  beta=-35.520  SE=15.489  t=-2.29  p=0.025  N=658
+h=3  beta=-34.473  SE=15.279  t=-2.26  p=0.027  N=595
+
+--- class_surprise_sign__cpshock_shock__hi ---
+h=0  beta=-7.523  SE=5.215  t=-1.44  p=0.157  N=452
+h=1  beta=-13.938  SE=6.317  t=-2.21  p=0.033  N=413
+h=2  beta=-6.853  SE=7.844  t=-0.87  p=0.387  N=372
+h=3  beta=-15.730  SE=9.911  t=-1.59  p=0.120  N=330
+
+--- class_surprise_sign__cpshock_shock__lo ---
+h=0  beta=+2.072  SE=0.923  t=+2.25  p=0.028  N=783
+h=1  beta=+1.748  SE=1.117  t=+1.57  p=0.122  N=721
+h=2  beta=+4.571  SE=1.277  t=+3.58  p=0.001  N=658
+h=3  beta=+3.670  SE=1.203  t=+3.05  p=0.003  N=595
+
+--- class_intersect_sign__cpshock_surprise__hi ---
+h=0  beta=-41.579  SE=34.108  t=-1.22  p=0.230  N=410
+h=1  beta=+9.576  SE=54.467  t=+0.18  p=0.861  N=374
+h=2  beta=-79.813  SE=63.057  t=-1.27  p=0.213  N=336
+h=3  beta=-62.787  SE=53.075  t=-1.18  p=0.244  N=297
+
+--- class_intersect_sign__cpshock_surprise__lo ---
+h=0  beta=-7.781  SE=7.836  t=-0.99  p=0.324  N=825
+h=1  beta=-13.992  SE=12.007  t=-1.17  p=0.248  N=760
+h=2  beta=-35.474  SE=15.490  t=-2.29  p=0.025  N=694
+h=3  beta=-34.431  SE=15.285  t=-2.25  p=0.027  N=628
+
+--- class_intersect_sign__cpshock_shock__hi ---
+h=0  beta=-7.481  SE=5.237  t=-1.43  p=0.161  N=410
+h=1  beta=-13.849  SE=6.361  t=-2.18  p=0.036  N=374
+h=2  beta=-6.535  SE=7.928  t=-0.82  p=0.415  N=336
+h=3  beta=-15.454  SE=9.975  t=-1.55  p=0.130  N=297
+
+--- class_intersect_sign__cpshock_shock__lo ---
+h=0  beta=+2.069  SE=0.922  t=+2.24  p=0.028  N=825
+h=1  beta=+1.742  SE=1.116  t=+1.56  p=0.123  N=760
+h=2  beta=+4.557  SE=1.277  t=+3.57  p=0.001  N=694
+h=3  beta=+3.657  SE=1.202  t=+3.04  p=0.003  N=628

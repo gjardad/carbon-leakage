@@ -1,0 +1,57 @@
+================================================================
+ Per-sector realized pass-through gamma_s at h = 12 months
+================================================================
+
+Spec: dlog_ppi_h12_{s,m} = sum_s [ gamma_s * CPShock_m * I(sector=s) ]
+       + alpha_s + delta_m + eps
+Sample: 2005-01 to 2019-12. FE: nace4d + year_month. Cluster: nace4d.
+
+Shock variant: gamma_s summary:
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+-0.007491  0.002357  0.004969  0.004993  0.006971  0.017542 
+Shock variant: t summary:
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+-0.6433  0.3429  0.7680  0.7639  1.1037  2.7829 
+Surprise variant: gamma_s summary:
+      Min.    1st Qu.     Median       Mean    3rd Qu.       Max. 
+-0.0898850 -0.0166556 -0.0072388 -0.0076519  0.0009538  0.0566250 
+Surprise variant: t summary:
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+-2.99084 -0.60531 -0.26068 -0.32874  0.03098  1.33008 
+
+Classification counts:
+
+class_shock_10:
+
+high   no 
+  10  123 
+
+class_shock_5:
+
+high   no 
+   6  127 
+
+class_shock_tercile:
+
+high   no 
+  45   88 
+
+class_surprise_10:
+
+ no 
+133 
+
+class_surprise_5:
+
+ no 
+133 
+
+class_surprise_tercile:
+
+high   no 
+  45   88 
+
+class_intersect_10:
+
+ no 
+133 

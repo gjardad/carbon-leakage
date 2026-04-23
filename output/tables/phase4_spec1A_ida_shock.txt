@@ -1,0 +1,27 @@
+
+\begingroup
+\centering
+\begin{tabular}{lcccc}
+   \tabularnewline \midrule \midrule
+   Dependent Variables: & d0             & d1            & d2            & d3\\  
+   Model:               & (1)            & (2)           & (3)           & (4)\\  
+   \midrule
+   \emph{Variables}\\
+   shock\_x\_dev        & 0.5832$^{***}$ & 1.084$^{***}$ & 1.657$^{***}$ & 1.606$^{***}$\\   
+                        & (0.2191)       & (0.3303)      & (0.4042)      & (0.3697)\\   
+   \midrule
+   \emph{Fixed-effects}\\
+   vat                  & Yes            & Yes           & Yes           & Yes\\  
+   nace4d-year          & Yes            & Yes           & Yes           & Yes\\  
+   \midrule
+   \emph{Fit statistics}\\
+   Observations         & 2,163          & 1,988         & 1,808         & 1,629\\  
+   R$^2$                & 0.29592        & 0.41222       & 0.54907       & 0.60569\\  
+   Within R$^2$         & 0.01333        & 0.03382       & 0.07321       & 0.06042\\  
+   \midrule \midrule
+   \multicolumn{5}{l}{\emph{Clustered (nace4d,year)) standard-errors in parentheses}}\\
+   \multicolumn{5}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
+\end{tabular}
+\par\endgroup
+
+
