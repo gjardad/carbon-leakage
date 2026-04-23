@@ -99,6 +99,7 @@ Source: [TREAT_HYPOTHESIS_PLAN.md](TREAT_HYPOTHESIS_PLAN.md). Goal: test whether
 
 ### Step 1 — Build the NACE × carbon-leakage-status panel
 - [ ] Parse annexes of Commission Decisions 2009/161/EC, 2014/746/EU, 2019/708/EU into a NACE4d × year dataset of free-allocation status. Output: `data/processed/cl_status_by_nace4d.csv`. Estimated ~1 day.
+- **Why here (and not in the reallocation descriptive work).** The reallocation note already observes `shortage_{i,t} = max(emissions − free, 0)` directly at firm-year, so ``who pays how much'' is already identified without any allocation-rule crosswalk. The 4d CL list is valuable specifically as a *treatment indicator* for anticipation: a firm in a 4d sector that stays on the CL list after the 2014-05 revision learns it will keep free allocation; one removed from the list learns it will face declining free allocation starting in 2015+. That asymmetric announcement is the identification Strategy C below relies on. The reallocation note's §4 caveat on NACE 2d coarseness points here for that reason. Discussed 2026-04-23.
 
 ### Step 2 — Add investment / capex measures to the firm panel
 - [ ] Pull tangible-asset lines from Annual Accounts; build log(capex / revenue) and energy-cost share. Reuse `intensity_base` from S12. Estimated ~1 day.
