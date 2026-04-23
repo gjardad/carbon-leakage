@@ -66,8 +66,10 @@ df <- df %>%
 # If restrict_vats is non-NULL, survivors/entrants/exiters are all confined to
 # firms in that set (used for triple-balanced rows). In that case entry and
 # exit are zero by construction.
-decompose_pair <- function(df, t0, t1, restrict_vats = NULL, label = NULL) {
+decompose_pair <- function(df, t0, t1, restrict_vats = NULL,
+                           exclude_vats = NULL, label = NULL) {
   if (!is.null(restrict_vats)) df <- df %>% filter(vat %in% restrict_vats)
+  if (!is.null(exclude_vats))  df <- df %>% filter(!(vat %in% exclude_vats))
 
   d0 <- df %>% filter(year == t0) %>%
     select(vat, nace2d_0 = nace2d, e_0 = emissions, q_0 = real_revenue)
@@ -177,6 +179,29 @@ results_triple <- bind_rows(
 )
 
 results <- bind_rows(results, results_triple)
+
+# ---- Run: contaminated-firm-excluded rows ----
+# Three firms drop off EUTL reporting in 2021 while their Annual Accounts
+# revenue continues/grows; identified as installation reclassification
+# artefacts. Exclude them from every year of the sample (not just 2021+) so
+# they do not enter the decomposition at all. Affects pairs that cross the
+# 2021 break; leaves 2005->2020 and earlier rows untouched.
+contaminated_vats <- c(
+  "68A2F4B84714EC1829E0AC28D29F204FDEBFF70F71F2A22FDE65461FF3ADDDFF", # NACE 24
+  "F8F1FAA7804D5A5B8495B44A8586C93F19689545D2D96B5CBBB19221519EC076", # NACE 20
+  "1061796C42F184760E3BAF45DC443875C42284348C2B209B70F02ED964EDAC7E"  # NACE 20
+)
+
+results_excl <- bind_rows(
+  decompose_pair(df, 2005, 2022, exclude_vats = contaminated_vats,
+                 label = "2005 -> 2022 [ex. 3 VATs]"),
+  decompose_pair(df, 2007, 2022, exclude_vats = contaminated_vats,
+                 label = "2007 -> 2022 [ex. 3 VATs]"),
+  decompose_pair(df, 2012, 2022, exclude_vats = contaminated_vats,
+                 label = "2012 -> 2022 [ex. 3 VATs]")
+)
+
+results <- bind_rows(results, results_excl)
 
 cat("\n=== Six-channel pairwise decomposition ===\n")
 cat("All channels reported in pp of E_{t_base}. Channels sum to total.\n")

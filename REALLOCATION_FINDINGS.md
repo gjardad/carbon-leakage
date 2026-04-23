@@ -463,13 +463,18 @@ Six-channel pp columns sum to **Total**. `z_ent` and `z_exit` report group-avera
 | 2005 → 2007 | 154 | 8  | 8  | −4.1  | +18.2 | +11.5 | +3.3  | **−38.1** | +1.0  | −0.1 | 183 | 130 |
 | 2005 → 2012 | 127 | 37 | 35 | −16.4 | +10.8 | +7.4  | +10.5 | **−49.6** | +10.8 | −6.4 | 671 | 382 |
 | 2005 → 2020 | 105 | 55 | 57 | −20.3 | +1.6  | −14.3 | +11.1 | −21.5     | +10.3 | −7.4 | 466 | 298 |
-| 2005 → 2022 | 100 | 49 | 62 | −37.3 | +15.6 | −31.7 | +4.5  | −25.6     | +8.5  | −8.5 | 372 | 234 |
+| 2005 → 2022 ⚠︎ | 100 | 49 | 62 | −37.3 | +15.6 | −31.7 | +4.5  | −25.6     | +8.5  | −8.5 | 372 | 234 |
 | 2007 → 2012 | 129 | 35 | 33 | −12.8 | −6.6  | −3.9  | +4.0  | −10.4     | +10.8 | −6.7 | 804 | 362 |
 | 2007 → 2020 | 109 | 51 | 53 | −16.8 | −12.6 | −18.5 | +9.3  | **+2.6**  | +9.5  | −7.1 | 534 | 231 |
 | 2012 → 2020 | 126 | 34 | 38 | −4.7  | −7.0  | −17.1 | +14.5 | **+4.2**  | +3.1  | −2.3 | 383 | 158 |
 | **2005 → 2012 [triple-bal]** | **101** | 0 | 0 | **−22.2** | +12.5 | +9.2  | +9.8  | **−53.7** | 0 | 0 | — | — |
 | **2012 → 2020 [triple-bal]** | **101** | 0 | 0 | **−3.3**  | −9.1  | −16.2 | +12.5 | **+9.5**  | 0 | 0 | — | — |
 | **2005 → 2020 [triple-bal]** | **101** | 0 | 0 | **−24.8** | +2.2  | −15.9 | +12.0 | −23.1     | 0 | 0 | — | — |
+| **2005 → 2022 [ex. 3 VATs]** | 99  | 49 | 61 | **−24.9** | +15.9 | −35.1 | +4.9  | **−11.6** | +10.2 | −9.2 | 369 | 286 |
+| **2007 → 2022 [ex. 3 VATs]** | 103 | 45 | 57 | **−21.1** | +0.7  | −32.0 | +5.0  | **+4.8**  | +9.4  | −9.0 | 442 | 227 |
+| **2012 → 2022 [ex. 3 VATs]** | 120 | 28 | 41 | **−12.6** | +6.8  | −29.5 | +11.1 | **−0.9**  | +2.9  | −2.9 | 334 | 170 |
+
+**⚠︎ The 2005 → 2022 unrestricted row is contaminated** by three installations that came off EUTL reporting in 2021 while their Annual Accounts revenue continued or grew (one in NACE 24, two in NACE 20 — see below). Their $\sim$8 Mt of 2020 emissions dropping to $\sim$0.1 Mt in 2022 register in the decomposition as $\sim -14$ pp of spurious Technique. Use the `[ex. 3 VATs]` rows for any claim about 2022.
 
 ### Key findings
 
@@ -480,6 +485,8 @@ Six-channel pp columns sum to **Total**. `z_ent` and `z_exit` report group-avera
 3. **Within-sector reallocation remains consistently positive.** +9.2 to +14.5 pp across every window, including on the triple-balanced panel. Dirtier firms have been slowly gaining share within their NACE 2d — reinforces the main null finding on within-sector reallocation even under the strictest sample.
 
 4. **Entrants are consistently more emission-intensive than exiters.** `z_ent` exceeds `z_exit` in every unrestricted pair, with ratios ranging from 1.4x (2005→2007) to 2.4x (2012→2020). This is the opposite of what a "dirty firms die under ETS pressure, clean firms enter" story would predict. Likely mechanisms: (i) "exit" in our data is data-loss, not literal firm death (Annual Accounts missingness); (ii) "entrants" include firms that came online after $t_{\text{base}}$ and may be in their capacity ramp-up phase with elevated intensity; (iii) firms whose emissions toggled past the zero threshold between the two years. In net emissions terms, entry and exit still roughly cancel (|Entry − Exit| ≤ 4.4 pp in every unrestricted row), because emissions-weighted contributions depend on both mean intensity *and* size, and exiters tend to be larger.
+
+5. **Three large post-2020 EUTL reclassifications distort the 2022 picture.** Diagnosed 2026-04-23: one NACE 24 firm (likely ArcelorMittal Gent: 4.6 Mt → 0.09 Mt over 2020→2022 while revenue rose 3,399 → 6,476 M€) and two NACE 20 firms show emissions and free allocation collapsing to near-zero in 2021 while their revenue continues or grows. This is installation-level reporting change, not real abatement or firm closure. NACE 21's 2021 free-allocation cut is the intended Phase IV benchmark reset, not a data break. Excluding the three firms from every year of the analysis and re-running the pair decomposition yields the `[ex. 3 VATs]` rows: **the 2005→2022 Total shrinks from −37.3 to −24.9 pp, and Technique from −25.6 to −11.6 pp** — most of the apparent "abatement" over 2005→2022 is actually reclassification. Between-sector reallocation strengthens slightly (−31.7 → −35.1) on the clean panel, confirming it is the genuine driver of the post-2012 decline. The 2012→2022 clean row (−12.6 total, Tech −0.9) makes the paper's headline sharp: on the non-reclassified sample, there is essentially no within-firm abatement over 2012–2022.
 
 ### Caveats
 
