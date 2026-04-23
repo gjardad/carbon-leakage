@@ -1,7 +1,10 @@
+=== Treatment window ===
+firm_cost_share: mean_{2013-2015}(shortage*EUA) / mean_{2010-2012}(total_cost)
+Event-study baseline t0 = 2015; horizons h = 1..7
+firm_treat rows: 231 across 88 NACE4d sectors
+
 === Panel thickness ===
 ETS-seller pair panel rows: 55155 
-Pair-years with non-missing d_log_real_flow: 45916 
-
 Pair lifespan distribution:
   1 year:    2117 
   2-3 years: 2102 
@@ -10,17 +13,54 @@ Pair lifespan distribution:
   mean:      6 
 
 Buyer-year cells with >=2 ETS sellers: 10345 / 17206 
-Buyer x 4d x year cells with >=2 ETS sellers (Spec 4.B): 5010 / 48269 
+Buyer x 4d x year cells with >=2 ETS sellers: 5010 / 48269 
 
-=== Spec 4.A coefficient table ===
-                                     spec     n    beta     se     t     p
-1               Spec 4.A EUA-Bartik, full 38168  0.0007 0.0015  0.47 0.639
-2         Spec 4.A CPShock surprise, full 38168  0.0225 0.0262  0.86 0.392
-3         Spec 4.A CPShock shock,    full 38168 -0.0148 0.0064 -2.30 0.021
-4          Spec 4.A EUA-Bartik, 2005-2022 38168  0.0007 0.0015  0.47 0.639
-5          Spec 4.A EUA-Bartik, 2013-2022 23519  0.0007 0.0015  0.48 0.628
-6          Spec 4.A EUA-Bartik, 2017-2022 14628 -0.0008 0.0017 -0.46 0.644
-7                     Spec 4.B EUA-Bartik  9194  0.0017 0.0026  0.65 0.514
-8               Spec 4.B CPShock surprise  9194  0.0691 0.3344  0.21 0.836
-9                  Spec 4.B CPShock shock  9194 -0.0021 0.0163 -0.13 0.896
-10 Ext. margin (P active next) EUA-Bartik 45940  0.0003 0.0003  0.88 0.377
+=== Coefficient table ===
+                                          spec horizon     n      beta       se
+1            BENCH: Spec 4.A-annual EUA-Bartik      NA 38168   0.00041  0.00180
+2      BENCH: Spec 4.B-annual EUA-Bartik w-sec      NA  9194   0.00136  0.00243
+3  PRIMARY: Spec 4.A-event firm_cost_share h=1       1   587 -12.30584  5.65656
+4  PRIMARY: Spec 4.A-event firm_cost_share h=2       2   536  -0.12041  0.46199
+5  PRIMARY: Spec 4.A-event firm_cost_share h=3       3   474   5.13032  4.41020
+6  PRIMARY: Spec 4.A-event firm_cost_share h=4       4   423 -12.02676 12.83805
+7  PRIMARY: Spec 4.A-event firm_cost_share h=5       5   413   6.41990  0.98372
+8  PRIMARY: Spec 4.A-event firm_cost_share h=6       6   424  -8.16745 21.43754
+9  PRIMARY: Spec 4.A-event firm_cost_share h=7       7   348  19.82867  9.25293
+10        PRIMARY: Spec 4.B-event firm_dev h=1       1   577  -3.81054  4.05261
+11        PRIMARY: Spec 4.B-event firm_dev h=2       2   525  -0.51913  1.37420
+12        PRIMARY: Spec 4.B-event firm_dev h=3       3   464  -0.26849  5.88752
+13        PRIMARY: Spec 4.B-event firm_dev h=4       4   415 -33.71994 38.47923
+14        PRIMARY: Spec 4.B-event firm_dev h=5       5   407   2.03975  0.80649
+15        PRIMARY: Spec 4.B-event firm_dev h=6       6   420 -14.27730 38.89387
+16        PRIMARY: Spec 4.B-event firm_dev h=7       7   342 -41.01780 52.18858
+17             Ext. margin firm_cost_share h=1       1   713  -2.20241  0.15334
+18             Ext. margin firm_cost_share h=2       2   713  -0.50463  0.63163
+19             Ext. margin firm_cost_share h=3       3   713  -2.20463  0.28817
+20             Ext. margin firm_cost_share h=4       4   713  -2.13949  0.30146
+21             Ext. margin firm_cost_share h=5       5   713  -0.49258  0.62550
+22             Ext. margin firm_cost_share h=6       6   713  -2.13881  0.29357
+23             Ext. margin firm_cost_share h=7       7   713  -2.25827  0.28254
+        t     p
+1    0.23 0.819
+2    0.56 0.574
+3   -2.18 0.030
+4   -0.26 0.794
+5    1.16 0.245
+6   -0.94 0.349
+7    6.53 0.000
+8   -0.38 0.703
+9    2.14 0.033
+10  -0.94 0.347
+11  -0.38 0.706
+12  -0.05 0.964
+13  -0.88 0.381
+14   2.53 0.012
+15  -0.37 0.714
+16  -0.79 0.432
+17 -14.36 0.000
+18  -0.80 0.425
+19  -7.65 0.000
+20  -7.10 0.000
+21  -0.79 0.431
+22  -7.29 0.000
+23  -7.99 0.000

@@ -1,37 +1,55 @@
 ###############################################################################
 # phase4_b2b_supplier_switching.R
 #
-# Angle 4 of REALLOCATION_MECHANISM_PLAN: B2B supplier switching.
-# Tests whether buyers shift purchases away from more-exposed ETS suppliers
-# as the EUA price rises.
+# Angle 4: B2B supplier switching under the EU ETS.
 #
-# Two specs:
-#   4.A (flow-level pair panel):
-#       Delta log(flow)_{j,b,t,h} = beta * (Signal_t x firm_cost_share_j)
-#                                  + alpha_{b,t} + alpha_{j,b} + eps
-#     Identified within (buyer, year) cell: across a buyer's ETS suppliers in
-#     a given year, do more-exposed suppliers lose flow more?
+# Do buyers reallocate purchases away from high-carbon-exposure ETS suppliers
+# as the post-MSR EUA price surge bites? Mirrors Peter-Ruane (2025) and
+# Boehm-Levchenko-Pandalai-Nayar (2022) horizon-differentiated designs.
 #
-#   4.B (within-seller-sector share):
-#       Delta share_{j,b,t,h} = beta * (Signal_t x firm_dev_{j,s(j)})
-#                              + alpha_{b,s(j),t} + alpha_{j,b} + eps
-#     Identified within (buyer, seller-4d-sector, year) cell: among a buyer's
-#     ETS suppliers in the same seller sector in the same year, does share
-#     shift from dirty to clean?
-#     share_{j,b,t} = flow_{j,b,t} / sum_{j' in s(j)} flow_{j',b,t}
-#     (denominator includes non-ETS sellers in the same 4d sector).
+# Identification strategy
+#   - Pre-period exposure window: 2013-2015 (MSR decided Oct 2015; 2016
+#     potentially contaminated by anticipation).
+#   - firm_cost_share_j = mean_{2013-15}(shortage * EUA) / mean_{2010-12}(total_cost)
+#   - firm_dev_j        = firm_cost_share_j - sector_mean(firm_cost_share) in NACE4d
+#   - Baseline year for event-study: t0 = 2015.
 #
-# Two candidate signals (run both; decide on RMD):
-#   - EUA level (Bartik: firm_cost_share_j x EUA_t).
-#   - Kanzig annual CPShock (surprise and shock variants). Known to sign-flip
-#     at annual frequency; included as robustness only.
+# Specifications (RMD-only; local-1 B2B is downsampled)
 #
-# Contamination filter: three NACE 20/24 VATs excluded (match aggregate
-# pairwise decomposition).
+#   PRIMARY (event-study long differences around t0 = 2015)
+#     Spec 4.B-event-h:
+#       share_{j,b,2015+h} - share_{j,b,2015} = beta_h * firm_dev_j
+#                                              + alpha_{b, s(j)} + eps
+#       Within buyer x seller-NACE4d cell, across ETS sellers with different
+#       firm_dev. Absorbs any sector-level confounder in the window (oil, gas,
+#       electricity, Belgian cycle). h = 1..7. Analog of Peter-Ruane long
+#       difference 1989 -> 1989+h.
 #
-# Local-1 note: B2B sample is DOWNSAMPLED on local 1. Pair FE is thin.
-# Coefficient estimates on local 1 are for code validation only; deploy to
-# RMD for reportable results.
+#     Spec 4.A-event-h:
+#       log(flow)_{j,b,2015+h} - log(flow)_{j,b,2015} = beta_h * firm_cost_share_j
+#                                                      + alpha_{b, s(j)} + eps
+#       Same cross-section at the flow level; uses buyer x seller-NACE4d FE
+#       as partial protection against commodity-cycle confound (but identifies
+#       off firm_cost_share, not firm_dev).
+#
+#   BENCHMARK (original Bartik annual-change; vulnerable to commodity-cycle
+#   confound because EUA_t co-moves with oil/gas/electricity prices that
+#   differentially affect carbon-intensive firms)
+#     Spec 4.A-annual: Delta log(flow) ~ (EUA_t x firm_cost_share_j)
+#                                        + alpha_{b,t} + alpha_{j,b}
+#     Spec 4.B-annual: Delta share     ~ (EUA_t x firm_dev_j)
+#                                        + alpha_{b, s(j), t} + alpha_{j,b}
+#
+#   Extensive margin at horizon h:
+#     1{pair active at 2015+h | active at 2015} ~ firm_cost_share_j
+#                                                  + alpha_{b, s(j)}
+#
+# Contamination filter: three NACE 20/24 VATs excluded.
+#
+# Kanzig annual series dropped entirely: shock and surprise variants are
+# essentially uncorrelated at annual frequency (r = 0.03) and sign-flip driven
+# by 6 disagreement-sign years. Not used in this exercise. See
+# memory/project_spec1a_shock_vs_surprise_flip.md.
 #
 # Output:
 #   output/tables/phase4_b2b_supplier_switching.txt   (diagnostic + regs)
@@ -50,8 +68,14 @@ while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DI
 source(file.path(REPO_DIR, "paths.R"))
 
 # ---- Config ----
-year_lo <- 2005L
-year_hi <- 2022L
+year_lo      <- 2005L
+year_hi      <- 2022L
+pre_num_lo   <- 2013L      # 2013-2015: pre-MSR-decision carbon cost window
+pre_num_hi   <- 2015L
+pre_denom_lo <- 2010L      # 2010-2012: pre-period total cost window (unchanged)
+pre_denom_hi <- 2012L
+t0_baseline  <- 2015L      # event-study baseline: last pre-MSR-decision year
+horizons     <- 1:7        # post-2015 horizons (2016..2022)
 
 contaminated_vats <- c(
   "68A2F4B84714EC1829E0AC28D29F204FDEBFF70F71F2A22FDE65461FF3ADDDFF",
@@ -69,38 +93,87 @@ eua_prices <- tibble(
 load(file.path(PROC_DATA, "b2b_selected_sample.RData"))
 load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
 load(file.path(PROC_DATA, "deflator_nace4d_2005base.RData"))
-firm_treat <- readRDS(file.path(OUT_DATA, "phase4_firm_treatment.rds"))
-load(file.path(OUT_DATA, "cpshock_annual.RData"))
+load(file.path(OUT_DATA,  "phase3_firm_exposure.RData"))    # firm_exposure
 
-# The b2b data frame name:
 b2b_df <- df_b2b_selected_sample
 rm(df_b2b_selected_sample)
 
-# ---- ETS seller universe ----
-# Define an ETS seller as a firm in firm_year_belgian_euets (regardless of
-# whether they had emissions > 0 in every year). Contaminated VATs excluded.
-ets_vats <- firm_year_belgian_euets %>%
-  distinct(vat) %>% pull(vat)
+# ---- Rebuild firm treatment on 2013-2015 window ----
+# This replaces the 2013-2016 window used in Spec 1.A's phase4_firm_treatment.rds.
+# Rationale: MSR was decided Oct 2015; including 2016 risks contaminating the
+# pre-period with MSR anticipation. Keep the 2010-2012 denominator unchanged.
 
+num_firm <- firm_exposure %>%
+  filter(year >= pre_num_lo, year <= pre_num_hi) %>%
+  group_by(vat) %>%
+  summarise(
+    mean_carbon_cost = mean(carbon_cost, na.rm = TRUE),
+    mean_shortage    = mean(shortage,    na.rm = TRUE),
+    n_num_years      = sum(!is.na(carbon_cost)),
+    .groups = "drop"
+  )
+
+denom_primary <- firm_exposure %>%
+  filter(year >= pre_denom_lo, year <= pre_denom_hi,
+         !is.na(total_cost), total_cost > 0) %>%
+  group_by(vat) %>%
+  summarise(mean_total_cost = mean(total_cost, na.rm = TRUE),
+            n_denom_years   = n(), .groups = "drop")
+
+# Fallback: earliest 3 years of positive total_cost for firms without 2010-12
+firms_all <- firm_exposure %>% distinct(vat)
+firms_fallback <- anti_join(firms_all, denom_primary, by = "vat") %>% pull(vat)
+
+denom_fallback <- firm_exposure %>%
+  filter(vat %in% firms_fallback, !is.na(total_cost), total_cost > 0) %>%
+  arrange(vat, year) %>%
+  group_by(vat) %>%
+  slice_head(n = 3) %>%
+  summarise(mean_total_cost = mean(total_cost, na.rm = TRUE),
+            n_denom_years   = n(), .groups = "drop")
+
+denom_firm <- bind_rows(denom_primary, denom_fallback)
+
+firm_nace <- firm_exposure %>%
+  distinct(vat, nace4d, nace2d) %>%
+  group_by(vat) %>% slice(1) %>% ungroup()
+
+firm_treat <- num_firm %>%
+  inner_join(denom_firm, by = "vat") %>%
+  inner_join(firm_nace,  by = "vat") %>%
+  mutate(firm_cost_share = ifelse(mean_total_cost > 0,
+                                  mean_carbon_cost / mean_total_cost,
+                                  NA_real_)) %>%
+  filter(!is.na(firm_cost_share))
+
+firm_treat <- firm_treat %>%
+  group_by(nace4d) %>%
+  mutate(sector_mean_share = mean(firm_cost_share, na.rm = TRUE),
+         firm_dev_share    = firm_cost_share - sector_mean_share,
+         n_sector_firms    = n()) %>%
+  ungroup()
+
+cat(sprintf("firm_treat (2013-2015 window): %d firms across %d NACE4d sectors\n",
+            nrow(firm_treat), n_distinct(firm_treat$nace4d)))
+cat("firm_cost_share summary:\n");  print(summary(firm_treat$firm_cost_share))
+cat("firm_dev_share summary:\n");   print(summary(firm_treat$firm_dev_share))
+
+# ---- ETS seller universe ----
+ets_vats <- firm_year_belgian_euets %>% distinct(vat) %>% pull(vat)
 ets_vats <- setdiff(ets_vats, contaminated_vats)
 cat("ETS seller universe:", length(ets_vats), "VATs (excl 3 contaminated)\n")
 
-# Firm-level cost share for each ETS seller
 ets_treatment <- firm_treat %>%
   filter(vat %in% ets_vats) %>%
   select(vat, nace4d, nace2d, firm_cost_share, firm_dev_share)
-
 cat("ETS sellers with firm_cost_share:", nrow(ets_treatment), "\n")
 
 # ---- Build pair panel restricted to ETS sellers ----
-# Rename b2b columns to seller (j) / buyer (b) convention:
-# In b2b data, corr_sales_ij = sales from i to j (i.e. i is seller, j is buyer).
 pairs <- b2b_df %>%
   rename(seller = vat_i_ano, buyer = vat_j_ano, corr_sales = corr_sales_ij) %>%
   filter(year >= year_lo, year <= year_hi,
          !is.na(corr_sales), corr_sales > 0)
 
-# ---- Build the panel for Spec 4.A: ETS sellers only ----
 pairs_ets <- pairs %>%
   filter(seller %in% ets_vats) %>%
   inner_join(ets_treatment, by = c("seller" = "vat"))
@@ -109,10 +182,10 @@ cat("\n=== ETS-seller pair panel ===\n")
 cat("rows (seller-buyer-year):", nrow(pairs_ets), "\n")
 cat("distinct ETS sellers:", n_distinct(pairs_ets$seller), "\n")
 cat("distinct buyers:      ", n_distinct(pairs_ets$buyer), "\n")
-cat("distinct pairs:       ", n_distinct(paste(pairs_ets$seller, pairs_ets$buyer)), "\n")
+cat("distinct pairs:       ",
+    n_distinct(paste(pairs_ets$seller, pairs_ets$buyer)), "\n")
 
-# ---- Deflate flow ----
-# Use seller's NACE 4d PPI (same as revenue deflation in Spec 1.A)
+# ---- Deflate flow (seller NACE 4d PPI) ----
 pairs_ets <- pairs_ets %>%
   left_join(deflator %>% select(nace4d, year, ppi), by = c("nace4d", "year")) %>%
   left_join(deflator_2d_only %>% select(nace2d, year, ppi_2d = ppi),
@@ -120,78 +193,44 @@ pairs_ets <- pairs_ets %>%
   mutate(ppi = coalesce(ppi, ppi_2d)) %>%
   select(-ppi_2d) %>%
   filter(!is.na(ppi)) %>%
-  mutate(real_flow = corr_sales / ppi * 100,
+  mutate(real_flow     = corr_sales / ppi * 100,
          log_real_flow = log(real_flow))
 
-# ---- Merge signals ----
+# ---- Merge EUA price (for benchmark Bartik specs only) ----
 pairs_ets <- pairs_ets %>%
   left_join(eua_prices, by = "year") %>%
-  left_join(cpshock_annual %>% select(year, cpshock_surprise, cpshock_shock),
-            by = "year") %>%
-  mutate(cpshock_surprise = coalesce(cpshock_surprise, 0),
-         cpshock_shock    = coalesce(cpshock_shock,    0),
-         shock_eua         = 100 * firm_cost_share * eua_price,
-         shock_cps_surp    = 100 * firm_cost_share * cpshock_surprise,
-         shock_cps_shock   = 100 * firm_cost_share * cpshock_shock)
+  mutate(shock_eua = 100 * firm_cost_share * eua_price)
 
-# ---- Diagnose sample thickness ----
+# ---- Thickness diagnostics ----
 cat("\n=== Sample thickness (crucial on downsampled local-1 B2B) ===\n")
-
-# Pair observation counts
-pair_counts <- pairs_ets %>%
-  group_by(seller, buyer) %>%
+pair_counts <- pairs_ets %>% group_by(seller, buyer) %>%
   summarise(n_years = n(), .groups = "drop")
-
-cat("\nPair-year counts:\n")
+cat("Pair-year counts:\n")
 cat("  pairs with 1 year:   ", sum(pair_counts$n_years == 1), "\n")
 cat("  pairs with 2-3 years:", sum(pair_counts$n_years %in% 2:3), "\n")
 cat("  pairs with 4-5 years:", sum(pair_counts$n_years %in% 4:5), "\n")
 cat("  pairs with 6+ years: ", sum(pair_counts$n_years >= 6), "\n")
-cat("  mean pair-lifespan:  ", round(mean(pair_counts$n_years), 1), "years\n")
+cat("  mean pair-lifespan:  ", round(mean(pair_counts$n_years), 1), "yrs\n")
 
-# Buyer-year cells with multiple ETS sellers (identification for Spec 4.A)
-by_buyer_year <- pairs_ets %>%
-  group_by(buyer, year) %>%
+by_buyer_year <- pairs_ets %>% group_by(buyer, year) %>%
   summarise(n_ets_sellers = n_distinct(seller), .groups = "drop")
+cat("Buyer-year cells with >= 2 ETS sellers:",
+    sum(by_buyer_year$n_ets_sellers >= 2), "/", nrow(by_buyer_year), "\n")
 
-cat("\nBuyer-year cells with >= 2 ETS sellers (Spec 4.A identification):\n")
-cat("  total cells with ETS purchases:", nrow(by_buyer_year), "\n")
-cat("  with >= 2 ETS sellers:         ",
-    sum(by_buyer_year$n_ets_sellers >= 2), "\n")
-cat("  with >= 3 ETS sellers:         ",
-    sum(by_buyer_year$n_ets_sellers >= 3), "\n")
-
-# Buyer-seller-sector-year cells with multiple ETS sellers (for Spec 4.B)
-by_buyer_sec_year <- pairs_ets %>%
-  group_by(buyer, nace4d, year) %>%
+by_buyer_sec_year <- pairs_ets %>% group_by(buyer, nace4d, year) %>%
   summarise(n_ets_sellers = n_distinct(seller), .groups = "drop")
+cat("Buyer x seller-4d x year cells with >= 2 ETS sellers:",
+    sum(by_buyer_sec_year$n_ets_sellers >= 2), "/",
+    nrow(by_buyer_sec_year), "\n")
 
-cat("\nBuyer x seller-4d x year cells with >= 2 ETS sellers (Spec 4.B identification):\n")
-cat("  total cells:", nrow(by_buyer_sec_year), "\n")
-cat("  with >= 2 ETS sellers: ",
-    sum(by_buyer_sec_year$n_ets_sellers >= 2), "\n")
-
-# ---- Build first-difference outcome ----
+# ---- Annual-change outcomes (for benchmark specs) ----
 pairs_ets <- pairs_ets %>%
   arrange(seller, buyer, year) %>%
   group_by(seller, buyer) %>%
   mutate(d_log_real_flow = log_real_flow - lag(log_real_flow)) %>%
   ungroup()
 
-cat("\nPair-year observations with non-missing d_log_real_flow:",
-    sum(!is.na(pairs_ets$d_log_real_flow)), "\n")
-
-# ---- Build Spec 4.B panel: share among all sellers in same seller-4d sector ----
-#
-# Need a vat -> nace5d map covering all sellers in the B2B data (ETS + non-ETS).
-# On RMD this comes from annual_accounts_selected_sample_key_variables.RData.
-# On local 1 the non-ETS map is thinner (downsampled), so Spec 4.B will be less
-# informative here; the code still runs either way.
-#
-# Denominator: sum of flow from ALL sellers in nace4d(j) to buyer b in year t.
-# Share:       flow_{j,b,t} / denominator.
-
-spec4b_feasible <- TRUE
+# ---- Build vat -> sector map (for share denominator, covering non-ETS too) ----
 aa_path <- file.path(PROC_DATA, "annual_accounts_selected_sample_key_variables.RData")
 if (!file.exists(aa_path)) {
   aa_path <- file.path(PROC_DATA, "annual_accounts_selected_sample.RData")
@@ -203,7 +242,6 @@ if (file.exists(aa_path)) {
   obj_name <- loaded_names[grepl("^df_annual_accounts", loaded_names)][1]
   if (!is.na(obj_name)) {
     aa <- get(obj_name)
-    # Some vintages use `vat`, others use `vat_ano`. Handle both.
     vat_col <- if ("vat" %in% names(aa)) "vat" else if ("vat_ano" %in% names(aa)) "vat_ano" else NA
     if (!is.na(vat_col) && "nace5d" %in% names(aa)) {
       aa <- aa %>% rename(vat = !!sym(vat_col))
@@ -219,208 +257,274 @@ if (file.exists(aa_path)) {
         select(vat, seller_nace4d = nace4d, seller_nace2d = nace2d)
       cat("Loaded vat -> sector map from", basename(aa_path),
           ":", nrow(vat_sector_map), "firms\n")
-    } else {
-      warning("annual_accounts file found but missing nace5d or vat/vat_ano: ", aa_path)
     }
     rm(aa); rm(list = obj_name)
-  } else {
-    warning("No df_annual_accounts_* object in ", aa_path)
   }
-} else {
-  warning("annual_accounts file not found at ", aa_path)
 }
 
-if (is.null(vat_sector_map)) {
-  spec4b_feasible <- FALSE
-  cat("Spec 4.B will be skipped (no vat -> sector map available).\n")
+spec4b_feasible <- !is.null(vat_sector_map)
+if (!spec4b_feasible) {
+  warning("No vat -> sector map; Spec 4.B will be skipped.")
 }
 
-# Build the all-seller pair panel for the denominator, with seller sector
-all_pairs <- pairs %>%
-  {if (!is.null(vat_sector_map)) left_join(., vat_sector_map, by = c("seller" = "vat"))
-   else mutate(., seller_nace4d = NA_character_, seller_nace2d = NA_character_)} %>%
-  filter(!is.na(seller_nace4d))
+# ---- Build share panel (Spec 4.B inputs) ----
+if (spec4b_feasible) {
+  all_pairs <- pairs %>%
+    left_join(vat_sector_map, by = c("seller" = "vat")) %>%
+    filter(!is.na(seller_nace4d))
 
-# Buyer-sector-year total flow (denominator for share)
-buyer_sec_year_flow <- all_pairs %>%
-  group_by(buyer, seller_nace4d, year) %>%
-  summarise(total_sector_flow = sum(corr_sales, na.rm = TRUE), .groups = "drop")
+  buyer_sec_year_flow <- all_pairs %>%
+    group_by(buyer, seller_nace4d, year) %>%
+    summarise(total_sector_flow = sum(corr_sales, na.rm = TRUE), .groups = "drop")
 
-cat("\n=== Spec 4.B panel: buyer x seller-4d x year cells ===\n")
-cat("rows:", nrow(buyer_sec_year_flow), "\n")
-cat("buyer x seller-4d cells with >= 2 distinct sellers (any ETS + non-ETS):",
-    all_pairs %>% group_by(buyer, seller_nace4d, year) %>%
-      summarise(n_sellers = n_distinct(seller), .groups = "drop") %>%
-      filter(n_sellers >= 2) %>% nrow(), "\n")
+  pairs_ets_4b <- pairs_ets %>%
+    mutate(seller_nace4d = nace4d) %>%
+    left_join(buyer_sec_year_flow, by = c("buyer", "seller_nace4d", "year")) %>%
+    mutate(share_jbt = corr_sales / total_sector_flow) %>%
+    filter(!is.na(share_jbt))
 
-# Merge total-sector flow onto the ETS-seller panel, compute share
-pairs_ets_4b <- pairs_ets %>%
-  mutate(seller_nace4d = nace4d) %>%
-  left_join(buyer_sec_year_flow, by = c("buyer", "seller_nace4d", "year")) %>%
-  mutate(share_jbt = corr_sales / total_sector_flow) %>%
-  filter(!is.na(share_jbt))
+  pairs_ets_4b <- pairs_ets_4b %>%
+    arrange(seller, buyer, year) %>%
+    group_by(seller, buyer) %>%
+    mutate(d_share = share_jbt - lag(share_jbt)) %>%
+    ungroup() %>%
+    mutate(shock_eua_dev = 100 * firm_dev_share * eua_price)
+}
 
-# First-difference share
-pairs_ets_4b <- pairs_ets_4b %>%
-  arrange(seller, buyer, year) %>%
-  group_by(seller, buyer) %>%
-  mutate(d_share = share_jbt - lag(share_jbt)) %>%
-  ungroup() %>%
-  mutate(shock_eua_dev      = 100 * firm_dev_share * eua_price,
-         shock_cps_surp_dev = 100 * firm_dev_share * cpshock_surprise,
-         shock_cps_shock_dev= 100 * firm_dev_share * cpshock_shock)
+# =============================================================================
+# BENCHMARK specs (original Bartik annual-change; retained for comparison)
+# =============================================================================
+cat("\n\n==============================================================\n")
+cat("BENCHMARK: Bartik annual-change specs\n")
+cat("(vulnerable to commodity-cycle confound; EUA_t co-moves with oil/gas)\n")
+cat("==============================================================\n")
 
-cat("\n=== Spec 4.B feasibility ===\n")
-cat("spec4b_feasible:", spec4b_feasible, "\n")
-cat("pair-years with d_share non-missing:",
-    sum(!is.na(pairs_ets_4b$d_share)), "\n")
+# -- Spec 4.A-annual --
+reg_data <- pairs_ets %>% filter(!is.na(d_log_real_flow))
+m_4A_annual <- feols(d_log_real_flow ~ shock_eua | seller^buyer + buyer^year,
+                     cluster = ~ seller + buyer, data = reg_data)
+cat("\n--- Spec 4.A-annual (EUA-Bartik) ---\n"); print(summary(m_4A_annual))
 
-# ---- Spec 4.A: Delta log(flow) ~ shock x firm_cost_share, pair + buyer*year FE ----
-run_4A <- function(df, signal_var, label) {
-  fml <- as.formula(paste0("d_log_real_flow ~ ", signal_var,
-                            " | seller^buyer + buyer^year"))
-  m <- feols(fml,
-             cluster = ~ seller + buyer,
-             data = df)
-  coefs <- coef(m); ses <- sqrt(diag(vcov(m)))
-  varname <- signal_var
-  list(label = label, n = m$nobs,
-       beta = coefs[varname], se = ses[varname],
+# -- Spec 4.B-annual --
+m_4B_annual <- NULL
+if (spec4b_feasible) {
+  reg_4b <- pairs_ets_4b %>% filter(!is.na(d_share))
+  m_4B_annual <- feols(d_share ~ shock_eua_dev
+                       | seller^buyer + buyer^seller_nace4d^year,
+                       cluster = ~ seller + buyer, data = reg_4b)
+  cat("\n--- Spec 4.B-annual (EUA-Bartik within-sector) ---\n")
+  print(summary(m_4B_annual))
+}
+
+# =============================================================================
+# PRIMARY: event-study long differences around t0 = 2015
+# =============================================================================
+cat("\n\n==============================================================\n")
+cat("PRIMARY: event-study long differences (baseline t0 = 2015)\n")
+cat("Horizons h = 1..7 correspond to 2016..2022\n")
+cat("==============================================================\n")
+
+# -- Build wide panel: one row per (seller, buyer), columns for each year --
+# For Spec 4.A-event: need log_real_flow at t0 and t0+h.
+flow_wide <- pairs_ets %>%
+  select(seller, buyer, year, log_real_flow, nace4d) %>%
+  pivot_wider(id_cols = c(seller, buyer, nace4d),
+              names_from = year,
+              names_prefix = "lf_",
+              values_from = log_real_flow)
+
+# For Spec 4.B-event: need share at t0 and t0+h.
+if (spec4b_feasible) {
+  share_wide <- pairs_ets_4b %>%
+    select(seller, buyer, year, share_jbt, seller_nace4d) %>%
+    pivot_wider(id_cols = c(seller, buyer, seller_nace4d),
+                names_from = year,
+                names_prefix = "sh_",
+                values_from = share_jbt)
+}
+
+# Attach firm-level regressors
+flow_wide <- flow_wide %>%
+  left_join(ets_treatment %>% select(vat, firm_cost_share, firm_dev_share),
+            by = c("seller" = "vat"))
+
+if (spec4b_feasible) {
+  share_wide <- share_wide %>%
+    left_join(ets_treatment %>% select(vat, firm_cost_share, firm_dev_share),
+              by = c("seller" = "vat"))
+}
+
+# -- Run event-study regressions at each horizon --
+run_event_flow <- function(h, wide, t0) {
+  yh  <- paste0("lf_", t0 + h)
+  y0  <- paste0("lf_", t0)
+  if (!all(c(yh, y0) %in% names(wide))) return(NULL)
+  dfh <- wide %>%
+    mutate(d_log_flow_h = .data[[yh]] - .data[[y0]]) %>%
+    filter(!is.na(d_log_flow_h))
+  if (nrow(dfh) < 50) return(NULL)
+  m <- feols(d_log_flow_h ~ firm_cost_share | buyer^nace4d,
+             cluster = ~ seller + buyer, data = dfh)
+  list(h = h, n = m$nobs,
+       n_pairs = n_distinct(paste(dfh$seller, dfh$buyer)),
+       beta = coef(m)["firm_cost_share"],
+       se   = sqrt(diag(vcov(m)))["firm_cost_share"],
        model = m)
 }
 
-cat("\n=== Spec 4.A: flow-level pair panel ===\n")
-
-reg_data <- pairs_ets %>% filter(!is.na(d_log_real_flow))
-
-# Three signal variants
-m_eua      <- run_4A(reg_data, "shock_eua",       "EUA-Bartik")
-m_cps_surp <- run_4A(reg_data, "shock_cps_surp",  "CPShock surprise")
-m_cps_shk  <- run_4A(reg_data, "shock_cps_shock", "CPShock shock")
-
-for (m in list(m_eua, m_cps_surp, m_cps_shk)) {
-  cat("\n---", m$label, "---\n")
-  print(summary(m$model))
+run_event_share <- function(h, wide, t0) {
+  yh  <- paste0("sh_", t0 + h)
+  y0  <- paste0("sh_", t0)
+  if (!all(c(yh, y0) %in% names(wide))) return(NULL)
+  dfh <- wide %>%
+    mutate(d_share_h = .data[[yh]] - .data[[y0]]) %>%
+    filter(!is.na(d_share_h))
+  if (nrow(dfh) < 50) return(NULL)
+  m <- feols(d_share_h ~ firm_dev_share | buyer^seller_nace4d,
+             cluster = ~ seller + buyer, data = dfh)
+  list(h = h, n = m$nobs,
+       n_pairs = n_distinct(paste(dfh$seller, dfh$buyer)),
+       beta = coef(m)["firm_dev_share"],
+       se   = sqrt(diag(vcov(m)))["firm_dev_share"],
+       model = m)
 }
 
-# ---- Window variants for EUA-Bartik spec ----
-cat("\n=== Spec 4.A EUA-Bartik, sample windows ===\n")
-
-run_window <- function(df, lo, hi, label) {
-  dfw <- df %>% filter(year >= lo, year <= hi, !is.na(d_log_real_flow))
-  if (nrow(dfw) < 100) return(NULL)
-  m <- feols(d_log_real_flow ~ shock_eua | seller^buyer + buyer^year,
-             cluster = ~ seller + buyer, data = dfw)
-  cat("\n--- Window:", label, "| n =", nrow(dfw),
-      "| pairs =", n_distinct(paste(dfw$seller, dfw$buyer)), "---\n")
-  print(summary(m))
-  m
+cat("\n--- Spec 4.A-event-h: Delta_h log(flow) ~ firm_cost_share, buyer x NACE4d FE ---\n")
+res_4A_event <- lapply(horizons, run_event_flow, wide = flow_wide, t0 = t0_baseline)
+for (r in res_4A_event) {
+  if (is.null(r)) next
+  cat(sprintf("  h=%d: beta=%.5f  se=%.5f  n=%d  pairs=%d\n",
+              r$h, r$beta, r$se, r$n, r$n_pairs))
 }
 
-m_full   <- run_window(pairs_ets, 2005, 2022, "2005-2022")
-m_phase3 <- run_window(pairs_ets, 2013, 2022, "2013-2022")
-m_post16 <- run_window(pairs_ets, 2017, 2022, "2017-2022 (post-base)")
-
-# ---- Spec 4.B: within-seller-sector share ----
-m_4b_eua      <- m_4b_cps_surp <- m_4b_cps_shock <- NULL
+res_4B_event <- NULL
 if (spec4b_feasible) {
-  cat("\n=== Spec 4.B: within-seller-sector share ===\n")
-
-  reg_4b <- pairs_ets_4b %>% filter(!is.na(d_share))
-
-  # EUA-Bartik
-  m_4b_eua <- feols(d_share ~ shock_eua_dev
-                    | seller^buyer + buyer^seller_nace4d^year,
-                    cluster = ~ seller + buyer, data = reg_4b)
-  cat("\n--- Spec 4.B, EUA-Bartik ---\n"); print(summary(m_4b_eua))
-
-  # CPShock surprise
-  m_4b_cps_surp <- feols(d_share ~ shock_cps_surp_dev
-                         | seller^buyer + buyer^seller_nace4d^year,
-                         cluster = ~ seller + buyer, data = reg_4b)
-  cat("\n--- Spec 4.B, CPShock surprise ---\n"); print(summary(m_4b_cps_surp))
-
-  # CPShock shock
-  m_4b_cps_shock <- feols(d_share ~ shock_cps_shock_dev
-                          | seller^buyer + buyer^seller_nace4d^year,
-                          cluster = ~ seller + buyer, data = reg_4b)
-  cat("\n--- Spec 4.B, CPShock shock ---\n"); print(summary(m_4b_cps_shock))
-} else {
-  cat("\n=== Spec 4.B skipped (no vat -> sector map available) ===\n")
+  cat("\n--- Spec 4.B-event-h: Delta_h share ~ firm_dev, buyer x seller-NACE4d FE ---\n")
+  res_4B_event <- lapply(horizons, run_event_share, wide = share_wide, t0 = t0_baseline)
+  for (r in res_4B_event) {
+    if (is.null(r)) next
+    cat(sprintf("  h=%d: beta=%.5f  se=%.5f  n=%d  pairs=%d\n",
+                r$h, r$beta, r$se, r$n, r$n_pairs))
+  }
 }
 
-# ---- Extensive margin: relationship continuation LPM ----
-cat("\n=== Extensive margin: P(pair active next year | active this year) ===\n")
+# =============================================================================
+# Extensive margin at horizon h: P(pair active at t0+h | active at t0)
+# =============================================================================
+cat("\n\n=== Extensive margin: P(pair active at t0+h | active at t0) ===\n")
 
-ext <- pairs_ets %>%
-  arrange(seller, buyer, year) %>%
-  group_by(seller, buyer) %>%
-  mutate(active_next = as.integer(!is.na(lead(year)) & lead(year) == year + 1)) %>%
-  ungroup() %>%
-  filter(!is.na(active_next))
+# Build indicator: pair (j,b) is active in year y if corr_sales > 0 in that year
+active_flags <- pairs_ets %>%
+  select(seller, buyer, year, nace4d) %>%
+  distinct() %>%
+  mutate(active = 1L) %>%
+  pivot_wider(id_cols = c(seller, buyer, nace4d),
+              names_from = year, names_prefix = "act_",
+              values_from = active, values_fill = 0L)
 
-m_ext_eua <- feols(active_next ~ shock_eua
-                   | seller^buyer + buyer^year,
-                   cluster = ~ seller + buyer, data = ext)
-cat("\n--- Extensive margin, EUA-Bartik ---\n"); print(summary(m_ext_eua))
+active_flags <- active_flags %>%
+  left_join(ets_treatment %>% select(vat, firm_cost_share),
+            by = c("seller" = "vat"))
 
-# ---- Save output ----
-extract_beta <- function(m, label, varname = "shock_eua") {
+run_event_ext <- function(h, wide, t0) {
+  y0 <- paste0("act_", t0)
+  yh <- paste0("act_", t0 + h)
+  if (!all(c(y0, yh) %in% names(wide))) return(NULL)
+  dfh <- wide %>%
+    filter(.data[[y0]] == 1L) %>%
+    mutate(active_h = .data[[yh]])
+  if (nrow(dfh) < 50) return(NULL)
+  m <- feols(active_h ~ firm_cost_share | buyer^nace4d,
+             cluster = ~ seller + buyer, data = dfh)
+  list(h = h, n = m$nobs,
+       n_pairs = n_distinct(paste(dfh$seller, dfh$buyer)),
+       beta = coef(m)["firm_cost_share"],
+       se   = sqrt(diag(vcov(m)))["firm_cost_share"],
+       model = m)
+}
+
+res_ext_event <- lapply(horizons, run_event_ext,
+                        wide = active_flags, t0 = t0_baseline)
+for (r in res_ext_event) {
+  if (is.null(r)) next
+  cat(sprintf("  h=%d: beta=%.5f  se=%.5f  n=%d  pairs=%d\n",
+              r$h, r$beta, r$se, r$n, r$n_pairs))
+}
+
+# =============================================================================
+# Output
+# =============================================================================
+extract_bench <- function(m, label, varname) {
   if (is.null(m)) return(NULL)
   co <- coef(m)[varname]; se <- sqrt(diag(vcov(m)))[varname]
-  tibble(spec = label, n = m$nobs, beta = co, se = se,
+  tibble(spec = label, horizon = NA_integer_, n = m$nobs,
+         beta = co, se = se,
          t = co / se, p = 2 * pt(abs(co / se), df = m$nobs, lower.tail = FALSE))
 }
 
+extract_event <- function(r, label_prefix) {
+  if (is.null(r)) return(NULL)
+  t_val <- r$beta / r$se
+  tibble(spec    = sprintf("%s h=%d", label_prefix, r$h),
+         horizon = r$h,
+         n       = r$n,
+         beta    = r$beta,
+         se      = r$se,
+         t       = t_val,
+         p       = 2 * pt(abs(t_val), df = r$n, lower.tail = FALSE))
+}
+
 summary_tbl <- bind_rows(
-  extract_beta(m_eua$model,       "Spec 4.A EUA-Bartik, full"),
-  extract_beta(m_cps_surp$model,  "Spec 4.A CPShock surprise, full", "shock_cps_surp"),
-  extract_beta(m_cps_shk$model,   "Spec 4.A CPShock shock,    full", "shock_cps_shock"),
-  extract_beta(m_full,            "Spec 4.A EUA-Bartik, 2005-2022"),
-  extract_beta(m_phase3,          "Spec 4.A EUA-Bartik, 2013-2022"),
-  extract_beta(m_post16,          "Spec 4.A EUA-Bartik, 2017-2022"),
-  extract_beta(m_4b_eua,          "Spec 4.B EUA-Bartik",             "shock_eua_dev"),
-  extract_beta(m_4b_cps_surp,     "Spec 4.B CPShock surprise",       "shock_cps_surp_dev"),
-  extract_beta(m_4b_cps_shock,    "Spec 4.B CPShock shock",          "shock_cps_shock_dev"),
-  extract_beta(m_ext_eua,         "Ext. margin (P active next) EUA-Bartik")
+  extract_bench(m_4A_annual, "BENCH: Spec 4.A-annual EUA-Bartik",       "shock_eua"),
+  extract_bench(m_4B_annual, "BENCH: Spec 4.B-annual EUA-Bartik w-sec", "shock_eua_dev"),
+  bind_rows(lapply(res_4A_event, extract_event,
+                   label_prefix = "PRIMARY: Spec 4.A-event firm_cost_share")),
+  bind_rows(lapply(res_4B_event, extract_event,
+                   label_prefix = "PRIMARY: Spec 4.B-event firm_dev")),
+  bind_rows(lapply(res_ext_event, extract_event,
+                   label_prefix = "Ext. margin firm_cost_share"))
 ) %>% filter(!is.na(beta))
 
 cat("\n=== Coefficient summary ===\n")
 print(as.data.frame(summary_tbl %>%
-  mutate(beta = round(beta, 4), se = round(se, 4),
+  mutate(beta = round(beta, 5), se = round(se, 5),
          t = round(t, 2), p = round(p, 3))))
 
 write.csv(summary_tbl %>%
-  mutate(across(c(beta, se, t, p), ~round(., 4))),
+  mutate(across(c(beta, se, t, p), ~round(., 5))),
   file.path(OUTPUT_TAB, "phase4_b2b_supplier_switching.csv"),
   row.names = FALSE)
 
 sink(file.path(OUTPUT_TAB, "phase4_b2b_supplier_switching.txt"))
-cat("=== Panel thickness ===\n")
-cat("ETS-seller pair panel rows:", nrow(pairs_ets), "\n")
-cat("Pair-years with non-missing d_log_real_flow:",
-    sum(!is.na(pairs_ets$d_log_real_flow)), "\n\n")
+cat("=== Treatment window ===\n")
+cat(sprintf("firm_cost_share: mean_{%d-%d}(shortage*EUA) / mean_{%d-%d}(total_cost)\n",
+            pre_num_lo, pre_num_hi, pre_denom_lo, pre_denom_hi))
+cat(sprintf("Event-study baseline t0 = %d; horizons h = %s\n",
+            t0_baseline, paste(range(horizons), collapse = "..")))
+cat(sprintf("firm_treat rows: %d across %d NACE4d sectors\n",
+            nrow(firm_treat), n_distinct(firm_treat$nace4d)))
 
+cat("\n=== Panel thickness ===\n")
+cat("ETS-seller pair panel rows:", nrow(pairs_ets), "\n")
 cat("Pair lifespan distribution:\n")
 cat("  1 year:   ", sum(pair_counts$n_years == 1), "\n")
 cat("  2-3 years:", sum(pair_counts$n_years %in% 2:3), "\n")
 cat("  4-5 years:", sum(pair_counts$n_years %in% 4:5), "\n")
 cat("  6+ years: ", sum(pair_counts$n_years >= 6), "\n")
-cat("  mean:     ", round(mean(pair_counts$n_years), 1), "\n\n")
+cat("  mean:     ", round(mean(pair_counts$n_years), 1), "\n")
 
-cat("Buyer-year cells with >=2 ETS sellers:",
+cat("\nBuyer-year cells with >=2 ETS sellers:",
     sum(by_buyer_year$n_ets_sellers >= 2), "/", nrow(by_buyer_year), "\n")
-cat("Buyer x 4d x year cells with >=2 ETS sellers (Spec 4.B):",
-    sum(by_buyer_sec_year$n_ets_sellers >= 2), "/", nrow(by_buyer_sec_year), "\n")
+cat("Buyer x 4d x year cells with >=2 ETS sellers:",
+    sum(by_buyer_sec_year$n_ets_sellers >= 2), "/",
+    nrow(by_buyer_sec_year), "\n")
 
-cat("\n=== Spec 4.A coefficient table ===\n")
+cat("\n=== Coefficient table ===\n")
 print(as.data.frame(summary_tbl %>%
-  mutate(beta = round(beta, 4), se = round(se, 4),
+  mutate(beta = round(beta, 5), se = round(se, 5),
          t = round(t, 2), p = round(p, 3))))
 sink()
 
 cat("\nSaved tables to", OUTPUT_TAB, "\n")
-cat("\nAll specs (4.A, 4.B, extensive margin) run end-to-end. On local 1 the\n")
-cat("downsampled B2B and downsampled annual accounts make estimates thinner\n")
-cat("than on RMD, so results should be validated on the full RMD sample before\n")
-cat("reporting.\n")
+cat("\nReady to run on RMD with full B2B + full annual_accounts.\n")
+cat("Event-study horizons 1..7 correspond to 2016..2022.\n")
