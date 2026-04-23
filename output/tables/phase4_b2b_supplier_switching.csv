@@ -1,24 +1,24 @@
-"spec","horizon","n","beta","se","t","p"
-"BENCH: Spec 4.A-annual EUA-Bartik",NA,38168,0.00041,0.0018,0.22861,0.81918
-"BENCH: Spec 4.B-annual EUA-Bartik w-sec",NA,9194,0.00136,0.00243,0.56186,0.57423
-"PRIMARY: Spec 4.A-event firm_cost_share h=1",1,587,-12.30584,5.65656,-2.1755,0.02999
-"PRIMARY: Spec 4.A-event firm_cost_share h=2",2,536,-0.12041,0.46199,-0.26063,0.79448
-"PRIMARY: Spec 4.A-event firm_cost_share h=3",3,474,5.13032,4.4102,1.16329,0.2453
-"PRIMARY: Spec 4.A-event firm_cost_share h=4",4,423,-12.02676,12.83805,-0.93681,0.34939
-"PRIMARY: Spec 4.A-event firm_cost_share h=5",5,413,6.4199,0.98372,6.52615,0
-"PRIMARY: Spec 4.A-event firm_cost_share h=6",6,424,-8.16745,21.43754,-0.38099,0.7034
-"PRIMARY: Spec 4.A-event firm_cost_share h=7",7,348,19.82867,9.25293,2.14296,0.03281
-"PRIMARY: Spec 4.B-event firm_dev h=1",1,577,-3.81054,4.05261,-0.94027,0.34747
-"PRIMARY: Spec 4.B-event firm_dev h=2",2,525,-0.51913,1.3742,-0.37777,0.70575
-"PRIMARY: Spec 4.B-event firm_dev h=3",3,464,-0.26849,5.88752,-0.0456,0.96365
-"PRIMARY: Spec 4.B-event firm_dev h=4",4,415,-33.71994,38.47923,-0.87632,0.38137
-"PRIMARY: Spec 4.B-event firm_dev h=5",5,407,2.03975,0.80649,2.52919,0.01181
-"PRIMARY: Spec 4.B-event firm_dev h=6",6,420,-14.2773,38.89387,-0.36708,0.71374
-"PRIMARY: Spec 4.B-event firm_dev h=7",7,342,-41.0178,52.18858,-0.78595,0.43244
-"Ext. margin firm_cost_share h=1",1,713,-2.20241,0.15334,-14.36336,0
-"Ext. margin firm_cost_share h=2",2,713,-0.50463,0.63163,-0.79893,0.4246
-"Ext. margin firm_cost_share h=3",3,713,-2.20463,0.28817,-7.65043,0
-"Ext. margin firm_cost_share h=4",4,713,-2.13949,0.30146,-7.09701,0
-"Ext. margin firm_cost_share h=5",5,713,-0.49258,0.6255,-0.78749,0.43126
-"Ext. margin firm_cost_share h=6",6,713,-2.13881,0.29357,-7.28557,0
-"Ext. margin firm_cost_share h=7",7,713,-2.25827,0.28254,-7.99261,0
+"spec","horizon","n","n_pairs","n_ets_pairs","beta","se","t","p"
+"BENCH: Spec 4.A-annual EUA-Bartik",NA,107179,NA,NA,-0.00137,0.00161,-0.85629,0.39184
+"BENCH: Spec 4.B-annual EUA-Bartik w-sec",NA,27466,NA,NA,2e-04,0.00018,1.06247,0.28803
+"PRIMARY: Spec 4.A-event firm_cost_share h=1",1,1487,5912,2420,-1.42232,4.40302,-0.32303,0.74672
+"PRIMARY: Spec 4.A-event firm_cost_share h=2",2,1348,5401,2251,0.17412,0.43557,0.39975,0.6894
+"PRIMARY: Spec 4.A-event firm_cost_share h=3",3,1269,5142,2100,1.39378,1.79156,0.77797,0.43673
+"PRIMARY: Spec 4.A-event firm_cost_share h=4",4,1144,4763,1970,-2.86263,3.82188,-0.74901,0.45401
+"PRIMARY: Spec 4.A-event firm_cost_share h=5",5,1065,4450,1848,6.20007,1.08131,5.73387,0
+"PRIMARY: Spec 4.A-event firm_cost_share h=6",6,1032,4252,1793,-1.6301,7.56016,-0.21562,0.82933
+"PRIMARY: Spec 4.A-event firm_cost_share h=7",7,918,4021,1655,15.8885,12.82895,1.23849,0.21585
+"PRIMARY: Spec 4.B-event firm_cost_share h=1",1,1487,5912,2420,1.76537,0.86136,2.04951,0.04059
+"PRIMARY: Spec 4.B-event firm_cost_share h=2",2,1348,5401,2251,0.10216,0.09877,1.03429,0.30119
+"PRIMARY: Spec 4.B-event firm_cost_share h=3",3,1269,5142,2100,0.15883,0.42483,0.37387,0.70856
+"PRIMARY: Spec 4.B-event firm_cost_share h=4",4,1144,4763,1970,0.08713,0.63155,0.13796,0.8903
+"PRIMARY: Spec 4.B-event firm_cost_share h=5",5,1065,4450,1848,1.48846,0.21135,7.04277,0
+"PRIMARY: Spec 4.B-event firm_cost_share h=6",6,1032,4252,1793,0.38374,0.79789,0.48094,0.63066
+"PRIMARY: Spec 4.B-event firm_cost_share h=7",7,918,4021,1655,0.20203,2.80355,0.07206,0.94257
+"Ext. margin firm_cost_share h=1",1,1970,7354,2896,-1.6574,0.54129,-3.06195,0.00223
+"Ext. margin firm_cost_share h=2",2,1970,7354,2896,0.32779,0.792,0.41388,0.67901
+"Ext. margin firm_cost_share h=3",3,1970,7354,2896,-1.20688,0.9783,-1.23365,0.21748
+"Ext. margin firm_cost_share h=4",4,1970,7354,2896,-1.18092,0.99257,-1.18976,0.23428
+"Ext. margin firm_cost_share h=5",5,1970,7354,2896,0.27142,0.62842,0.43191,0.66586
+"Ext. margin firm_cost_share h=6",6,1970,7354,2896,-0.86948,1.20788,-0.71984,0.47171
+"Ext. margin firm_cost_share h=7",7,1970,7354,2896,-0.95952,1.08851,-0.8815,0.37815
