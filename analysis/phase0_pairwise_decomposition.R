@@ -175,7 +175,13 @@ cat("\nTriple-balanced panel (firms in 2005, 2012, 2020):", length(triple_vats),
 results_triple <- bind_rows(
   decompose_pair(df, 2005, 2012, restrict_vats = triple_vats, label = "2005 -> 2012 [triple-bal]"),
   decompose_pair(df, 2012, 2020, restrict_vats = triple_vats, label = "2012 -> 2020 [triple-bal]"),
-  decompose_pair(df, 2005, 2020, restrict_vats = triple_vats, label = "2005 -> 2020 [triple-bal]")
+  decompose_pair(df, 2005, 2020, restrict_vats = triple_vats, label = "2005 -> 2020 [triple-bal]"),
+  decompose_pair(df, 2020, 2022,
+                 restrict_vats = setdiff(triple_vats,
+                   c("68A2F4B84714EC1829E0AC28D29F204FDEBFF70F71F2A22FDE65461FF3ADDDFF",
+                     "F8F1FAA7804D5A5B8495B44A8586C93F19689545D2D96B5CBBB19221519EC076",
+                     "1061796C42F184760E3BAF45DC443875C42284348C2B209B70F02ED964EDAC7E")),
+                 label = "2020 -> 2022 [triple-bal, ex. 3 VATs]")
 )
 
 results <- bind_rows(results, results_triple)

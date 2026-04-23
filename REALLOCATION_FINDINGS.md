@@ -472,6 +472,7 @@ Six-channel pp columns sum to **Total**. `z_ent` and `z_exit` report group-avera
 | **2005 → 2012 [triple-bal]** | **101** | 0 | 0 | **−22.2** | +12.5 | +9.2  | +9.8  | **−53.7** | 0 | 0 | — | — |
 | **2012 → 2020 [triple-bal]** | **101** | 0 | 0 | **−3.3**  | −9.1  | −16.2 | +12.5 | **+9.5**  | 0 | 0 | — | — |
 | **2005 → 2020 [triple-bal]** | **101** | 0 | 0 | **−24.8** | +2.2  | −15.9 | +12.0 | −23.1     | 0 | 0 | — | — |
+| **2020 → 2022 [triple-bal, ex. 3 VATs]** | 96 | 0 | 3 | **−3.8** | +12.5 | −13.5 | −8.7 | **+6.4** | 0 | −0.4 | — | — |
 
 ᶜ **Rows ending in 2022 exclude three contaminated VATs from every year.** One NACE 24 installation (likely ArcelorMittal Gent) and two NACE 20 installations come off EUTL reporting in 2021 while their Annual Accounts revenue continues or grows — diagnosed as installation-level reclassification, not real abatement (see finding 5 below). The unrestricted 2005→2022 row was Total $-37.3$ with Technique $-25.6$; excluding the three VATs yields Total $-24.9$ with Technique $-11.6$, i.e.\ $\sim 12$ pp of Total and $\sim 14$ pp of Technique in the unrestricted row were artefact. The unrestricted 2007→2022 and 2012→2022 rows are not reported.
 
