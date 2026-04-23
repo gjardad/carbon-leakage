@@ -456,31 +456,36 @@ All channels reported in pp of $E_{t_{\text{base}}}$.
 
 ### Results
 
-| Pair | n_surv | n_ent | n_exit | Total | Scale | Between | Within | Technique | Entry | Exit |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 2005 → 2007 | 154 | 8  | 8  | −4.1  | +18.2 | +11.5 | +3.3  | **−38.1** | +1.0  | −0.1 |
-| 2005 → 2012 | 127 | 37 | 35 | −16.4 | +10.8 | +7.4  | +10.5 | **−49.6** | +10.8 | −6.4 |
-| 2005 → 2020 | 105 | 55 | 57 | −20.3 | +1.6  | −14.3 | +11.1 | −21.5     | +10.3 | −7.4 |
-| 2005 → 2022 | 100 | 49 | 62 | −37.3 | +15.6 | −31.7 | +4.5  | −25.6     | +8.5  | −8.5 |
-| 2007 → 2012 | 129 | 35 | 33 | −12.8 | −6.6  | −3.9  | +4.0  | −10.4     | +10.8 | −6.7 |
-| 2007 → 2020 | 109 | 51 | 53 | −16.8 | −12.6 | −18.5 | +9.3  | **+2.6**  | +9.5  | −7.1 |
-| 2012 → 2020 | 126 | 34 | 38 | −4.7  | −7.0  | −17.1 | +14.5 | **+4.2**  | +3.1  | −2.3 |
+Six-channel pp columns sum to **Total**. `z_ent` and `z_exit` report group-average emission intensity in tCO₂ per million EUR of real revenue (entrants measured in $t_{\text{end}}$, exiters in $t_{\text{base}}$). The bottom three rows restrict to the 101-firm **triple-balanced panel** — firms with positive emissions in all of 2005, 2012, and 2020 — so entry/exit are zero by construction on those rows.
+
+| Pair | n_surv | n_ent | n_exit | Total | Scale | Between | Within | Technique | Entry | Exit | z_ent | z_exit |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2005 → 2007 | 154 | 8  | 8  | −4.1  | +18.2 | +11.5 | +3.3  | **−38.1** | +1.0  | −0.1 | 183 | 130 |
+| 2005 → 2012 | 127 | 37 | 35 | −16.4 | +10.8 | +7.4  | +10.5 | **−49.6** | +10.8 | −6.4 | 671 | 382 |
+| 2005 → 2020 | 105 | 55 | 57 | −20.3 | +1.6  | −14.3 | +11.1 | −21.5     | +10.3 | −7.4 | 466 | 298 |
+| 2005 → 2022 | 100 | 49 | 62 | −37.3 | +15.6 | −31.7 | +4.5  | −25.6     | +8.5  | −8.5 | 372 | 234 |
+| 2007 → 2012 | 129 | 35 | 33 | −12.8 | −6.6  | −3.9  | +4.0  | −10.4     | +10.8 | −6.7 | 804 | 362 |
+| 2007 → 2020 | 109 | 51 | 53 | −16.8 | −12.6 | −18.5 | +9.3  | **+2.6**  | +9.5  | −7.1 | 534 | 231 |
+| 2012 → 2020 | 126 | 34 | 38 | −4.7  | −7.0  | −17.1 | +14.5 | **+4.2**  | +3.1  | −2.3 | 383 | 158 |
+| **2005 → 2012 [triple-bal]** | **101** | 0 | 0 | **−22.2** | +12.5 | +9.2  | +9.8  | **−53.7** | 0 | 0 | — | — |
+| **2012 → 2020 [triple-bal]** | **101** | 0 | 0 | **−3.3**  | −9.1  | −16.2 | +12.5 | **+9.5**  | 0 | 0 | — | — |
+| **2005 → 2020 [triple-bal]** | **101** | 0 | 0 | **−24.8** | +2.2  | −15.9 | +12.0 | −23.1     | 0 | 0 | — | — |
 
 ### Key findings
 
-1. **Within-firm abatement is front-loaded.** Technique is −49.6 pp over 2005→2012 (127 survivors) but **+4.2 pp over 2012→2020** (126 survivors, a nearly identical firm set). Among firms that survive both windows, the intensity reduction accumulated through 2012 largely did not continue afterward. 2007→2020 is the same story (tech = +2.6 among 109 survivors). The −25.6 pp technique channel in the 2005→2022 view is therefore almost entirely Phase I/II abatement, not a steady decline.
+1. **Within-firm abatement reverses post-2012 on the same firms.** The triple-balanced panel makes this unambiguous: among the 101 firms present in all three years, technique is **−53.7 pp over 2005→2012 and +9.5 pp over 2012→2020**. The intensity gains accumulated in Phase I/II partially *reversed* from 2012 onward. The full-window technique of −23.1 pp is the net. The near-identical-sample comparison across windows rules out sample composition as the explanation for the difference seen earlier (−49.6 in 2005→2012 vs +4.2 in 2012→2020). Among the same firms, the reversal is larger (+9.5 vs +4.2) when measured cleanly.
 
-2. **Between-sector reallocation carries the post-2012 story.** From 2012 onward, between-sector is the only channel moving emissions down: −17.1 pp (2012→2020), −18.5 (2007→2020), −31.7 (2005→2022). This is the manufacturing-mix shift of the Belgian economy, not carbon pricing per se.
+2. **Between-sector reallocation is carrying the post-2012 decline.** On the triple-balanced sample, between = −16.2 over 2012→2020 while technique is +9.5 — the manufacturing-mix shift of the Belgian economy is more than offsetting the within-firm intensity drift.
 
-3. **Within-sector reallocation is consistently positive.** +3 to +15 pp in every pair. Dirtier firms have been slowly *gaining* share within their NACE 2d, across every window, including post-2017 — reinforces the main null finding on within-sector reallocation.
+3. **Within-sector reallocation remains consistently positive.** +9.2 to +14.5 pp across every window, including on the triple-balanced panel. Dirtier firms have been slowly gaining share within their NACE 2d — reinforces the main null finding on within-sector reallocation even under the strictest sample.
 
-4. **Entry and exit roughly cancel.** |Entry − Exit| is ≤ 4.4 pp in every pair. Net entry/exit is not driving the headline (consistent with the Melitz–Polanec finding).
+4. **Entrants are consistently more emission-intensive than exiters.** `z_ent` exceeds `z_exit` in every unrestricted pair, with ratios ranging from 1.4x (2005→2007) to 2.4x (2012→2020). This is the opposite of what a "dirty firms die under ETS pressure, clean firms enter" story would predict. Likely mechanisms: (i) "exit" in our data is data-loss, not literal firm death (Annual Accounts missingness); (ii) "entrants" include firms that came online after $t_{\text{base}}$ and may be in their capacity ramp-up phase with elevated intensity; (iii) firms whose emissions toggled past the zero threshold between the two years. In net emissions terms, entry and exit still roughly cancel (|Entry − Exit| ≤ 4.4 pp in every unrestricted row), because emissions-weighted contributions depend on both mean intensity *and* size, and exiters tend to be larger.
 
 ### Caveats
 
-- Even in this pairwise form, sample composition still varies across pairs: 2005→2012 has 127 survivors; 2012→2020 has 126 — but these are not identical firm sets, so comparing "technique −49.6" and "technique +4.2" as a time series of the *same* firms is still slightly off. A triple-balanced panel (firms in 2005, 2012, and 2020) would tighten this.
-- Exit ≠ firm death: a firm is an "exiter" if its emissions are missing or zero in $t_{\text{end}}$, which can happen because Annual Accounts data is missing or the installation temporarily shut down. The 281-firm EUTL roster is nearly stable in every year.
-- "Between" here uses only survivors' sector aggregates, not the full panel (unlike the fixed-base Table 1, which uses all firms for the sector decomposition). Numbers are therefore not directly comparable to Table 1's `between_sector` column even for overlapping years.
+- Exit ≠ firm death: a firm is an "exiter" if its emissions are missing or zero in $t_{\text{end}}$, which usually reflects Annual Accounts data availability rather than an actual plant closure. The 281-firm EUTL roster is nearly stable in every year.
+- "Between" here uses only survivors' sector aggregates, not the full panel (unlike the fixed-base Table 1). Numbers are therefore not directly comparable to Table 1's `between_sector` column even for overlapping years.
+- The triple-balanced panel (101 firms) is a selected sample — firms with continuous emissions *and* Annual Accounts coverage across 15 years are likely larger and more established than the broader population. The direction of the 2012→2020 technique reversal is however consistent with the 126-firm pair-wise estimate (+4.2), so selection is not driving the sign.
 
 ---
 

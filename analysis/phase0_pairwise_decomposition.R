@@ -63,7 +63,11 @@ df <- df %>%
   mutate(real_revenue = revenue / ppi * 100)
 
 # ---- Decomposition function ----
-decompose_pair <- function(df, t0, t1) {
+# If restrict_vats is non-NULL, survivors/entrants/exiters are all confined to
+# firms in that set (used for triple-balanced rows). In that case entry and
+# exit are zero by construction.
+decompose_pair <- function(df, t0, t1, restrict_vats = NULL, label = NULL) {
+  if (!is.null(restrict_vats)) df <- df %>% filter(vat %in% restrict_vats)
 
   d0 <- df %>% filter(year == t0) %>%
     select(vat, nace2d_0 = nace2d, e_0 = emissions, q_0 = real_revenue)
@@ -88,6 +92,12 @@ decompose_pair <- function(df, t0, t1) {
 
   E_entry <- sum(entrants$e_1)
   E_exit  <- sum(exiters$e_0)
+
+  # Group-average intensities (emissions / revenue across each group)
+  z_entrants <- if (nrow(entrants) > 0) sum(entrants$e_1) / sum(entrants$q_1) else NA_real_
+  z_exiters  <- if (nrow(exiters)  > 0) sum(exiters$e_0)  / sum(exiters$q_0)  else NA_real_
+  z_survivors_t0 <- E_s_0 / Y_s_0
+  z_survivors_t1 <- E_s_1 / Y_s_1
 
   # Within-survivor firm shares & intensities
   s <- survivors %>%
@@ -130,6 +140,7 @@ decompose_pair <- function(df, t0, t1) {
 
   # Express in pp of E_t0
   tibble(
+    label = if (is.null(label)) paste0(t0, " -> ", t1) else label,
     t_base = t0, t_end = t1,
     n_survivors = nrow(survivors),
     n_entrants  = nrow(entrants),
@@ -141,12 +152,31 @@ decompose_pair <- function(df, t0, t1) {
     within_pp   = within_eff   / E_t0 * 100,
     tech_pp     = tech_eff     / E_t0 * 100,
     entry_pp    = entry_eff    / E_t0 * 100,
-    exit_pp     = exit_eff     / E_t0 * 100
+    exit_pp     = exit_eff     / E_t0 * 100,
+    z_survivors_t0 = z_survivors_t0,
+    z_survivors_t1 = z_survivors_t1,
+    z_entrants_t1  = z_entrants,
+    z_exiters_t0   = z_exiters
   )
 }
 
-# ---- Run ----
+# ---- Run: unrestricted pairs ----
 results <- bind_rows(lapply(pairs, function(p) decompose_pair(df, p[1], p[2])))
+
+# ---- Run: triple-balanced panel (firms with e>0 in 2005, 2012, and 2020) ----
+vats_2005 <- df %>% filter(year == 2005) %>% pull(vat)
+vats_2012 <- df %>% filter(year == 2012) %>% pull(vat)
+vats_2020 <- df %>% filter(year == 2020) %>% pull(vat)
+triple_vats <- Reduce(intersect, list(vats_2005, vats_2012, vats_2020))
+cat("\nTriple-balanced panel (firms in 2005, 2012, 2020):", length(triple_vats), "firms\n")
+
+results_triple <- bind_rows(
+  decompose_pair(df, 2005, 2012, restrict_vats = triple_vats, label = "2005 -> 2012 [triple-bal]"),
+  decompose_pair(df, 2012, 2020, restrict_vats = triple_vats, label = "2012 -> 2020 [triple-bal]"),
+  decompose_pair(df, 2005, 2020, restrict_vats = triple_vats, label = "2005 -> 2020 [triple-bal]")
+)
+
+results <- bind_rows(results, results_triple)
 
 cat("\n=== Six-channel pairwise decomposition ===\n")
 cat("All channels reported in pp of E_{t_base}. Channels sum to total.\n")
@@ -155,12 +185,17 @@ cat("n_entrants:  firms with emissions>0 in t_end only\n")
 cat("n_exiters:   firms with emissions>0 in t_base only\n\n")
 
 print_tbl <- results %>%
-  mutate(pair = paste0(t_base, " -> ", t_end)) %>%
-  select(pair, n_survivors, n_entrants, n_exiters,
-         total_pp, scale_pp, between_pp, within_pp, tech_pp, entry_pp, exit_pp) %>%
-  mutate(across(ends_with("_pp"), ~ round(., 1)))
+  select(label, n_survivors, n_entrants, n_exiters,
+         total_pp, scale_pp, between_pp, within_pp, tech_pp, entry_pp, exit_pp,
+         z_entrants_t1, z_exiters_t0) %>%
+  mutate(across(ends_with("_pp"), ~ round(., 1)),
+         across(starts_with("z_"), ~ round(., 5)))
 
 print(as.data.frame(print_tbl))
+
+cat("\nZ units: tCO2 per EUR of real revenue (2005-base deflation).\n")
+cat("z_entrants_t1 = sum(e_entrants, t_end) / sum(q_entrants, t_end)\n")
+cat("z_exiters_t0  = sum(e_exiters,  t_base) / sum(q_exiters,  t_base)\n")
 
 # ---- Save ----
 out_path <- file.path(OUTPUT_TAB, "phase0_pairwise_decomposition.csv")
