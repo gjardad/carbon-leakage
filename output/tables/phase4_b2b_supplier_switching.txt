@@ -1,0 +1,22 @@
+=== Panel thickness ===
+ETS-seller pair panel rows: 55155 
+Pair-years with non-missing d_log_real_flow: 45916 
+
+Pair lifespan distribution:
+  1 year:    2117 
+  2-3 years: 2102 
+  4-5 years: 1175 
+  6+ years:  3845 
+  mean:      6 
+
+Buyer-year cells with >=2 ETS sellers: 10345 / 17206 
+Buyer x 4d x year cells with >=2 ETS sellers (Spec 4.B): 5010 / 48269 
+
+=== Spec 4.A coefficient table ===
+                             spec     n    beta     se     t     p
+1       Spec 4.A EUA-Bartik, full 38168  0.0007 0.0015  0.47 0.639
+2 Spec 4.A CPShock surprise, full 38168  0.0225 0.0262  0.86 0.392
+3 Spec 4.A CPShock shock,    full 38168 -0.0148 0.0064 -2.30 0.021
+4  Spec 4.A EUA-Bartik, 2005-2022 38168  0.0007 0.0015  0.47 0.639
+5  Spec 4.A EUA-Bartik, 2013-2022 23519  0.0007 0.0015  0.48 0.628
+6  Spec 4.A EUA-Bartik, 2017-2022 14628 -0.0008 0.0017 -0.46 0.644
