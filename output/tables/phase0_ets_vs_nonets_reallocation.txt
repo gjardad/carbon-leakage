@@ -1,0 +1,51 @@
+=== Main spec: log(real_rev) ~ ETS x shock + ETS x EUA | firm + 4d*year ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 80,932
+Fixed-effects: vat: 9,107,  nace4d^year: 1,615
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error   t value Pr(>|t|) 
+is_ets:shock     -0.025556   0.016983 -1.504811  0.13584 
+is_ets:eua_price  0.000320   0.001093  0.292527  0.77055 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.50382     Adj. R2: 0.929499
+                Within R2: 1.986e-4
+
+=== Robustness 4d+year FE (no firm FE) ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 81,972
+Fixed-effects: nace4d: 92,  year: 18
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error  t value  Pr(>|t|)    
+is_ets            3.450909   0.174253 19.80405 < 2.2e-16 ***
+is_ets:shock     -0.168216   0.059397 -2.83205 0.0056938 ** 
+is_ets:eua_price  0.009038   0.003994  2.26282 0.0260257 *  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 1.72903     Adj. R2: 0.286315
+                Within R2: 0.122492
+
+=== Robustness first differences ===
+OLS estimation, Dep. Var.: d_log_real_rev
+Observations: 70,848
+Fixed-effects: vat: 8,137,  nace4d^year: 1,518
+Standard-errors: Clustered (nace4d) 
+               Estimate Std. Error  t value Pr(>|t|)    
+is_ets:d_shock 0.019174   0.021586 0.888278 0.376733    
+is_ets:d_eua   0.002283   0.001209 1.889355 0.062028 .  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.427943     Adj. R2: 0.095374
+                 Within R2: 2.956e-4
+
+=== Simpler spec: ETS x EUA only ===
+OLS estimation, Dep. Var.: log_real_rev
+Observations: 80,932
+Fixed-effects: vat: 9,107,  nace4d^year: 1,615
+Standard-errors: Clustered (nace4d) 
+                  Estimate Std. Error   t value Pr(>|t|) 
+is_ets:eua_price -0.000866    0.00116 -0.747042  0.45696 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+RMSE: 0.503862     Adj. R2: 0.929488
+                 Within R2: 3.13e-5 
