@@ -1,0 +1,50 @@
+"nace2d","sector_name","phase","t0","t1","paying_start","learning_date","learning_event","allocation_rule","n_surv","n_ent","n_exit","E_t0_kt","E_t1_kt","total_pp","scale_pp","within_pp","tech_pp","entry_pp","exit_pp"
+"35","Electricity","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",4,1,0,18481.2,16317.7,-11.71,46.81,14.52,-74.61,1.58,0
+"23","Cement, glass, ceramics","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",27,0,1,9097.5,9260.1,1.79,11.58,-3.95,-5.77,0,-0.06
+"19","Petroleum refining","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",5,0,0,5621.7,5723,1.8,19.87,-23.3,5.24,0,0
+"20","Chemicals","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",29,2,2,3973.1,3919.8,-1.34,-2.92,3.27,-5.14,3.57,-0.13
+"24","Basic metals","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",11,1,0,3184.9,3213.6,0.9,23.78,-51.6,27.69,1.03,0
+"10","Food","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",21,1,2,845.5,812.9,-3.86,24.94,-10.21,-17.22,1.47,-2.84
+"17","Paper","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",9,1,0,706.1,693.4,-1.79,18.15,6.9,-30.78,3.94,0
+"11","Beverages","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",6,0,0,137.6,135.4,-1.65,6.38,7.63,-15.65,0,0
+"29","Motor vehicles","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",6,0,0,108,77.1,-28.57,-10.83,-8.81,-8.92,0,0
+"22","Rubber, plastics","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",4,0,0,103.9,98.7,-4.97,12.38,1.64,-18.99,0,0
+"21","Pharmaceuticals","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",3,1,0,95.1,100.5,5.67,2.63,2.61,-10.36,10.78,0
+"13","Textiles","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",8,1,2,80.6,80.6,0.04,9.12,-4.26,-4.76,9.45,-9.52
+"25","Fabricated metals","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","grandfathered_free",6,0,0,70.5,74.3,5.47,63.74,-17.64,-40.63,0,0
+"28","[unmapped]","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","unknown",5,0,0,66.1,57.5,-12.99,18.79,-6.18,-25.6,0,0
+"30","[unmapped]","Phase 1",2005,2007,"2005-01-01","2003-10-13","Directive 2003/87/EC (pre-Kanzig sample)","unknown",4,0,0,22.4,22.1,-1.22,-10.34,-8.79,17.91,0,0
+"35","Electricity","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","grandfathered_free",4,5,3,14302.2,14095.2,-1.45,-8.4,3.29,-17.96,23.66,-2.04
+"23","Cement, glass, ceramics","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","grandfathered_free",27,4,3,9098.3,7760.1,-14.71,-8.89,5.77,-14.39,3.23,-0.43
+"19","Petroleum refining","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","grandfathered_free",3,2,3,6355.7,6004.9,-5.52,-5.79,-4.85,8.89,5.11,-8.88
+"20","Chemicals","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","grandfathered_free",30,7,2,5385.5,5412,0.49,-34.41,7.53,24.96,5.24,-2.82
+"24","Basic metals","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","grandfathered_free",10,3,1,3789.5,1139.9,-69.92,0.99,-1.18,-9.41,3.38,-63.71
+"10","Food","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","grandfathered_free",22,4,4,783.7,985.7,25.77,17.23,13.54,-29.36,31.2,-6.84
+"17","Paper","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","grandfathered_free",7,0,1,673,751,11.59,-17.59,17.55,13.31,0,-1.68
+"16","[unmapped]","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","unknown",4,0,1,141.5,82.6,-41.58,19.88,0.13,-59.99,0,-1.6
+"11","Beverages","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","grandfathered_free",5,1,1,128.9,123.7,-4.06,7.59,0.17,-13.7,7.2,-5.32
+"21","Pharmaceuticals","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","grandfathered_free",3,0,1,104.9,96,-8.44,49.61,9.44,-60.25,0,-7.24
+"29","Motor vehicles","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","grandfathered_free",3,0,1,91.6,59.5,-35.1,16.45,18.41,-36.06,0,-33.9
+"13","Textiles","Phase 2",2008,2012,"2008-01-01","2005-06-20","First Kanzig surprise, Phase 1 launch priced in","grandfathered_free",5,2,2,60.5,46,-23.85,-20.85,-3.7,4.92,15.52,-19.75
+"35","Electricity","Phase 3",2013,2020,"2013-01-01","2009-04-23","Directive 2009/29/EC adopted (Phase 3 auctioning framework)","full_auction",6,2,1,12687.1,11341,-10.61,-26.61,-6.22,19.08,3.22,-0.09
+"23","Cement, glass, ceramics","Phase 3",2013,2020,"2013-01-01","2009-04-23","Directive 2009/29/EC adopted (Phase 3 auctioning framework)","CL_list_free",32,0,6,7528.9,6664,-11.49,3.15,13.4,-27.27,0,-0.77
+"20","Chemicals","Phase 3",2013,2020,"2013-01-01","2009-04-23","Directive 2009/29/EC adopted (Phase 3 auctioning framework)","CL_list_free",39,9,3,7022.8,6894.6,-1.83,-7.46,13.5,-11.06,4.49,-1.3
+"19","Petroleum refining","Phase 3",2013,2020,"2013-01-01","2009-04-23","Directive 2009/29/EC adopted (Phase 3 auctioning framework)","CL_list_free",4,0,1,6045.8,5847.5,-3.28,-43.41,83.07,-42.43,0,-0.5
+"24","Basic metals","Phase 3",2013,2020,"2013-01-01","2009-04-23","Directive 2009/29/EC adopted (Phase 3 auctioning framework)","CL_list_free",9,0,3,1092.2,1007.3,-7.77,10.21,13.26,-25.87,0,-5.37
+"10","Food","Phase 3",2013,2020,"2013-01-01","2009-04-23","Directive 2009/29/EC adopted (Phase 3 auctioning framework)","partial_free_declining",20,1,5,970.4,1073.4,10.62,26.52,-9.15,-3.14,2.97,-6.59
+"17","Paper","Phase 3",2013,2020,"2013-01-01","2009-04-23","Directive 2009/29/EC adopted (Phase 3 auctioning framework)","CL_list_free",6,0,1,715.5,679.1,-5.09,-5.99,-2.6,14.5,0,-11
+"21","Pharmaceuticals","Phase 3",2013,2020,"2013-01-01","2009-04-23","Directive 2009/29/EC adopted (Phase 3 auctioning framework)","partial_free_declining",3,1,0,97.3,91.7,-5.76,120.22,-21.21,-115.82,11.06,0
+"11","Beverages","Phase 3",2013,2020,"2013-01-01","2009-04-23","Directive 2009/29/EC adopted (Phase 3 auctioning framework)","partial_free_declining",4,1,1,89.1,118.7,33.31,32.56,-9.43,7.18,14.3,-11.3
+"22","Rubber, plastics","Phase 3",2013,2020,"2013-01-01","2009-04-23","Directive 2009/29/EC adopted (Phase 3 auctioning framework)","partial_free_declining",2,1,1,68.6,72.2,5.3,19.98,-0.66,-16.62,15.08,-12.48
+"13","Textiles","Phase 3",2013,2020,"2013-01-01","2009-04-23","Directive 2009/29/EC adopted (Phase 3 auctioning framework)","partial_free_declining",7,2,3,67.2,53.8,-19.97,-3.91,0.7,-10.24,7.19,-13.71
+"35","Electricity","Phase 4",2021,2022,"2021-01-01","2018-03-14","Directive 2018/410 adopted (Phase 4 cap trajectory)","full_auction",7,0,1,10241.3,11131.5,8.69,-8.59,-3.11,20.41,0,-0.02
+"23","Cement, glass, ceramics","Phase 4",2021,2022,"2021-01-01","2018-03-14","Directive 2018/410 adopted (Phase 4 cap trajectory)","CL_list_free",32,0,0,6915,6458.7,-6.6,-2.28,-15.07,10.75,0,0
+"20","Chemicals","Phase 4",2021,2022,"2021-01-01","2018-03-14","Directive 2018/410 adopted (Phase 4 cap trajectory)","CL_list_free",47,0,1,6797.4,5709.3,-16.01,6.03,2.9,-23.56,0,-1.38
+"19","Petroleum refining","Phase 4",2021,2022,"2021-01-01","2018-03-14","Directive 2018/410 adopted (Phase 4 cap trajectory)","CL_list_free",4,0,0,6097.2,5711.7,-6.32,2.78,2.19,-11.29,0,0
+"10","Food","Phase 4",2021,2022,"2021-01-01","2018-03-14","Directive 2018/410 adopted (Phase 4 cap trajectory)","partial_free_declining",19,0,2,1062.6,1039.7,-2.16,23.11,-11.06,-8.32,0,-5.89
+"24","Basic metals","Phase 4",2021,2022,"2021-01-01","2018-03-14","Directive 2018/410 adopted (Phase 4 cap trajectory)","CL_list_free",9,0,0,1045.2,936.6,-10.4,-6.26,2.02,-6.16,0,0
+"17","Paper","Phase 4",2021,2022,"2021-01-01","2018-03-14","Directive 2018/410 adopted (Phase 4 cap trajectory)","partial_free_declining",6,0,0,686.8,682.2,-0.67,5.58,0.49,-6.74,0,0
+"11","Beverages","Phase 4",2021,2022,"2021-01-01","2018-03-14","Directive 2018/410 adopted (Phase 4 cap trajectory)","partial_free_declining",4,0,1,126.6,123.9,-2.08,0.13,7.62,-5.81,0,-4.01
+"21","Pharmaceuticals","Phase 4",2021,2022,"2021-01-01","2018-03-14","Directive 2018/410 adopted (Phase 4 cap trajectory)","partial_free_declining",4,0,0,90.7,82.6,-8.91,13.79,-0.51,-22.19,0,0
+"22","Rubber, plastics","Phase 4",2021,2022,"2021-01-01","2018-03-14","Directive 2018/410 adopted (Phase 4 cap trajectory)","partial_free_declining",3,0,0,77.7,61.8,-20.51,-8.7,1.95,-13.76,0,0
+"13","Textiles","Phase 4",2021,2022,"2021-01-01","2018-03-14","Directive 2018/410 adopted (Phase 4 cap trajectory)","partial_free_declining",6,0,1,56.7,45.3,-20.01,3.06,-1.71,-4.61,0,-16.74
