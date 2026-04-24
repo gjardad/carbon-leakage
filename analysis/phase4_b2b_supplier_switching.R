@@ -32,6 +32,9 @@
 #       window (oil, gas, electricity, Belgian cycle) via the cell FE; buyer x
 #       sector FE also absorbs the sector-mean cost share, so demeaning is
 #       redundant. h = 1..7. Analog of Peter-Ruane long difference 1989 -> 1989+h.
+#       Sample: pairs active at t0=2015. For pairs that separate by t0+h,
+#       share is imputed to 0 (correct post-separation share); avoids the
+#       survivorship bias of dropping separated pairs.
 #
 #     Spec 4.A-event-h:
 #       log(flow)_{j,b,2015+h} - log(flow)_{j,b,2015} = beta_h * firm_cost_share_j
@@ -225,6 +228,21 @@ pairs_master <- pairs %>%
 pairs_master <- pairs_master %>%
   filter(!(seller_is_ets & !(seller %in% ets_treatment$vat)))
 
+# Collapse to one row per (seller, buyer, year). b2b_df can contain duplicate
+# (seller, buyer, year) tuples (sub-annual rows, multiple product records,
+# or sample-construction artifacts). Without this, pivot_wider produces
+# list-columns which breaks the event-study diff.
+pre_dedup <- nrow(pairs_master)
+pairs_master <- pairs_master %>%
+  group_by(seller, buyer, year, seller_nace4d, seller_nace2d,
+           seller_is_ets, firm_cost_share) %>%
+  summarise(corr_sales = sum(corr_sales, na.rm = TRUE), .groups = "drop")
+post_dedup <- nrow(pairs_master)
+if (post_dedup < pre_dedup) {
+  cat(sprintf("Aggregated %d duplicate (seller,buyer,year) rows -> %d unique\n",
+              pre_dedup - post_dedup, post_dedup))
+}
+
 cat("\n=== Master pair panel ===\n")
 cat("rows (seller-buyer-year):", nrow(pairs_master), "\n")
 cat("distinct sellers:", n_distinct(pairs_master$seller),
@@ -367,19 +385,27 @@ run_event_flow <- function(h, wide, t0) {
 }
 
 run_event_share <- function(h, wide, t0) {
+  # Condition on pair active at t0 (sh_t0 non-NA). For pairs that separate
+  # between t0 and t0+h (sh_{t0+h} is NA), impute share = 0, which is the
+  # correct post-separation share. Avoids survivorship bias that would
+  # drop separated pairs and bias beta^h toward zero if high-exposure
+  # sellers are more likely to lose buyers.
   yh  <- paste0("sh_", t0 + h)
   y0  <- paste0("sh_", t0)
   if (!all(c(yh, y0) %in% names(wide))) return(NULL)
   dfh <- wide %>%
-    mutate(d_share_h = .data[[yh]] - .data[[y0]]) %>%
-    filter(!is.na(d_share_h))
+    filter(!is.na(.data[[y0]])) %>%
+    mutate(sh_h_filled = tidyr::replace_na(.data[[yh]], 0),
+           d_share_h   = sh_h_filled - .data[[y0]])
   if (nrow(dfh) < 50) return(NULL)
+  n_separated <- sum(is.na(dfh[[yh]]))
   m <- feols(d_share_h ~ firm_cost_share | buyer^seller_nace4d,
              cluster = ~ seller + buyer, data = dfh)
   list(h = h, n = m$nobs,
        n_pairs = n_distinct(paste(dfh$seller, dfh$buyer)),
        n_ets_pairs  = n_distinct(paste(dfh$seller[dfh$seller_is_ets],
                                        dfh$buyer[dfh$seller_is_ets])),
+       n_separated = n_separated,
        beta = coef(m)["firm_cost_share"],
        se   = sqrt(diag(vcov(m)))["firm_cost_share"],
        model = m)
@@ -394,11 +420,12 @@ for (r in res_4A_event) {
 }
 
 cat("\n--- Spec 4.B-event-h: Delta_h share ~ firm_cost_share, buyer x seller-4d FE ---\n")
+cat("    (Pairs active at t0=2015; share imputed to 0 for pairs that separate by t0+h)\n")
 res_4B_event <- lapply(horizons, run_event_share, wide = share_wide, t0 = t0_baseline)
 for (r in res_4B_event) {
   if (is.null(r)) next
-  cat(sprintf("  h=%d: beta=%.5f  se=%.5f  n=%d  pairs=%d (ETS: %d)\n",
-              r$h, r$beta, r$se, r$n, r$n_pairs, r$n_ets_pairs))
+  cat(sprintf("  h=%d: beta=%.5f  se=%.5f  n=%d  pairs=%d (ETS: %d, separated: %d)\n",
+              r$h, r$beta, r$se, r$n, r$n_pairs, r$n_ets_pairs, r$n_separated))
 }
 
 # =============================================================================
