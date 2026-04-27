@@ -21,15 +21,16 @@
 # history for the dropped Stata version that incorrectly excluded them.)
 #
 # Inputs (RMD paths via paths.R):
-#   * Raw customs: ${RAW_DATA}/customs/customs_import_*.dta  -- yearly OR
-#                  ${RAW_DATA}/customs/customs_import_all.dta  -- single
-#     Schema (CONFIRM ON FIRST RUN, may need column renames):
-#       vat (string, firm ID)
-#       cn8 (string, 8-digit CN code)
-#       partner_iso2 (string, source country ISO2)
-#       year (int)
-#       value (double, EUR)
-#       flow_type (1 = import / 2 = export) [optional]
+#   * Raw customs: ${RAW_DATA}/NBB/import_export_ANO.dta
+#     Schema (verified 2026-04-27):
+#       vat_ano (string, SHA-256 hashed VAT)
+#       year (numeric)
+#       cncode (string, 8-digit CN code)
+#       country (string, partner ISO2)
+#       flow (character; "I" = import, "X" = export)
+#       cn_value (numeric, EUR)
+#       cn_weight, cn_units (numeric, optional)
+#     ~7.6M rows total (~4M imports), 2000-2022.
 #   * ${PROC_DATA}/firm_year_belgian_euets.RData -- 281 ETS firms x year
 #   * ${PROC_DATA}/annual_accounts_selected_sample_key_variables.RData
 #     OR equivalent .dta on RMD.
@@ -53,52 +54,46 @@ FIRSTYEAR <- 2000L
 LASTYEAR  <- 2019L
 
 # ---------------------------------------------------------------------------
-# 1. Load raw customs imports
+# 1. Load raw customs imports and rename columns to canonical names
 # ---------------------------------------------------------------------------
-cust_dir <- file.path(RAW_DATA, "customs")
-single_path <- file.path(cust_dir, "customs_import_all.dta")
-if (file.exists(single_path)) {
-  cat("Loading single-file panel:", single_path, "\n")
-  d <- as.data.table(read_dta(single_path))
-} else {
-  cat("Loading yearly customs files from:", cust_dir, "\n")
-  yearly_files <- list.files(cust_dir,
-                             pattern = "^customs_import_\\d{4}\\.dta$",
-                             full.names = TRUE)
-  stopifnot(length(yearly_files) > 0)
-  d <- rbindlist(lapply(yearly_files, function(f) as.data.table(read_dta(f))),
-                 fill = TRUE)
-}
+customs_path <- file.path(RAW_DATA, "NBB", "import_export_ANO.dta")
+cat("Loading:", customs_path, "\n")
+d <- as.data.table(read_dta(customs_path))
 cat("Raw customs rows:", nrow(d), "\n")
 
-# Optional flow-type filter (if column exists, keep imports only).
-if ("flow_type" %in% names(d)) {
-  d <- d[flow_type == 1L]
-  d[, flow_type := NULL]
-}
+# Canonical column names used throughout this pipeline.
+setnames(d,
+         c("vat_ano", "cncode", "country", "cn_value"),
+         c("vat",     "cn8",    "partner_iso2", "value"))
+
+# Filter to imports only (flow = "I").
+d <- d[flow == "I"]
+d[, flow := NULL]
 
 # Year window.
 d <- d[year %between% c(FIRSTYEAR, LASTYEAR)]
 cat("After flow + year filter:", nrow(d), "rows\n")
 
-# Standardize CN8 to 8-character padded string.
+# Standardize CN8 to 8-character padded string (raw cncode may have leading
+# zeros stripped if numeric upstream).
 d[, cn8 := sprintf("%08d", as.integer(cn8))]
+d[, year := as.integer(year)]
 
 # ---------------------------------------------------------------------------
-# 2. Buyer NACE join (annual accounts)
+# 2. Buyer NACE join (raw master annual accounts -- full firm coverage)
 # ---------------------------------------------------------------------------
-aa_path_dta   <- file.path(PROC_DATA, "annual_accounts_selected_sample_key_variables.dta")
-aa_path_rdata <- file.path(PROC_DATA, "annual_accounts_selected_sample_key_variables.RData")
-if (file.exists(aa_path_dta)) {
-  aa <- as.data.table(read_dta(aa_path_dta))
-} else {
-  load(aa_path_rdata)
-  # Convention: object name in RData is df_annual_accounts or similar.
-  # If different, adjust the next line accordingly.
-  aa <- as.data.table(get(ls(pattern = "annual|accounts|key_var")[1]))
-}
+# The raw master ${RAW_DATA}/NBB/Annual_Accounts_MASTER_ANO.dta has 227 columns
+# but we only need vat_ano, year, nace5d. The processed sample
+# (annual_accounts_selected_sample_key_variables) is downsampled and unsuitable
+# here because we need every importing firm.
+aa_path <- file.path(RAW_DATA, "NBB", "Annual_Accounts_MASTER_ANO.dta")
+aa <- as.data.table(read_dta(aa_path,
+                             col_select = c("vat_ano", "year", "nace5d")))
+setnames(aa, "vat_ano", "vat")
+aa[, year := as.integer(year)]
 aa[, nace4d := substr(sprintf("%05d", as.integer(nace5d)), 1, 4)]
 aa <- unique(aa[, .(vat, year, nace4d)])
+cat("Annual accounts (vat, year, nace4d) tuples:", nrow(aa), "\n")
 
 d <- merge(d, aa, by = c("vat", "year"), all.x = TRUE)
 d[, buyer_nace2d := substr(nace4d, 1, 2)]
@@ -176,10 +171,12 @@ d[, is_ets_country := NULL]
 # ---------------------------------------------------------------------------
 # 10. ETS firm flag
 # ---------------------------------------------------------------------------
+# firm_year_belgian_euets.RData contains the data.frame `firm_year_belgian_euets`
+# with 5339 rows (281 ETS firms x 2005-2023). We only need (vat, year) keys.
 load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
-ets_obj <- ls(pattern = "ets|euets|firm_year")[1]
-ets <- as.data.table(get(ets_obj))
-ets <- unique(ets[, .(vat, year)])
+ets <- as.data.table(firm_year_belgian_euets)
+ets <- unique(ets[!is.na(vat), .(vat, year)])
+ets[, year := as.integer(year)]
 ets[, is_ets_firm := 1L]
 d <- merge(d, ets, by = c("vat", "year"), all.x = TRUE)
 d[is.na(is_ets_firm), is_ets_firm := 0L]
