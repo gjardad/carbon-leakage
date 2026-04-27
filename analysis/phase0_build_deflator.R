@@ -35,8 +35,9 @@ REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
 while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
 source(file.path(REPO_DIR, "paths.R"))
 
-base_year <- 2005
-link_year <- 2010  # where Eurostat 2d and Statbel 4d overlap
+base_year <- 2005       # rebasing anchor (PPI = 100 at this year)
+sample_start <- 2000    # earliest year retained in the output deflator
+link_year <- 2010       # where Eurostat 2d and Statbel 4d overlap
 
 ###############################################################################
 # STEP 1: Parse Statbel NACE 4-digit PPI (domestic market, 2010=100)
@@ -181,7 +182,7 @@ base_vals <- ppi_eurostat %>%
 ppi_eurostat <- ppi_eurostat %>%
   left_join(base_vals, by = "nace2d") %>%
   mutate(ppi_2005 = ppi_2010base / base_val * 100) %>%
-  filter(!is.na(ppi_2005), year >= base_year) %>%
+  filter(!is.na(ppi_2005), year >= sample_start) %>%
   select(nace2d, year, ppi_2005)
 
 # --- 2e. Fill gaps by linear interpolation (NACE 18, 30: gap in 2018-2020) ---
@@ -190,7 +191,7 @@ ppi_eurostat <- ppi_eurostat %>%
   group_by(nace2d) %>%
   arrange(nace2d, year) %>%
   # Complete the year sequence so interpolation has rows to fill
-  complete(year = seq(base_year, max(ppi_eurostat$year))) %>%
+  complete(year = seq(sample_start, max(ppi_eurostat$year))) %>%
   mutate(ppi_2005 = approx(year, ppi_2005, year, rule = 1)$y) %>%
   ungroup() %>%
   filter(!is.na(ppi_2005))
@@ -238,7 +239,7 @@ cat("Statbel chained:", n_distinct(ppi_statbel_chained$nace4d), "sectors,",
 nace4d_to_2d <- ppi_statbel %>% distinct(nace4d, nace2d)
 
 deflator_pre2010 <- nace4d_to_2d %>%
-  cross_join(tibble(year = base_year:(link_year - 1))) %>%
+  cross_join(tibble(year = sample_start:(link_year - 1))) %>%
   left_join(ppi_eurostat %>% select(nace2d, year, ppi = ppi_2005),
             by = c("nace2d", "year")) %>%
   filter(!is.na(ppi)) %>%
@@ -251,7 +252,7 @@ deflator <- bind_rows(deflator_pre2010, ppi_statbel_chained) %>%
 
 # 2-digit fallback for firms whose nace4d isn't in Statbel
 deflator_2d_only <- ppi_eurostat %>%
-  filter(year >= base_year) %>%
+  filter(year >= sample_start) %>%
   select(nace2d, year, ppi = ppi_2005) %>%
   mutate(ppi_source = "eurostat_2d")
 
