@@ -333,6 +333,20 @@ Replace: continuous `firm_cost_share_j` → discrete `TREAT_j`; shift from long-
 
 **Phase 3 verification:** Expected sign β_2, β_3 **< 0** (ETS-regulated Belgian sellers lose buyer share post-ETS). Magnitude: if domestic leakage parallels cross-border, β_3 in [−0.05, −0.15]. Small or null β would suggest domestic reshuffling is weaker than cross-border leakage — still a publishable finding. Cross-check sign with existing Angle 4 Spec 4.B-event-h at horizons 5–7.
 
+## Possible extension — country-panel Comext / BACI replication
+
+Phase 2 produced a null-to-negative finding for Belgium ([IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md)) that may not generalize across the EU. A natural extension uses **product-level country-panel data (BACI from CEPII, Comext from Eurostat, or UN Comtrade)** to run the CMdG-style diff-in-diff for every EU member state simultaneously. Identification weakens from CMdG's firm × product × country FE to country × product × source-country FE — within-firm sourcing variation becomes noise — but the central question ("did EU countries' aggregate sourcing of regulated products shift toward non-ETS partners post-2005?") remains fully answerable.
+
+Concretely:
+- Unit of observation: importing country × CN/HS product × source country × year.
+- Treatment: same `1(regulated_product) × 1(non-ETS source)` interaction.
+- Sample: all EU member states 2000-2019 (or 2000-2022 if extending past CMdG's window).
+- Output: a single coefficient per importing country × phase, plus a pooled estimate.
+
+This bounds the external validity of the Belgian finding cheaply. If most EU members behave like Belgium (null/negative), France is the exception. If most behave like France (positive), Belgium is the exception and the firm-heterogeneity that CMdG capture but country averages dilute is the explanation.
+
+Cost: ~1 week. Scripts go on local 1 (BACI/Comext are public). No firm-level data required.
+
 ## Sequencing and machines
 
 | Phase | Machine | Blockers | ETA | Output |
