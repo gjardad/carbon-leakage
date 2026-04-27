@@ -1,14 +1,18 @@
 # phase2_cmdj_table1.R
 #
 # Replicates CMdG Table 1 ("Imports of regulated vs. unregulated inputs from
-# non-ETS countries"). PPML diff-in-diff at firm x product x source-country x
-# year, phase-aggregated. Six FE-column specifications. Two outcomes.
+# non-ETS countries") EXACTLY. Per CMdG p. 12-13, the sample is restricted
+# to non-ETS source countries (because intra-EU imports suffer from the 2011
+# Intrastat threshold change). The control group is unregulated x non-ETS.
 #
 # Spec (CMdG Eq 1, phase-aggregated):
-#   y_{f,p,i,t} = exp[ b_1 * 1(non_ets_country)_i * 1(regulated)_p * 1(t in 2005-08)
-#                    + b_2 * 1(non_ets_country)_i * 1(regulated)_p * 1(t in 2009-12)
-#                    + b_3 * 1(non_ets_country)_i * 1(regulated)_p * 1(t in 2013-19)
-#                    + FE ]
+#   sample: is_non_ets_country == 1
+#   y_{f,p,i,t} = b_1 * 1(regulated)_p * 1(t in 2005-08)
+#               + b_2 * 1(regulated)_p * 1(t in 2009-12)
+#               + b_3 * 1(regulated)_p * 1(t in 2013-19) + FE
+#
+# For an alternative-control comparison (regulated x ETS, regulated x non-ETS
+# vs all other 3 cells, triple-difference), see phase2_cmdj_table1_robustness.R.
 #
 # Outcomes:
 #   Panel A: share_{f,p,i,t} = value / sum_{p,i}(value | f,t)  (intensive margin)
@@ -52,18 +56,23 @@ if (USE_MOCK) {
   if (!requireNamespace("haven", quietly = TRUE)) install.packages("haven", repos = "https://cloud.r-project.org")
   d <- as.data.table(haven::read_dta(file.path(PROC_DATA, "customs_import_panel_regulated.dta")))
 }
-cat("Panel rows:", nrow(d), "\n")
+cat("Panel rows (full):", nrow(d), "\n")
 
-# Outcome A: share within (firm, year) over the regression sample.
+# CMdG-EXACT: restrict regression sample to non-ETS source countries.
+d <- d[is_non_ets_country == 1L]
+cat("Panel rows (non-ETS only):", nrow(d), "\n")
+
+# Outcome A: share within (firm, year) over THIS subsample.
 # Per CMdG p. 13, the denominator is the firm's total imports in year t over
-# the regression sample (regulated-intensive buyers, core inputs, non-capital).
+# the regression sample. With the non-ETS restriction, the denominator is
+# implicitly non-ETS-imports only.
 d[, total_value_ft := sum(value), by = .(vat, year)]
 d[, share := ifelse(total_value_ft > 0, value / total_value_ft, 0)]
 
 # Outcome B: probability of positive value.
 d[, prob_active := as.integer(value > 0)]
 
-# Treatment: regulated_product x non_ets_country, by phase.
+# Treatment: regulated_product (within the non-ETS subsample), by phase.
 d[, phase := fcase(
   year < 2005L, "pre",
   year <= 2008L, "p1",
@@ -75,7 +84,7 @@ d[, phase := factor(phase, levels = c("pre", "p1", "p2", "p3", "post"))]
 d[, phase_p1 := as.integer(phase == "p1")]
 d[, phase_p2 := as.integer(phase == "p2")]
 d[, phase_p3 := as.integer(phase == "p3")]
-d[, treat := is_regulated_product * is_non_ets_country]
+d[, treat := is_regulated_product]              # within non-ETS sample, treatment is "regulated"
 d[, treat_p1 := treat * phase_p1]
 d[, treat_p2 := treat * phase_p2]
 d[, treat_p3 := treat * phase_p3]
