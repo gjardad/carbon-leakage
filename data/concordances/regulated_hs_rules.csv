@@ -1,0 +1,145 @@
+source,group_id,hs_code,hs_level,action,description
+ETS,1,2716,4,include,Electrical energy
+ETS,2,2709,4,include,Petroleum oils crude
+ETS,2,2710,4,include,Petroleum oils not crude
+ETS,2,2711,4,include,Petroleum gases
+ETS,2,2712,4,include,Petroleum jelly waxes
+ETS,2,2713,4,include,Petroleum coke bitumen
+ETS,2,2714,4,include,Bitumen and asphalt natural
+ETS,2,2715,4,include,Bituminous mixtures
+ETS,2,6807,4,include,Articles of asphalt
+ETS,3,2701,4,include,Coal
+ETS,3,2702,4,include,Lignite
+ETS,3,2703,4,include,Peat
+ETS,3,2704,4,include,Coke and semi-coke
+ETS,3,2705,4,include,Coal gas water gas
+ETS,3,2706,4,include,Tar from coal lignite peat
+ETS,4,26,2,include,Metal ores and concentrates
+ETS,4,2618,4,exclude,Granulated slag from iron/steel
+ETS,4,2619,4,exclude,Slag dross other from iron/steel
+ETS,4,2620,4,exclude,Slag ash residues containing metals
+ETS,4,2621,4,exclude,Other slag and ash
+ETS,5,72,2,include,Iron and steel
+ETS,5,7204,4,exclude,Ferrous waste and scrap
+ETS,6,2521,4,include,Limestone flux
+ETS,6,2522,4,include,Quicklime slaked lime hydraulic lime
+ETS,6,2523,4,include,Cement
+ETS,7,7001,4,include,Cullet and other waste glass
+ETS,7,7002,4,include,Glass in balls rods tubes
+ETS,7,7003,4,include,Cast or rolled glass
+ETS,7,7004,4,include,Drawn or blown glass
+ETS,7,7005,4,include,Float glass
+ETS,7,7006,4,include,Glass bent edge-worked
+ETS,8,69,2,include,Ceramic products
+ETS,9,47,2,include,Pulp of wood
+ETS,9,48,2,include,Paper and paperboard
+ETS,9,4707,4,exclude,Recovered paper waste
+ETS,20,2716,4,include,Electrical energy (combustion of fuels)
+ETS,21,2709,4,include,Petroleum oils crude (refining)
+ETS,21,2710,4,include,Petroleum oils not crude (refining)
+ETS,21,2711,4,include,Petroleum gases (refining)
+ETS,21,2712,4,include,Petroleum jelly waxes (refining)
+ETS,21,2713,4,include,Petroleum coke bitumen (refining)
+ETS,21,2714,4,include,Bitumen and asphalt natural (refining)
+ETS,21,2715,4,include,Bituminous mixtures (refining)
+ETS,22,2704,4,include,Coke (production of coke)
+ETS,22,2708,4,include,Pitch from coal tar
+ETS,22,2713,4,include,Petroleum coke
+ETS,23,26,2,include,Metal ores (roasting/sintering)
+ETS,23,2618,4,exclude,Granulated slag
+ETS,23,2619,4,exclude,Slag dross other
+ETS,23,2620,4,exclude,Slag ash with metals
+ETS,23,2621,4,exclude,Other slag and ash
+ETS,24,72,2,include,Iron and steel (production)
+ETS,24,7204,4,exclude,Ferrous waste and scrap
+ETS,25,73,2,include,Articles of iron or steel
+ETS,26,76,2,include,Aluminium and articles thereof (primary)
+ETS,27,76,2,include,Aluminium and articles thereof (secondary)
+ETS,28,74,2,include,Copper
+ETS,28,75,2,include,Nickel
+ETS,28,78,2,include,Lead
+ETS,28,79,2,include,Zinc
+ETS,28,80,2,include,Tin
+ETS,28,81,2,include,Other base metals
+ETS,29,2523,4,include,Cement (clinker production)
+ETS,30,2518,4,include,Dolomite
+ETS,30,2519,4,include,Magnesium carbonate magnesia
+ETS,30,2521,4,include,Limestone flux
+ETS,30,2522,4,include,Quicklime slaked lime
+ETS,31,7001,4,include,Glass cullet
+ETS,31,7002,4,include,Glass balls rods tubes
+ETS,31,7003,4,include,Cast/rolled glass
+ETS,31,7004,4,include,Drawn/blown glass
+ETS,31,7005,4,include,Float glass
+ETS,31,7006,4,include,Glass bent edge-worked
+ETS,32,69,2,include,Ceramics
+ETS,33,6806,4,include,Slag wool rock wool mineral wools
+ETS,34,6809,4,include,Articles of plaster
+ETS,35,47,2,include,Pulp of wood (production)
+ETS,35,4707,4,exclude,Recovered paper waste
+ETS,36,48,2,include,Paper and paperboard (production)
+ETS,37,2803,4,include,Carbon black
+ETS,38,2808,4,include,Nitric and sulphonitric acids
+ETS,39,291712,6,include,Adipic acid
+ETS,40,2912,4,include,Aldehydes
+ETS,40,2918,4,include,Carboxylic acids with additional oxygen function
+ETS,41,2814,4,include,Ammonia
+ETS,42,28,2,include,Inorganic chemicals (bulk chemicals)
+ETS,42,29,2,include,Organic chemicals (bulk chemicals)
+ETS,43,2804,4,include,Hydrogen rare gases
+ETS,44,283630,6,include,Sodium hydrogencarbonate
+CBAM,Cement,2507,4,include,Other kaolinic clays
+CBAM,Cement,252310,6,include,Cement clinkers
+CBAM,Cement,252321,6,include,White Portland cement
+CBAM,Cement,252329,6,include,Other Portland cement
+CBAM,Cement,252330,6,include,Aluminous cement
+CBAM,Cement,252390,6,include,Other hydraulic cements
+CBAM,Electricity,2716,4,include,Electrical energy
+CBAM,Fertilisers,2808,4,include,Nitric and sulphonitric acids
+CBAM,Fertilisers,2814,4,include,Ammonia
+CBAM,Fertilisers,283421,6,include,Nitrates of potassium
+CBAM,Fertilisers,3102,4,include,Mineral or chemical fertilisers nitrogenous
+CBAM,Fertilisers,3105,4,include,Mineral or chemical fertilisers other
+CBAM,Fertilisers,310560,6,exclude,Fertilisers with phosphorus and potassium
+CBAM,IronSteel_chap72,72,2,include,Iron and steel
+CBAM,IronSteel_chap72,720220,6,exclude,Ferro-silicon
+CBAM,IronSteel_chap72,720230,6,exclude,Ferro-silico-manganese
+CBAM,IronSteel_chap72,720250,6,exclude,Ferro-silico-chromium
+CBAM,IronSteel_chap72,720270,6,exclude,Ferro-molybdenum
+CBAM,IronSteel_chap72,720280,6,exclude,Ferro-tungsten and ferro-silico-tungsten
+CBAM,IronSteel_chap72,720291,6,exclude,Ferro-titanium and ferro-silico-titanium
+CBAM,IronSteel_chap72,720292,6,exclude,Ferro-vanadium
+CBAM,IronSteel_chap72,720293,6,exclude,Ferro-niobium
+CBAM,IronSteel_chap72,72029910,8,exclude,Ferro-phosphorus
+CBAM,IronSteel_chap72,72029930,8,exclude,Ferro-silico-magnesium
+CBAM,IronSteel_chap72,72029980,8,exclude,Other
+CBAM,IronSteel_chap72,7204,4,exclude,Ferrous waste and scrap
+CBAM,IronSteel_articles,260112,6,include,Iron ores agglomerated
+CBAM,IronSteel_articles,7301,4,include,Sheet piling of iron or steel
+CBAM,IronSteel_articles,7302,4,include,Railway/tramway track material
+CBAM,IronSteel_articles,7303,4,include,Tubes and pipes cast iron
+CBAM,IronSteel_articles,7304,4,include,Tubes and pipes seamless iron/steel
+CBAM,IronSteel_articles,7305,4,include,Other tubes/pipes external diam > 406.4mm
+CBAM,IronSteel_articles,7306,4,include,Other tubes pipes hollow profiles
+CBAM,IronSteel_articles,7307,4,include,Tube/pipe fittings
+CBAM,IronSteel_articles,7308,4,include,Structures and parts
+CBAM,IronSteel_articles,7309,4,include,Reservoirs tanks > 300L
+CBAM,IronSteel_articles,7310,4,include,Tanks casks <= 300L
+CBAM,IronSteel_articles,7311,4,include,Containers for compressed/liquefied gas
+CBAM,IronSteel_articles,7318,4,include,Screws bolts nuts
+CBAM,IronSteel_articles,7326,4,include,Other articles of iron/steel
+CBAM,Aluminium,7601,4,include,Unwrought aluminium
+CBAM,Aluminium,7603,4,include,Aluminium powders/flakes
+CBAM,Aluminium,7604,4,include,Aluminium bars rods profiles
+CBAM,Aluminium,7605,4,include,Aluminium wire
+CBAM,Aluminium,7606,4,include,Aluminium plates sheets strip > 0.2mm
+CBAM,Aluminium,7607,4,include,Aluminium foil <= 0.2mm
+CBAM,Aluminium,7608,4,include,Aluminium tubes and pipes
+CBAM,Aluminium,7609,4,include,Aluminium tube/pipe fittings
+CBAM,Aluminium,7610,4,include,Aluminium structures
+CBAM,Aluminium,7611,4,include,Aluminium reservoirs > 300L
+CBAM,Aluminium,7612,4,include,Aluminium casks <= 300L
+CBAM,Aluminium,7613,4,include,Aluminium containers for compressed gas
+CBAM,Aluminium,7614,4,include,Aluminium stranded wire cables
+CBAM,Aluminium,7616,4,include,Other articles of aluminium
+CBAM,Chemicals,280410,6,include,Hydrogen

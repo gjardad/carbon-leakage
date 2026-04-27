@@ -1,0 +1,63 @@
+naf_code,description,nace2d,ets,ri,cbam
+C10A,Meat products,10,0,0,0
+C10B,"Fish, crustaceans and molluscs",10,0,0,0
+C10C,Fruit and vegetables,10,0,0,0
+C10D,Vegetable and animal oils and fats,10,0,0,0
+C10E,Dairy products,10,0,0,0
+C10F,"Grain mill prods, and starch products",10,0,0,0
+C10G,Bakery and farinaceous products,10,0,0,0
+C10H,Other food products,10,0,0,0
+C10K,Prepared animal feeds,10,0,0,0
+C11Z,Beverages,11,0,1,0
+C12Z,Tobacco products,12,0,0,0
+C13Z,Textile products,13,0,0,0
+C14Z,Wearing apparel,14,0,1,0
+C15Z,Leather products,15,0,1,0
+C16Z,Wood products,16,0,0,0
+C17A,"Pulp, paper and paperboard",17,1,1,0
+C17B,Articles of paper,17,1,1,0
+C18Z,Printing & reprod. of recorded media,18,0,1,0
+C19Z,Coke and refined petroleum,19,1,1,0
+C20A,"Basic chem., fert., plas. and syn. rubber",20,1,1,1
+C20B,Soap and detergents,20,0,1,0
+C20C,Other chemical products,20,0,1,0
+C21Z,Pharmaceutical products,21,0,1,0
+C22A,Rubber products,22,0,1,0
+C22B,Plastics products,22,0,1,0
+C23A,Glass products,23,1,1,0
+C23B,Other mineral products,23,1,1,0
+C24A,Basic iron and steel,24,1,1,1
+C24B,Basic precious & other non-ferr. metals,24,1,1,1
+C24C,Casting of metals,24,1,1,0
+C25A,Structural metal products,25,1,1,1
+C25B,"Tanks, reservoir, containers of metal",25,1,1,1
+C25C,Weapons and ammunition,25,0,0,0
+C25D,Forging of metal; powder metallurgy,25,1,1,0
+C25E,"Cutlery, tools, general hardware",25,0,1,1
+C26A,Electronic components,26,0,1,0
+C26B,Computers,26,0,1,0
+C26C,Communication equipment,26,0,1,0
+C26D,Consumer electronics,26,0,0,0
+C26E,"Instr. for measuring, testing, navigation",26,0,1,0
+C26F,Electromedical equipment,26,0,1,0
+C26G,Optical instruments,26,0,1,0
+C27A,Domestic appliances,27,0,1,1
+C27B,Other electric equipment,27,0,1,0
+C28A,General-purpose machinery,28,0,1,0
+C28B,Agricultural and forestry machinery,28,0,1,0
+C28C,Metal forming machinery,28,0,1,0
+C28D,Other special-purpose machinery,28,0,1,0
+C29A,Motor vehicles,29,0,1,0
+C29B,Parts & accessories for motor vehicles,29,0,1,0
+C30A,Ships and boats,30,0,1,0
+C30B,Railway locomotives,30,0,1,0
+C30C,Air and spacecraft,30,0,0,0
+C30D,Military fighting vehicles,30,0,0,0
+C30E,Other transport equipment,30,0,1,0
+C31Z,Furniture,31,0,1,0
+C32A,Jewellery,32,0,1,0
+C32B,Medical and dental instruments,32,0,1,0
+C32C,Other manufacturing,32,0,1,0
+C33Z,Repair and installation,33,0,1,0
+D35A,"Electricity, gas, steam, air con. supply",35,1,,0
+D35B,Manufacture & distribution of gas,35,1,,0
