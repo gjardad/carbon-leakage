@@ -2,64 +2,54 @@
 firm_cost_share: mean_{2013-2015}(shortage*EUA) / mean_{2010-2012}(total_cost) for ETS;
                  = 0 for non-ETS sellers in the B2B network.
 Event-study baseline t0 = 2015; horizons h = 1..7
-
-=== Panel composition ===
-Master pair panel rows: 139893 
-Distinct sellers: 684 
-  of which ETS    : 205 
-  of which non-ETS: 479 
-
-=== Identification thickness ===
-buyer x seller-4d x year cells:  118835 
-  with >=2 sellers any         : 15199 
-  with >=1 ETS & >=1 non-ETS   : 4847 
+Spec 4.B imputes share=0 for pairs active at t0 that separate by t0+h.
 
 === Coefficient table ===
-                                          spec horizon      n n_pairs
-1            BENCH: Spec 4.A-annual EUA-Bartik      NA 107179      NA
-2      BENCH: Spec 4.B-annual EUA-Bartik w-sec      NA  27466      NA
-3  PRIMARY: Spec 4.A-event firm_cost_share h=1       1   1487    5912
-4  PRIMARY: Spec 4.A-event firm_cost_share h=2       2   1348    5401
-5  PRIMARY: Spec 4.A-event firm_cost_share h=3       3   1269    5142
-6  PRIMARY: Spec 4.A-event firm_cost_share h=4       4   1144    4763
-7  PRIMARY: Spec 4.A-event firm_cost_share h=5       5   1065    4450
-8  PRIMARY: Spec 4.A-event firm_cost_share h=6       6   1032    4252
-9  PRIMARY: Spec 4.A-event firm_cost_share h=7       7    918    4021
-10 PRIMARY: Spec 4.B-event firm_cost_share h=1       1   1487    5912
-11 PRIMARY: Spec 4.B-event firm_cost_share h=2       2   1348    5401
-12 PRIMARY: Spec 4.B-event firm_cost_share h=3       3   1269    5142
-13 PRIMARY: Spec 4.B-event firm_cost_share h=4       4   1144    4763
-14 PRIMARY: Spec 4.B-event firm_cost_share h=5       5   1065    4450
-15 PRIMARY: Spec 4.B-event firm_cost_share h=6       6   1032    4252
-16 PRIMARY: Spec 4.B-event firm_cost_share h=7       7    918    4021
-17             Ext. margin firm_cost_share h=1       1   1970    7354
-18             Ext. margin firm_cost_share h=2       2   1970    7354
-19             Ext. margin firm_cost_share h=3       3   1970    7354
-20             Ext. margin firm_cost_share h=4       4   1970    7354
-21             Ext. margin firm_cost_share h=5       5   1970    7354
-22             Ext. margin firm_cost_share h=6       6   1970    7354
-23             Ext. margin firm_cost_share h=7       7   1970    7354
-   n_ets_pairs     beta       se     t     p
-1           NA -0.00138  0.00160 -0.87 0.387
-2           NA  0.00019  0.00018  1.06 0.290
-3         2420 -1.42293  4.38194 -0.32 0.745
-4         2251  0.17182  0.44053  0.39 0.697
-5         2100  1.37779  1.79248  0.77 0.442
-6         1970 -2.85878  3.81204 -0.75 0.453
-7         1848  6.20410  1.09596  5.66 0.000
-8         1793 -1.62081  7.51698 -0.22 0.829
-9         1655 15.85438 12.72953  1.25 0.213
-10        2420  1.75539  0.85717  2.05 0.041
-11        2251  0.10291  0.09951  1.03 0.301
-12        2100  0.15779  0.42339  0.37 0.709
-13        1970  0.08845  0.62895  0.14 0.888
-14        1848  1.49055  0.21419  6.96 0.000
-15        1793  0.38076  0.79500  0.48 0.632
-16        1655  0.20661  2.78962  0.07 0.941
-17        2896 -1.65518  0.54663 -3.03 0.002
-18        2896  0.33023  0.79701  0.41 0.679
-19        2896 -1.20279  0.98465 -1.22 0.222
-20        2896 -1.17589  0.99925 -1.18 0.239
-21        2896  0.27230  0.63201  0.43 0.667
-22        2896 -0.86314  1.21457 -0.71 0.477
-23        2896 -0.95387  1.09500 -0.87 0.384
+                                          spec horizon       n n_pairs n_ets_pairs
+1            BENCH: Spec 4.A-annual EUA-Bartik      NA 9062955      NA          NA
+2      BENCH: Spec 4.B-annual EUA-Bartik w-sec      NA 4111954      NA          NA
+3  PRIMARY: Spec 4.A-event firm_cost_share h=1       1  221271  507633       20346
+4  PRIMARY: Spec 4.A-event firm_cost_share h=2       2  185846  437973       17926
+5  PRIMARY: Spec 4.A-event firm_cost_share h=3       3  162088  387476       16372
+6  PRIMARY: Spec 4.A-event firm_cost_share h=4       4  142223  344929       14860
+7  PRIMARY: Spec 4.A-event firm_cost_share h=5       5  119337  295905       13338
+8  PRIMARY: Spec 4.A-event firm_cost_share h=6       6  109095  272218       12703
+9  PRIMARY: Spec 4.A-event firm_cost_share h=7       7   96348  245957       11692
+10 PRIMARY: Spec 4.B-event firm_cost_share h=1       1  372507  799967       26483
+11 PRIMARY: Spec 4.B-event firm_cost_share h=2       2  372507  799967       26483
+12 PRIMARY: Spec 4.B-event firm_cost_share h=3       3  372507  799967       26483
+13 PRIMARY: Spec 4.B-event firm_cost_share h=4       4  372507  799967       26483
+14 PRIMARY: Spec 4.B-event firm_cost_share h=5       5  372507  799967       26483
+15 PRIMARY: Spec 4.B-event firm_cost_share h=6       6  372507  799967       26483
+16 PRIMARY: Spec 4.B-event firm_cost_share h=7       7  372507  799967       26483
+17             Ext. margin firm_cost_share h=1       1  372507  799967       26483
+18             Ext. margin firm_cost_share h=2       2  372507  799967       26483
+19             Ext. margin firm_cost_share h=3       3  372507  799967       26483
+20             Ext. margin firm_cost_share h=4       4  372507  799967       26483
+21             Ext. margin firm_cost_share h=5       5  372507  799967       26483
+22             Ext. margin firm_cost_share h=6       6  372507  799967       26483
+23             Ext. margin firm_cost_share h=7       7  372507  799967       26483
+   n_separated     beta      se     t     p
+1           NA -0.00146 0.00167 -0.87 0.382
+2           NA -0.00005 0.00004 -1.36 0.175
+3           NA  1.54872 1.00380  1.54 0.123
+4           NA  0.77929 1.51150  0.52 0.606
+5           NA  3.06491 3.72300  0.82 0.410
+6           NA -2.06461 2.49197 -0.83 0.407
+7           NA  5.67049 1.85868  3.05 0.002
+8           NA  4.43575 1.93838  2.29 0.022
+9           NA  4.38411 2.34630  1.87 0.062
+10      292334  0.36955 0.17630  2.10 0.036
+11      361994  0.44322 0.19688  2.25 0.024
+12      412491  0.48013 0.22129  2.17 0.030
+13      455038  0.29102 0.19340  1.50 0.132
+14      504062  0.05532 0.39050  0.14 0.887
+15      527749  0.44675 0.21148  2.11 0.035
+16      554010  0.54620 0.28367  1.93 0.054
+17          NA -1.03871 0.44584 -2.33 0.020
+18          NA -0.40479 0.62173 -0.65 0.515
+19          NA -0.63914 0.53002 -1.21 0.228
+20          NA -1.25218 0.46345 -2.70 0.007
+21          NA -4.19123 2.46124 -1.70 0.089
+22          NA -0.33043 0.45845 -0.72 0.471
+23          NA -0.41027 0.46785 -0.88 0.381
