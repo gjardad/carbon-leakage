@@ -1,0 +1,102 @@
+================================================================
+Phase 5 field-level diagnostic of firm_year_belgian_euets
+User:     jota_
+Hostname: BOOK-08PG0CCVU5
+Date:     2026-04-28
+================================================================
+
+--- All column names ---
+ [1] "bvd_id"             "year"               "allocated_free"    
+ [4] "allocated_total"    "emissions"          "country_id"        
+ [7] "activity_id"        "nace_id_from_eutl"  "vat"               
+[10] "capital"            "revenue"            "wage_bill"         
+[13] "fte"                "value_added"        "nace5d"            
+[16] "emissions_prod"     "fte_prod"           "labor_prod"        
+[19] "capital_prod"       "allowance_shortage" "shortage_prod"     
+[22] "in_sample"         
+
+Rows: 5339
+Distinct vat: 281
+in_sample == 1: 3930
+
+--- Per-column profile for key numeric fields ---
+          field n_total n_NA n_zero n_negative n_positive         p25
+      emissions    5339    0   1567          0       3772        0.00
+ allocated_free    5339    0   1715          0       3624        0.00
+        revenue    5339 1153     63          7       4116 47117336.50
+    value_added    5339 1113      0        181       4045 11908133.00
+      wage_bill    5339 1373      0          0       3966  8208394.50
+        capital    5339 1190      0          0       4149 10190092.00
+            fte    5339 1377      0          0       3962      117.12
+          p50          p75
+     13225.00     50365.50
+     12353.00     49167.00
+ 133467825.50 351981800.75
+  34760825.00  82832784.50
+  20983110.50  50636616.75
+  28939386.00  85049358.00
+       312.75       654.18
+
+--- Per-column profile, RESTRICTED to in_sample == 1 ---
+          field n_total n_NA n_zero n_negative n_positive         p25
+      emissions    3930    0    847          0       3083     3369.50
+ allocated_free    3930    0    947          0       2983     1403.25
+        revenue    3930    0      0          0       3930 56359360.00
+    value_added    3930    2      0         64       3864 14533551.75
+      wage_bill    3930    0      0          0       3930  8395595.25
+        capital    3930   20      0          0       3910 10742328.00
+            fte    3930    2      0          0       3928      120.90
+          p50         p75
+     20590.50     69680.0
+     19221.00     71352.0
+ 145270675.50 372685123.5
+  38921117.00  87810638.0
+  21193884.00  51135615.0
+  29815766.00  87158200.2
+       314.75       656.9
+
+--- total_cost diagnostic (in_sample == 1) ---
+n_in_sample:                       3930
+total_cost is NA:                  2
+total_cost <= 0 (and not NA):      20
+total_cost > 0:                    3908
+
+--- Why is total_cost NA / non-positive (in_sample == 1)? ---
+  total bad rows:                  22
+  revenue is NA:                   0
+  revenue == 0 (not NA):           0
+  value_added is NA:               2
+  wage_bill is NA:                 0
+  wage_bill == 0 (not NA):         0
+  mat_inputs < 0 (rev-VA negative):20
+  total_cost == 0 exactly:         0
+
+--- Bad rows by year (in_sample == 1) ---
+ year n_bad
+ 2005     1
+ 2006     2
+ 2007     1
+ 2008     2
+ 2009     1
+ 2010     1
+ 2011     1
+ 2012     1
+ 2013     1
+ 2014     2
+ 2016     1
+ 2017     1
+ 2019     2
+ 2020     2
+ 2021     2
+ 2022     1
+
+--- All column count:  22  ---
+Looking for any column that exists on this machine but not the expected
+set; the user can manually compare across machines.
+
+================================================================
+Run this on local-1 and RMD, diff the outputs. The 'bad rows by
+year' table will show whether the divergence is concentrated in a
+specific period (e.g., recent years where annual accounts has more
+missing data on one machine than the other).
+================================================================
