@@ -289,9 +289,7 @@ Combined with [IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md):
 Two ways to read this:
 
 1. **Substantively:** Belgium is too small, too EU-integrated, and too concentrated in chemicals exporters for the cross-border-leakage mechanism CMdG document for France to operate. Domestically, ETS-regulated firms are the structural supply backbone — buyers had no realistic alternatives within Belgium, regardless of cost-share intensity. The post-2005 "consolidation" reflects pre-existing market structure dynamics that pre-date and survive the policy.
-2. **Methodologically:** Belgian B2B + customs panels are too small to distinguish leakage from market-structure effects at the firm level. CMdG's identification depends on French-style firm count (27k vs Belgium's ~3-5k). Smaller economies need different identification strategies (country panels, structural models, or larger pooled samples).
-
-A natural extension is the **country-panel BACI / Comext replication** (see [CMdG_REPLICATION.md](CMdG_REPLICATION.md) "Possible extension"), which trades firm-level identification for cross-country external validity and would tell us whether France is the outlier or Belgium is.
+2. **Methodologically:** Belgian B2B + customs panels are too small to distinguish leakage from market-structure effects at the firm level. CMdG's identification depends on French-style firm count (27k vs Belgium's ~3-5k). The firm-level dimension is what makes their result interesting; a country-panel BACI/Comext analog would lose precisely that.
 
 ---
 
