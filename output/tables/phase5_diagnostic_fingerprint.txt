@@ -9,14 +9,14 @@ Date:      2026-04-29
 
 --- Input: firm_year_belgian_euets ---
 rows:                5339
-cols:                24
+cols:                26
 distinct vat:        281
 year range:          2005-2023
 in_sample == 1:      3946
 sum(emissions):      894411131
 sum(allocated_free): 801768914
 sum(revenue):        2668115520800
-SHA1 (sorted v,y):   6f68b1bcc6a3db922705a3c8b4ab2357da47fad5
+SHA1 (sorted v,y):   fb87b18c2a93caf27cf59edee4c0dd66a314f6af
 
 --- Input: eua_prices_annual ---
 rows:                19
@@ -47,7 +47,7 @@ year-by-year prices:
 
 --- Output: firm_exposure ---
 rows:                3946
-cols:                35
+cols:                37
 distinct vat:        258
 year range:          2005-2022
 cost_share_total def:3103 (78.64%)
@@ -55,7 +55,7 @@ cost_share_total > 0:1412
 sum(carbon_cost):    4309689923
 sum(shortage):       204104890
 sum(emissions):      791273744
-SHA1 (sorted v,y):   8d153755cffa9d6b50b258695b601c6874f2d25f
+SHA1 (sorted v,y):   bc61515584acc09a47fd3776d80cc49d265a9636
 
 --- Per-phase aggregates ---
       phase n_firm_years n_distinct_firms sum_emissions sum_shortage sum_carbon_cost
