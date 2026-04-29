@@ -48,6 +48,9 @@ cat("Year range:  ", min(b2b$year, na.rm = TRUE), "-",
 # ---------------------------------------------------------------------------
 # 2. First year per (seller, buyer)
 # ---------------------------------------------------------------------------
+# setkey before by-grouping uses data.table's sorted path -- a large speedup
+# at RMD scale (~80M unique pairs).
+setkey(b2b, seller, buyer)
 pair_age <- b2b[, .(first_year_pair = min(year, na.rm = TRUE)),
                 by = .(seller, buyer)]
 pair_age[, is_left_censored := as.integer(first_year_pair == B2B_FIRST_YEAR)]

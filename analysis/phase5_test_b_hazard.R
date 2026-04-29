@@ -91,13 +91,17 @@ cat(sprintf("Dropped %d B2B rows for contaminated sellers (year >= 2021).\n",
 # If t == last_active_year + 1 AND corr_sales_t == 0, pair_dies_t = 1.
 # A right-censored pair (last_active_year == YEAR_HI) never dies in-sample.
 panel[, active := as.integer(corr_sales > 0)]
+# setkey before by-grouping uses data.table's sorted path -- a large speedup
+# on the RMD-scale balanced panel.
+setkey(panel, seller, buyer, year)
 panel[, last_active_year := suppressWarnings(max(year[active == 1L])),
       by = .(seller, buyer)]
 # pairs with no active year in the trimmed sample shouldn't appear; keep guard
 panel <- panel[is.finite(last_active_year)]
+# (re-key after the row drop)
+setkey(panel, seller, buyer, year)
 
 # Active in t-1?
-setorder(panel, seller, buyer, year)
 panel[, active_lag1 := shift(active, 1L, type = "lag"), by = .(seller, buyer)]
 panel[, year_gap_lag := year - shift(year, 1L, type = "lag"),
       by = .(seller, buyer)]

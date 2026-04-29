@@ -86,6 +86,9 @@ b2b[, pair_age_t := year - first_year_pair]
 # ---------------------------------------------------------------------------
 # 2. Per-pair summary: length, last year, censoring
 # ---------------------------------------------------------------------------
+# setkey before by-grouping uses data.table's sorted path -- a large speedup
+# at RMD scale (~80M unique pairs).
+setkey(b2b, seller, buyer)
 pair_summary <- b2b[, .(
   first_year      = min(year),
   last_year       = max(year),

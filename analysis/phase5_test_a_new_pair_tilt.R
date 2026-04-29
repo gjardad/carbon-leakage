@@ -146,6 +146,8 @@ b2b <- merge(b2b,
 b2b[is.na(fcs_outcome), fcs_outcome := 0]
 
 # Within-(seller_nace4d, year) rank of fcs_outcome, normalized to [0, 1].
+# setkey before by-grouping for the data.table sorted path.
+setkey(b2b, seller_nace4d, year)
 b2b[, fcs_rank := frank(fcs_outcome, ties.method = "average"),
     by = .(seller_nace4d, year)]
 b2b[, n_in_cell := .N, by = .(seller_nace4d, year)]
