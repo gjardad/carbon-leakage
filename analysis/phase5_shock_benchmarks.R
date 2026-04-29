@@ -106,12 +106,26 @@ cat(sprintf("Year range: %d-%d\n",
 # Compute sigma_b for three windows
 # ===========================================================================
 #
-# For each (vat, year) compute Δlog(inputs_VAT) over consecutive years.
-# Drop differences that span >1 year. Within firm and within window, take sd.
-# Require >=3 differences for the 2005-2019 window (long); >=2 for the short
-# 2019-2022 window (only 3 differences possible at most). Pooled requires >=3.
+# Two parallel measures:
+#
+#   (1) sigma_b_inputs    = sd_t( Δlog(inputs_VAT_{b,t}) )
+#       Mixes scale variation (firm growing/shrinking) with input-cost
+#       variation. The "raw" buyer-cost-volatility number.
+#
+#   (2) sigma_b_share     = sd_t( Δlog(inputs_VAT_{b,t} / turnover_VAT_{b,t}) )
+#                         = sd_t( Δlog(inputs) - Δlog(revenue) )
+#       The variation in the input-cost-per-unit-of-revenue ratio. If
+#       inputs and revenue scale together with quantity, this ratio
+#       strips out scale and isolates the input-cost-structure component.
+#       This is the right benchmark for an ETS shock, which is a pure
+#       price shock and doesn't depend on the firm's quantity decisions.
+#
+# Both are computed on consecutive-year differences within firm.
+# Drop differences that span >1 year. Require >=3 differences for the
+# 2005-2019 window (long); >=2 for the short 2019-2022 window (only 3
+# differences possible at most). Pooled requires >=3.
 # ===========================================================================
-cat("\n=== Computing sigma_b for three windows ===\n")
+cat("\n=== Computing sigma_b -- raw inputs_VAT, three windows ===\n")
 
 aa_diffs <- aa_inputs %>%
   arrange(vat, year) %>%
@@ -121,7 +135,34 @@ aa_diffs <- aa_inputs %>%
   ungroup() %>%
   filter(!is.na(dlog), dyear == 1)
 
-cat(sprintf("Buyer-year diffs (consecutive only): %d\n", nrow(aa_diffs)))
+cat(sprintf("Buyer-year diffs on inputs_VAT (consec): %d\n", nrow(aa_diffs)))
+
+# ── Approach A: inputs_VAT / turnover_VAT ratio ─────────────────────────
+# Strip out scale variation. Construct the input-cost-share-of-revenue
+# series and take Δlog, which equals Δlog(inputs) − Δlog(revenue).
+
+cat("\n=== Computing sigma_b -- inputs_VAT / turnover_VAT ratio ===\n")
+
+aa_share <- aa_inputs %>%
+  filter(!is.na(turnover_VAT), turnover_VAT > 0) %>%
+  mutate(input_share = inputs_VAT / turnover_VAT)
+
+cat(sprintf("Firm-year obs with input_share defined: %d\n", nrow(aa_share)))
+cat(sprintf("  (input_share quantile 25/50/75): %.3f / %.3f / %.3f\n",
+            quantile(aa_share$input_share, 0.25),
+            quantile(aa_share$input_share, 0.50),
+            quantile(aa_share$input_share, 0.75)))
+
+aa_share_diffs <- aa_share %>%
+  arrange(vat, year) %>%
+  group_by(vat) %>%
+  mutate(dlog = log(input_share) - log(lag(input_share)),
+         dyear = year - lag(year)) %>%
+  ungroup() %>%
+  filter(!is.na(dlog), dyear == 1)
+
+cat(sprintf("Buyer-year diffs on inputs/revenue ratio (consec): %d\n",
+            nrow(aa_share_diffs)))
 
 # Helper to compute sigma_b on a window
 compute_sigma_b <- function(diffs, year_min, year_max, min_n) {
@@ -188,6 +229,15 @@ cat(sprintf("Buyers with usable sigma_b (2005-2019, n_diffs>=3): %d\n", nrow(sig
 cat(sprintf("Buyers with usable sigma_b (2019-2022, n_diffs>=2): %d\n", nrow(sigma_post)))
 cat(sprintf("Buyers with usable sigma_b (2005-2022, n_diffs>=3): %d\n", nrow(sigma_full)))
 
+# sigma_b on inputs/revenue ratio (purified of scale)
+sigma_share_pre  <- compute_sigma_b(aa_share_diffs, 2005, 2019, min_n = 3)
+sigma_share_post <- compute_sigma_b(aa_share_diffs, 2019, 2022, min_n = 2)
+sigma_share_full <- compute_sigma_b(aa_share_diffs, 2005, 2022, min_n = 3)
+
+cat(sprintf("Buyers with usable sigma_share (2005-2019, n_diffs>=3): %d\n", nrow(sigma_share_pre)))
+cat(sprintf("Buyers with usable sigma_share (2019-2022, n_diffs>=2): %d\n", nrow(sigma_share_post)))
+cat(sprintf("Buyers with usable sigma_share (2005-2022, n_diffs>=3): %d\n", nrow(sigma_share_full)))
+
 # Compute the more directly interpretable typical-change statistics
 typical_pre  <- compute_typical_change(aa_diffs, 2005, 2019, min_n = 3)
 typical_post <- compute_typical_change(aa_diffs, 2019, 2022, min_n = 2)
@@ -207,6 +257,25 @@ write.csv(typical_table,
           file.path(OUTPUT_TAB, "phase5_moment5_typical_change.csv"),
           row.names = FALSE)
 cat("Saved:", file.path(OUTPUT_TAB, "phase5_moment5_typical_change.csv"), "\n")
+
+# Same typical-change calculation on inputs/revenue ratio
+typical_share_pre  <- compute_typical_change(aa_share_diffs, 2005, 2019, min_n = 3)
+typical_share_post <- compute_typical_change(aa_share_diffs, 2019, 2022, min_n = 2)
+typical_share_full <- compute_typical_change(aa_share_diffs, 2005, 2022, min_n = 3)
+
+typical_share_table <- bind_rows(
+  typical_share_pre  %>% mutate(window = "2005-2019 (pre-shock)"),
+  typical_share_post %>% mutate(window = "2019-2022 (Phase IV / pandemic)"),
+  typical_share_full %>% mutate(window = "2005-2022 (pooled)")
+) %>% select(window, everything())
+
+cat("\n=== Typical |Δlog| on inputs/revenue ratio (scale-stripped) ===\n")
+print(as.data.frame(typical_share_table), digits = 4)
+
+write.csv(typical_share_table,
+          file.path(OUTPUT_TAB, "phase5_moment5_typical_change_input_share.csv"),
+          row.names = FALSE)
+cat("Saved:", file.path(OUTPUT_TAB, "phase5_moment5_typical_change_input_share.csv"), "\n")
 
 # Distribution table
 qtab <- function(x, label) {
@@ -229,6 +298,22 @@ print(vol_table, digits = 4)
 
 write.csv(vol_table,
           file.path(OUTPUT_TAB, "phase5_moment5_buyer_volatility_inputsVAT.csv"),
+          row.names = FALSE)
+
+# ---- Cross-buyer distribution of sigma_share (Δlog of inputs/revenue ratio) ----
+vol_share_table <- bind_rows(
+  qtab(sigma_share_pre$sigma_b,  "2005-2019 (pre-shock)"),
+  qtab(sigma_share_post$sigma_b, "2019-2022 (Phase IV / pandemic)"),
+  qtab(sigma_share_full$sigma_b, "2005-2022 (pooled)")
+) %>% as_tibble()
+
+cat("\nCross-buyer distribution of sigma_share (within-firm sd of Δlog inputs_VAT/turnover_VAT):\n")
+cat("(scale-stripped: removes variation common to inputs and revenue;\n")
+cat(" isolates input-cost-structure component, the right benchmark for ETS shock)\n")
+print(vol_share_table, digits = 4)
+
+write.csv(vol_share_table,
+          file.path(OUTPUT_TAB, "phase5_moment5_buyer_volatility_input_share.csv"),
           row.names = FALSE)
 
 # ---- By buyer NACE 2d ----
@@ -257,11 +342,25 @@ vol_nace_table <- bind_rows(
   vol_by_nace(sigma_full, "2005-2022")
 )
 
-cat("\n=== sigma_b by buyer NACE 2d ===\n")
+cat("\n=== sigma_b by buyer NACE 2d (raw inputs_VAT) ===\n")
 print(as.data.frame(vol_nace_table), digits = 4)
 
 write.csv(vol_nace_table,
           file.path(OUTPUT_TAB, "phase5_moment5_buyer_volatility_by_nace2d.csv"),
+          row.names = FALSE)
+
+# Same NACE-2d split for the scale-stripped sigma_share
+vol_share_nace_table <- bind_rows(
+  vol_by_nace(sigma_share_pre,  "2005-2019"),
+  vol_by_nace(sigma_share_post, "2019-2022"),
+  vol_by_nace(sigma_share_full, "2005-2022")
+)
+
+cat("\n=== sigma_share by buyer NACE 2d (scale-stripped inputs/revenue ratio) ===\n")
+print(as.data.frame(vol_share_nace_table), digits = 4)
+
+write.csv(vol_share_nace_table,
+          file.path(OUTPUT_TAB, "phase5_moment5_buyer_volatility_input_share_by_nace2d.csv"),
           row.names = FALSE)
 
 # ===========================================================================
@@ -358,10 +457,22 @@ cat("consecutive years. Reports cross-buyer distribution of sigma_b for\n")
 cat("three windows.\n\n")
 
 cat("--------------------------------------------------------------\n")
-cat("(b) sigma_b distribution by window\n")
+cat("(b) sigma_b distribution by window -- inputs_VAT (raw)\n")
 cat("    sigma_b = within-firm sd of Δlog(inputs_VAT) over consec years\n")
+cat("    Mixes scale variation with input-cost-structure variation.\n")
 cat("--------------------------------------------------------------\n")
 print(as.data.frame(vol_table), digits = 4)
+cat("\n")
+
+cat("--------------------------------------------------------------\n")
+cat("(b') sigma_share distribution -- inputs_VAT / turnover_VAT (scale-stripped)\n")
+cat("    sigma_share = within-firm sd of Δlog(inputs_VAT / turnover_VAT)\n")
+cat("                = within-firm sd of [Δlog(inputs) - Δlog(revenue)]\n")
+cat("    Strips scale variation (firm growing/shrinking moves both inputs\n")
+cat("    and revenue together). Isolates input-cost-structure component,\n")
+cat("    the right benchmark for an ETS shock (which is a pure price shock).\n")
+cat("--------------------------------------------------------------\n")
+print(as.data.frame(vol_share_table), digits = 4)
 cat("\n")
 
 cat("--------------------------------------------------------------\n")
@@ -370,7 +481,11 @@ cat("    pool_median_abs = median |Δlog| pooled across all firm-years\n")
 cat("    cross_firm_median_within_firm_median_abs = median across firms\n")
 cat("        of each firm's median |Δlog|\n")
 cat("--------------------------------------------------------------\n")
+cat("On raw inputs_VAT:\n")
 print(as.data.frame(typical_table), digits = 4)
+cat("\n")
+cat("On inputs_VAT / turnover_VAT (scale-stripped):\n")
+print(as.data.frame(typical_share_table), digits = 4)
 cat("\n")
 
 cat("--------------------------------------------------------------\n")
