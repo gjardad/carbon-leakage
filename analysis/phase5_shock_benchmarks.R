@@ -135,6 +135,48 @@ compute_sigma_b <- function(diffs, year_min, year_max, min_n) {
     filter(n_diffs >= min_n, !is.na(sigma_b), sigma_b > 0)
 }
 
+# Helper to compute the "typical year-on-year change" |Δlog| on a window.
+#
+# sigma_b describes the SPREAD of year-on-year changes around the firm's
+# own mean. For the more direct "how big is a typical year-on-year change"
+# question, the right statistic is median(|Δlog|).
+#
+# Returns:
+#   - pool_median_abs : pooled median of |Δlog| across ALL firm-year diffs
+#                       in the window. Answers "the typical (firm-year)
+#                       year-on-year |change| in input costs is X%"
+#   - cross_firm_med_within_firm_med_abs : for each firm, compute its own
+#                       median of |Δlog|; then take the median across firms.
+#                       Answers "the typical firm's typical year has |change| X%"
+compute_typical_change <- function(diffs, year_min, year_max, min_n) {
+  d <- diffs %>%
+    filter(year >= year_min, year <= year_max) %>%
+    mutate(abs_dlog = abs(dlog))
+
+  pooled <- tibble(
+    n_firm_years = nrow(d),
+    n_distinct_firms = n_distinct(d$vat),
+    pool_median_abs = median(d$abs_dlog, na.rm = TRUE),
+    pool_mean_abs   = mean(d$abs_dlog, na.rm = TRUE)
+  )
+
+  per_firm_meds <- d %>%
+    group_by(vat) %>%
+    summarise(n_diffs = n(),
+              firm_median_abs = median(abs_dlog, na.rm = TRUE),
+              firm_mean_abs   = mean(abs_dlog, na.rm = TRUE),
+              .groups = "drop") %>%
+    filter(n_diffs >= min_n)
+
+  cross_firm <- tibble(
+    n_buyers = nrow(per_firm_meds),
+    cross_firm_median_within_firm_median_abs = median(per_firm_meds$firm_median_abs),
+    cross_firm_median_within_firm_mean_abs   = median(per_firm_meds$firm_mean_abs)
+  )
+
+  bind_cols(pooled, cross_firm)
+}
+
 # 2005-2019: pre-pandemic, pre-Phase-IV. Clean noise floor.
 sigma_pre  <- compute_sigma_b(aa_diffs, 2005, 2019, min_n = 3)
 # 2019-2022: pandemic + Phase-IV bite. Contaminated noise floor.
@@ -145,6 +187,26 @@ sigma_full <- compute_sigma_b(aa_diffs, 2005, 2022, min_n = 3)
 cat(sprintf("Buyers with usable sigma_b (2005-2019, n_diffs>=3): %d\n", nrow(sigma_pre)))
 cat(sprintf("Buyers with usable sigma_b (2019-2022, n_diffs>=2): %d\n", nrow(sigma_post)))
 cat(sprintf("Buyers with usable sigma_b (2005-2022, n_diffs>=3): %d\n", nrow(sigma_full)))
+
+# Compute the more directly interpretable typical-change statistics
+typical_pre  <- compute_typical_change(aa_diffs, 2005, 2019, min_n = 3)
+typical_post <- compute_typical_change(aa_diffs, 2019, 2022, min_n = 2)
+typical_full <- compute_typical_change(aa_diffs, 2005, 2022, min_n = 3)
+
+typical_table <- bind_rows(
+  typical_pre  %>% mutate(window = "2005-2019 (pre-shock)"),
+  typical_post %>% mutate(window = "2019-2022 (Phase IV / pandemic)"),
+  typical_full %>% mutate(window = "2005-2022 (pooled)")
+) %>% select(window, everything())
+
+cat("\n=== Typical year-on-year |change| in input costs ===\n")
+cat("(median |Δlog|, pooled across firm-years and via two-stage cross-firm median)\n")
+print(as.data.frame(typical_table), digits = 4)
+
+write.csv(typical_table,
+          file.path(OUTPUT_TAB, "phase5_moment5_typical_change.csv"),
+          row.names = FALSE)
+cat("Saved:", file.path(OUTPUT_TAB, "phase5_moment5_typical_change.csv"), "\n")
 
 # Distribution table
 qtab <- function(x, label) {
@@ -297,8 +359,18 @@ cat("three windows.\n\n")
 
 cat("--------------------------------------------------------------\n")
 cat("(b) sigma_b distribution by window\n")
+cat("    sigma_b = within-firm sd of Δlog(inputs_VAT) over consec years\n")
 cat("--------------------------------------------------------------\n")
 print(as.data.frame(vol_table), digits = 4)
+cat("\n")
+
+cat("--------------------------------------------------------------\n")
+cat("Typical year-on-year |change| in input costs\n")
+cat("    pool_median_abs = median |Δlog| pooled across all firm-years\n")
+cat("    cross_firm_median_within_firm_median_abs = median across firms\n")
+cat("        of each firm's median |Δlog|\n")
+cat("--------------------------------------------------------------\n")
+print(as.data.frame(typical_table), digits = 4)
 cat("\n")
 
 cat("--------------------------------------------------------------\n")
