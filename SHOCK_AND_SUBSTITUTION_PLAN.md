@@ -157,12 +157,19 @@ Four tests. **G is the foundational test ("if substitution happens anywhere, it 
 **Cell construction.** Unit: `(buyer × input-NACE 4d × year)`. For each cell compute:
 - `n_ets_sellers` = number of ETS sellers j whose seller-NACE 4d == cell's input NACE 4d.
 - `spread` = `max_j firm_cost_share_j − min_j firm_cost_share_j` over the ETS sellers in the cell.
-- `max_pair_shock` = `max_j (firm_cost_share_j × corr_sales_{j,b,t} / Σ_{j' in cell} corr_sales_{j',b,t})`. Sum in the denominator runs over ALL sellers in the cell (ETS and non-ETS).
+- `max_pair_shock` = `max_j (firm_cost_share_j × corr_sales_{j,b,t} / Σ_{j' in cell} corr_sales_{j',b,t})`. Within-NACE-4d shock magnitude (option (b) in shock-magnitude framing).
+- `max_pair_shock_total` = `max_j (firm_cost_share_j × corr_sales_{j,b,t} / inputs_VAT_{b,t})`. Total-input shock magnitude (option (c)). Apples-to-apples with σ_share.
 
 **High-power subset filter:**
-1. `n_ets_sellers ≥ 2` (alternative ETS supplier exists).
+1. `n_ets_sellers ≥ 2` (alternative ETS supplier exists; required for substitution to be feasible).
 2. `spread ≥ θ_spread` — meaningful intensity gap. Starting threshold: `θ_spread = 0.005` (50 bp of cost-share). Robustness: also try `θ_spread = 0.01` and a relative-spread alternative `max_j / min_j ≥ 5×`.
-3. `max_pair_shock ≥ θ_shock` — at least one position is materially exposed. Starting threshold: `θ_shock = 0.01` (1% of buyer's NACE-4d input bill).
+3. `max_pair_shock_total ≥ θ_shock_total` — the cell's biggest ETS position must materially affect the buyer's TOTAL cost structure, not just within-NACE costs. Starting threshold: `θ_shock_total = 0.005` (0.5% of buyer's total input bill). This is the binding filter: it ensures the buyer would actually notice the shock at their total-cost level, against their σ_share noise floor of ~15%.
+
+**Why filter on `max_pair_shock_total` rather than `max_pair_shock`:** A cell with a 5% pair-shock at NACE-4d level but only 1% NACE-share-of-total-inputs gives a buyer-total exposure of 0.05% — too small to motivate switching effort, however large it looks within-NACE. The substitution decision is made *given* that the buyer cares about this NACE 4d at the total-cost level. Filtering on `max_pair_shock_total` ensures we select cells where the buyer would actually act.
+
+**Empirical expectation.** Per [SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md), pair-shock-total p90 is 1.16% across all Phase IV ETS pair-years; only cement-buyer cells (NACE 23) have p90 in the meaningful 5–10% range. The high-power subset will therefore be **predominantly cement-buyer cells, with a handful of NACE 32 (other manufacturing) cells and other oddballs**. The threshold-based filter is preserved (rather than a sector-based filter) so we don't exclude a buyer at the upper percentile of pair-shock-total just because they're not in cement — but *de facto* the test will be cement-heavy.
+
+**Expected sample size.** With `θ_shock_total = 0.005` (0.5%), we expect roughly the top 5–8% of Phase IV ETS pair-years (≈ 200–300 distinct cells) to survive the filter, dominated by cement. Robustness with looser thresholds (θ_shock_total = 0.001) would expand to ~500 cells; stricter (θ_shock_total = 0.02) restricts to <100 cells, mostly cement-input-heavy buyers.
 
 **Sample for the regression.** All `(seller × buyer × year)` rows where the corresponding `(buyer, NACE 4d, year)` cell satisfies the high-power filter. **Includes non-ETS sellers in the same NACE 4d as zero-intensity rows** (`firm_cost_share = 0`). They are the dominant substitution path in many cells and serve as the natural "control" trajectory.
 
@@ -198,13 +205,14 @@ G2 is the cell-level intensity-weighted average exposure (single number per cell
 **Predictions:** β < 0 (substitution) vs β ≈ 0 (null), parallel to G1.
 
 **Robustness:**
-- Threshold sensitivity: report estimates for grids of `θ_spread ∈ {0.001, 0.005, 0.01, 0.02}` and `θ_shock ∈ {0.005, 0.01, 0.05}`. The high-power subset shrinks with stricter thresholds; we want the result to be stable, or at least to move monotonically (stronger substitution at stricter filters = good).
+- Threshold sensitivity: report estimates for grids of `θ_spread ∈ {0.001, 0.005, 0.01, 0.02}` and `θ_shock_total ∈ {0.001, 0.005, 0.01, 0.02}`. The high-power subset shrinks with stricter thresholds; we want the result to be stable, or at least to move monotonically (stronger substitution at stricter filters = good — substitution should be strongest where the shock is biggest).
 - Pre-2012 placebo: re-run on the 2005–2014 window with `Post_t = 1(t ≥ 2010)` or similar. Should give β ≈ 0 if the post-2015 estimate is causal.
-- Sector decomposition: split by buyer NACE 2d. Cement (NACE 23 buyers) is where the shock is largest per [SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md); the test should have most identifying power there.
+- Sector decomposition: split by buyer NACE 2d. Per [SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md), cement (NACE 23 buyers) is where the shock is large enough relative to background noise to be detectable (signal-to-noise ≈ 0.68σ). The high-power subset will be predominantly cement-buyer cells — report the cement-only estimate as the load-bearing result. The handful of non-cement cells that survive the filter (NACE 32 and oddball cement-input-heavy buyers in non-cement sectors) are useful for confirming the result isn't sector-specific to cement.
+- Also report the broader "any pair-shock-total > θ" sample without the spread/n_ets filter, as a sanity check that the within-NACE substitution feasibility filter isn't doing all the work.
 
 **Output:** `output/tables/phase5_test_g_feasibility_restricted.csv` with G1 estimates across threshold combinations, plus G2 cell-level series (descriptive). `output/figures/phase5_test_g_weighted_intensity_by_year.pdf` plots `weighted_intensity` over time within high-power cells, by NACE 2d.
 
-**Sample size caveat:** the high-power filter is restrictive **by design**. The whole point is to identify where substitution should be most plausible. Expect the subset to be a small fraction of the full B2B panel — possibly only a few hundred cell-years in Phase IV. SE will be wide. That is the cost of running the test on the right subsample. If the resulting power is too low to reject moderate β values, that itself is a finding (no surprise — the universe of "feasible-substitution" cells in Belgium is small).
+**Sample size caveat:** the high-power filter is restrictive **by design**. The whole point is to identify where substitution should be most plausible. With `θ_shock_total = 0.005` we expect ~200–300 cell-years in Phase IV, dominated by cement-buyer cells. SE will be wide. That is the cost of running the test on the right subsample. If the resulting power is too low to reject moderate β values, that itself is a finding — the universe of "feasible-substitution AND meaningful-buyer-cost-impact" cells in Belgian B2B is small, dominated by cement, and concentrated in Phase IV.
 
 #### Test A — New-pair carbon-intensity tilt (the extensive-margin separator)
 
@@ -292,15 +300,17 @@ Summary table at head of `STICKINESS_VS_CONCENTRATION.md`:
 
 **Test G is the foundational decision point.** Run G first.
 
-- **G's β < 0**: substitution exists where it's most feasible. Then run A, B, C: A tells whether the *new-formation* margin tilts the same way; B tells whether *break-up rates* respond to intensity; C tells whether relational dynamics exist generally. The set of (G, A, B, C) tells you whether substitution is broad-based or restricted to the high-power subset.
-- **G's β ≈ 0**: no substitution even where most feasible. Two interpretations:
-  - *Shock too small*: consistent with [SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md) verdict that pair-shock magnitudes are below the buyer's σ_b noise floor. Even when concentrated in cells with the largest possible exposure, the shock just isn't big enough to motivate switching.
-  - *Stickiness dominates*: relational capital is so strong that even feasible, large-shock cells show no reweighting.
-  Tests A and B then become diagnostics on which of these is operative — A tells whether new pairs (where stickiness is absent) tilt low-intensity (would rule out shock-too-small), B tells whether young pairs at high-intensity sellers die more (would point to stickiness-by-age).
+Per [SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md), the high-power subset Test G operates on is **predominantly cement-buyer cells** — that's the only sector where the pair-shock-total reaches a meaningful fraction of buyer total inputs (cement-buyer p90 = 8.80%, signal-to-noise 0.68σ). The threshold-based filter (rather than a sector-based filter) keeps the door open for non-cement cells that happen to clear the bar (NACE 32, oddball construction-adjacent buyers in NACE 22/13/etc.), but expect cement to dominate.
+
+- **G's β < 0**: substitution exists where it's most feasible AND meaningful at the buyer's total cost. Then run A, B, C: A tells whether the *new-formation* margin tilts the same way; B tells whether *break-up rates* respond to intensity; C tells whether relational dynamics exist generally. The set of (G, A, B, C) tells you whether substitution is broad-based or restricted to the high-power subset.
+- **G's β ≈ 0**: no substitution even where most feasible AND most exposed. Two interpretations:
+  - *Stickiness dominates*: relational capital is so strong that even cement buyers facing 0.68σ pair-shock-totals don't reweight. This is the most economically meaningful case — Belgian buyers are sticky enough to absorb a near-detectable shock without acting.
+  - *Shock still too small*: even at 0.68σ, the cement signal isn't quite enough to motivate switching effort against natural cost noise. Plausible but weaker — at this magnitude relative to noise, a sophisticated buyer would notice.
+  Tests A and B then become diagnostics on which of these is operative — A tells whether new pairs (where stickiness is absent) tilt low-intensity (would rule out shock-too-small if we see substitution there), B tells whether young pairs at high-intensity sellers die more (would point to stickiness-by-age).
 
 Coherent stickiness narrative requires G null + A negative on new-pairs + B positive on hazard + C shows life-cycle. Coherent shock-too-small requires G null + A null + B null + C flat. Coherent concentration is the residual when alternatives are absent — Test G's filter `n_ets_sellers ≥ 2` already excludes most of the concentration story, so a null G *cannot* be due to concentration alone within its subset.
 
-Mixed signals across A, B, C with a non-null G likely mean **both channels operate, varying by sector** — split G, A, B by NACE 2d (cement/steel/refining likely concentration; chemicals/machinery/electrical likely stickiness or shock-too-small) and report sector decomposition.
+Mixed signals across A, B, C with a non-null G likely mean **both channels operate, varying by sector** — split G, A, B by NACE 2d. Empirical expectation: cement (NACE 23) is the only sector with enough Phase IV exposure to make the test meaningful; non-cement sectors will likely have insufficient power for a clean reading.
 
 If the joint pattern is consistent with stickiness, the deferred Tests D and E become the natural next step (with Känzig-shock-vs-surprise resolved deliberately). If consistent with concentration or shock-too-small, the deferred tests are unlikely to add — the paper's story is concentration- or magnitude-driven and the ancillary battery is small.
 
