@@ -8,16 +8,26 @@
 #   shifter transmits to Belgian unit values (F = 195, slope per pp ≈ -1.3%).
 #   E3 asks: do Belgian buyers actually reroute sourcing in response?
 #
-#   Two reduced-form scatters at the input-NACE-4d × year level:
+#   Three reduced-form scatters at the input-NACE-4d × year level:
 #
-#   Version A (load-bearing for the leakage paper):
+#   Version A (absolute B2B level):
 #     Δlog(domestic B2B sales from Belgian sellers in NACE 4d n) ~ ΔChinaShare_n
-#     Expected slope: NEGATIVE. China shock → buyers rerouting away from
-#     Belgian sellers of China-shocked categories.
+#     Expected slope: NEGATIVE. Caveat: doesn't normalize by total Belgian
+#     buyer expenditure on NACE 4d n -- common GDP growth shows up in
+#     intercept, but a within-NACE-4d substitution visible only as a share
+#     would be missed.
+#
+#   Version A2 (share-of-expenditure, the cleaner version):
+#     Δ(Belgian-seller share of Belgian-buyer expenditure on NACE 4d n)
+#     where Belgian-seller share = b2b_sales / (b2b_sales + v_total_be_imports).
+#     Expected slope: NEGATIVE. This is the substantive substitution outcome:
+#     does the Belgian-source share of input expenditure fall when China
+#     shocks the category?
 #
 #   Version B (mechanical sanity check via direct imports):
-#     Δlog(Belgian imports from China in NACE 4d n) ~ ΔChinaShare_n
-#     Expected slope: POSITIVE. China shock → more direct imports from China.
+#     Δ(China share of Belgian imports of NACE 4d n) ~ ΔChinaShare_n
+#     Expected slope: POSITIVE. China shock → Belgian imports tilt toward
+#     China.
 #
 #   Identification: same EU-26-excl-Belgium shifter from E1, aggregated from
 #   HS6 to NACE 4d via cn8_to_nace4d.csv (weighted by 2002 EU-26 trade value).
@@ -45,6 +55,12 @@
 #     binding here since we use 2002 and 2012, both pre-2021. No drop.
 #   - 2002 is the first B2B year — left-censoring not load-bearing for an
 #     aggregated NACE-4d outcome but flagged.
+#   - Currency mismatch: B2B corr_sales in EUR, BACI v in thousand USD. For
+#     Version A2 (share computation that mixes both) we convert BACI USD to
+#     EUR using ECB annual-average rates: 2002 EUR/USD = 0.9456,
+#     2012 EUR/USD = 1.2848. These are public ECB reference rates; precise
+#     daily rates would shift A2 marginally but not change the slope sign or
+#     order-of-magnitude.
 ###############################################################################
 
 rm(list = ls())
@@ -168,8 +184,38 @@ imports_b[, delta_china_share_be := china_share_be_2012 - china_share_be_2002]
 cat(sprintf("NACE 4d cells with Belgian imports in both years: %d\n",
             sum(!is.na(imports_b$delta_china_share_be))))
 
+# ---- Version A2: Belgian-seller share of Belgian-buyer expenditure ----
+# Need to put B2B (EUR) and BACI imports (thousand USD) on the same currency
+# scale. Convert BACI USD -> EUR using ECB annual-average rates.
+usd_per_eur <- c("2002" = 0.9456, "2012" = 1.2848)
+
+imports_eur <- imports_agg[, .(nace4d, year,
+                                v_total_be_eur = v_total_be * 1000 /
+                                                  usd_per_eur[as.character(year)])]
+imports_eur_wide <- dcast(imports_eur, nace4d ~ year,
+                          value.var = "v_total_be_eur")
+setnames(imports_eur_wide, c("2002", "2012"),
+         c("v_total_be_eur_2002", "v_total_be_eur_2012"))
+
+share_data <- merge(b2b_a[, .(nace4d, b2b_sales_2002, b2b_sales_2012)],
+                    imports_eur_wide, by = "nace4d", all = FALSE)
+share_data[, total_exp_2002 := b2b_sales_2002 + v_total_be_eur_2002]
+share_data[, total_exp_2012 := b2b_sales_2012 + v_total_be_eur_2012]
+share_data <- share_data[total_exp_2002 > 0 & total_exp_2012 > 0]
+share_data[, belgian_seller_share_2002 := b2b_sales_2002 / total_exp_2002]
+share_data[, belgian_seller_share_2012 := b2b_sales_2012 / total_exp_2012]
+share_data[, delta_belgian_seller_share :=
+              belgian_seller_share_2012 - belgian_seller_share_2002]
+
+cat(sprintf("NACE 4d cells with Belgian-seller share computable: %d\n",
+            sum(!is.na(share_data$delta_belgian_seller_share))))
+
 # ---- Merge and assemble regression dataset ----
 e3 <- merge(shifter_nace, b2b_a[, .(nace4d, dlog_b2b_sales)],
+            by = "nace4d", all.x = TRUE)
+e3 <- merge(e3, share_data[, .(nace4d, delta_belgian_seller_share,
+                                belgian_seller_share_2002,
+                                belgian_seller_share_2012)],
             by = "nace4d", all.x = TRUE)
 e3 <- merge(e3, imports_b[, .(nace4d, delta_china_share_be,
                                   china_share_be_2002, china_share_be_2012)],
@@ -190,6 +236,7 @@ trim_outcome <- function(dt, col) {
   dt
 }
 e3 <- trim_outcome(e3, "dlog_b2b_sales")
+e3 <- trim_outcome(e3, "delta_belgian_seller_share")
 e3 <- trim_outcome(e3, "delta_china_share_be")
 
 # ---- WLS regressions ----
@@ -220,11 +267,13 @@ run_reg <- function(dt, ycol, label) {
   )
 }
 
-res_a <- run_reg(e3, "dlog_b2b_sales",
-                 "Version A: domestic B2B sales (seller NACE 4d)")
-res_b <- run_reg(e3, "delta_china_share_be",
-                 "Version B: China share of Belgian imports")
-results <- rbindlist(list(res_a, res_b))
+res_a  <- run_reg(e3, "dlog_b2b_sales",
+                  "Version A:  domestic B2B sales (level)")
+res_a2 <- run_reg(e3, "delta_belgian_seller_share",
+                  "Version A2: Belgian-seller share of expenditure")
+res_b  <- run_reg(e3, "delta_china_share_be",
+                  "Version B:  China share of Belgian imports")
+results <- rbindlist(list(res_a, res_a2, res_b))
 print(results, digits = 4)
 
 fwrite(results, file.path(OUTPUT_TAB, "phase6_eyeball_e3_summary.csv"))
@@ -253,14 +302,17 @@ make_panel <- function(dt, ycol, title_text, slope, fstat, n) {
     theme(plot.title.position = "plot")
 }
 
-p_a <- make_panel(e3, "dlog_b2b_sales",
-                  "A: Delta-log domestic B2B sales by Belgian sellers (NACE 4d)",
-                  res_a$beta, res_a$f_stat, res_a$n)
-p_b <- make_panel(e3, "delta_china_share_be",
-                  "B: Delta China share of Belgian imports (NACE 4d)",
-                  res_b$beta, res_b$f_stat, res_b$n)
+p_a  <- make_panel(e3, "dlog_b2b_sales",
+                   "A: Delta-log B2B sales (level)",
+                   res_a$beta, res_a$f_stat, res_a$n)
+p_a2 <- make_panel(e3, "delta_belgian_seller_share",
+                   "A2: Delta Belgian-seller share of expenditure",
+                   res_a2$beta, res_a2$f_stat, res_a2$n)
+p_b  <- make_panel(e3, "delta_china_share_be",
+                   "B: Delta China share of Belgian imports",
+                   res_b$beta, res_b$f_stat, res_b$n)
 
-p_combined <- (p_a | p_b) +
+p_combined <- (p_a | p_a2 | p_b) +
   plot_annotation(
     title    = "Eyeball E3 -- Reduced-form: do Belgian buyers reroute? (2002 -> 2012)",
     subtitle = "One observation per input-NACE-4d. Trade-weighted (2002 EU-26 import value). 1% tails of outcome trimmed.",
@@ -268,11 +320,12 @@ p_combined <- (p_a | p_b) +
   ) & theme(plot.title.position = "plot")
 
 ggsave(file.path(OUTPUT_FIG, "phase6_eyeball_e3_reduced_form.pdf"),
-       p_combined, width = 12, height = 6)
+       p_combined, width = 16, height = 6)
 cat("Saved:", file.path(OUTPUT_FIG, "phase6_eyeball_e3_reduced_form.pdf"), "\n")
 
 # ---- Save intermediate data ----
-save(e3, shifter_nace, b2b_a, imports_b, imports_agg, hs6_nace_modal, results,
+save(e3, shifter_nace, b2b_a, imports_b, imports_agg, share_data,
+     hs6_nace_modal, results,
      file = file.path(OUT_DATA, "phase6_e3_reduced_form_data.RData"))
 cat("Saved:", file.path(OUT_DATA, "phase6_e3_reduced_form_data.RData"), "\n")
 
@@ -291,17 +344,25 @@ cat("  Horizon: 2002 -> 2012 (10-yr LR window, P&R-comparable).\n")
 cat("  WLS, weights = NACE-4d's 2002 EU-26 import value.\n")
 cat("  1% tails of each outcome trimmed.\n\n")
 
-cat("Version A -- domestic B2B sales by Belgian sellers in NACE 4d n:\n")
-cat("  Outcome: Delta log(sum_{seller in NACE 4d n} corr_sales_ij from 2002 to 2012)\n")
-cat("  Expected slope: NEGATIVE (buyers reroute away from Belgian sellers of\n")
-cat("                 China-shocked categories).\n\n")
+cat("Version A -- absolute B2B sales by Belgian sellers in NACE 4d n:\n")
+cat("  Outcome: Delta log(sum_{seller in NACE 4d n} corr_sales_ij)\n")
+cat("  Expected slope: NEGATIVE (buyers reroute away from Belgian sellers).\n")
+cat("  Caveat: doesn't normalize by total Belgian buyer expenditure.\n\n")
+
+cat("Version A2 -- Belgian-seller share of buyer expenditure on NACE 4d n:\n")
+cat("  Outcome: Delta(belgian_seller_share) where\n")
+cat("    belgian_seller_share_n,t = b2b_sales_n,t /\n")
+cat("                               (b2b_sales_n,t + v_total_be_imports_n,t)\n")
+cat("  Expected slope: NEGATIVE. Cleaner than A: directly measures whether the\n")
+cat("    Belgian-source share of input expenditure falls when the category is\n")
+cat("    China-shocked.\n")
+cat("  Currency: BACI USD converted to EUR via ECB annual mean rates\n")
+cat("    (2002: 0.9456; 2012: 1.2848 USD per EUR).\n\n")
 
 cat("Version B -- China's share of Belgian imports in NACE 4d n:\n")
-cat("  Outcome: Delta(china_share_BE_n) where china_share_BE_n = v_China->BE,n / v_total->BE,n\n")
-cat("  Expected slope: POSITIVE (buyers shift toward direct Chinese imports).\n")
-cat("  Note: this is a share-on-share regression. Δlog absolute imports\n")
-cat("        was contaminated by 2002-baseline composition; share-version is\n")
-cat("        the apples-to-apples reduced form.\n\n")
+cat("  Outcome: Delta(china_share_BE_n) where\n")
+cat("    china_share_BE_n,t = v_China->BE,n,t / v_total->BE,n,t\n")
+cat("  Expected slope: POSITIVE (buyers tilt imports toward China).\n\n")
 
 cat("Sample:\n")
 cat(sprintf("  HS6 in shifter: %d\n", nrow(china_shifter_hs6)))
@@ -316,30 +377,31 @@ print(results, digits = 4)
 cat("\n")
 
 cat("================================================================\n")
-cat("Verdict (joint reading of A and B)\n")
-cat(sprintf("  Version A: beta = %.4f, F = %.1f, p = %.4g, N = %d\n",
-            res_a$beta, res_a$f_stat, res_a$p_value, res_a$n))
-cat(sprintf("  Version B: beta = %.4f, F = %.1f, p = %.4g, N = %d\n",
-            res_b$beta, res_b$f_stat, res_b$p_value, res_b$n))
+cat("Verdict (joint reading; A2 is the load-bearing domestic-substitution test)\n")
+cat(sprintf("  Version A  (level)        : beta = %.4f, F = %.1f, p = %.4g, N = %d\n",
+            res_a$beta,  res_a$f_stat,  res_a$p_value,  res_a$n))
+cat(sprintf("  Version A2 (share)        : beta = %.4f, F = %.1f, p = %.4g, N = %d\n",
+            res_a2$beta, res_a2$f_stat, res_a2$p_value, res_a2$n))
+cat(sprintf("  Version B  (import share) : beta = %.4f, F = %.1f, p = %.4g, N = %d\n",
+            res_b$beta,  res_b$f_stat,  res_b$p_value,  res_b$n))
 cat("\n")
 
-a_neg_sig <- !is.na(res_a$beta) && res_a$beta < 0 && res_a$p_value < 0.05
-b_pos_sig <- !is.na(res_b$beta) && res_b$beta > 0 && res_b$p_value < 0.05
-a_null    <- !is.na(res_a$p_value) && res_a$p_value >= 0.10
+a2_neg_sig <- !is.na(res_a2$beta) && res_a2$beta < 0 && res_a2$p_value < 0.05
+a2_null    <- !is.na(res_a2$p_value) && res_a2$p_value >= 0.10
+b_pos_sig  <- !is.na(res_b$beta)  && res_b$beta  > 0 && res_b$p_value  < 0.05
 
-if (a_neg_sig && b_pos_sig) {
-  cat("  PASS (substitution): A significantly negative, B significantly positive.\n")
-  cat("        Belgian buyers reroute away from Belgian sellers and toward\n")
-  cat("        direct Chinese imports of China-shocked categories.\n")
+if (a2_neg_sig && b_pos_sig) {
+  cat("  PASS (substitution): A2 significantly negative, B significantly positive.\n")
+  cat("        Belgian buyers reroute away from Belgian sellers (Belgian-source\n")
+  cat("        share of expenditure falls) and toward direct Chinese imports.\n")
   cat("        Project moves to E4 and full D1/D2.\n")
-} else if (a_null && b_pos_sig) {
+} else if (a2_null && b_pos_sig) {
   cat("  PARTIAL (LR-null on domestic side): import margin alive (B positive)\n")
-  cat("           but domestic B2B does not reroute (A null). This is the\n")
-  cat("           LR analog of the carbon-leakage null -- itself a finding.\n")
-  cat("           Project pivots to writing the LR-null paper rather than\n")
-  cat("           estimating theta.\n")
-} else if (!a_neg_sig && !b_pos_sig) {
-  cat("  FAIL: neither A nor B shows the expected substitution sign. Either\n")
+  cat("           but Belgian-source expenditure share does not fall (A2 null).\n")
+  cat("           This is the LR analog of the carbon-leakage null -- itself\n")
+  cat("           a finding. Project pivots to writing the LR-null paper.\n")
+} else if (!a2_neg_sig && !b_pos_sig) {
+  cat("  FAIL: neither A2 nor B shows the expected substitution sign. Either\n")
   cat("        the China shock doesn't drive substitution at the NACE-4d\n")
   cat("        level, or the aggregation washed out the signal.\n")
   cat("        Investigate before D1.\n")
