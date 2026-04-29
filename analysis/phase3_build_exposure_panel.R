@@ -55,6 +55,13 @@ load(file.path(OUT_DATA, "phase3_eua_prices.RData"))
 # ===========================================================================
 cat("\n=== Firm-year exposure panel ===\n")
 
+# Upstream invariant (build_firm_year_euets.R in inferring_emissions/):
+#   emissions == NA  iff  is_regulated == 0  iff  no installation of this
+#   firm had a verified emissions report in year t. Those firm-years are
+#   genuinely unobserved (not zero). They are kept in the panel for
+#   completeness; the cost_share_total computation below correctly
+#   propagates NA, so they drop out of any distribution that filters on
+#   !is.na(cost_share_total).
 firm_exposure <- firm_year_belgian_euets %>%
   filter(in_sample == 1) %>%
   left_join(eua_prices_annual %>% select(year, eua_price, phase),
