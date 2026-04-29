@@ -201,15 +201,36 @@ panel_share <- panel %>%
   mutate(pair_share = ifelse(buyer_input_spend > 0,
                              corr_sales / buyer_input_spend, NA_real_))
 
-# Step 3: join firm_cost_share_{j,t}
+# Step 3a: load buyer's total declared input bill (inputs_VAT) per buyer-year
+# This is the denominator for pair_shock_total (option (c)) and the input
+# to buyer_total_shock (option (a) = sum of pair_shock_total across j).
+load(file.path(PROC_DATA, "annual_accounts_more_selected_sample.RData"))
+buyer_inputs <- df_annual_accounts_more_selected_sample %>%
+  rename(buyer = vat_ano) %>%
+  filter(!is.na(inputs_VAT), inputs_VAT > 0) %>%
+  select(buyer, year, inputs_VAT_total = inputs_VAT)
+rm(df_annual_accounts_more_selected_sample)
+
+# Step 3b: join firm_cost_share_{j,t} and buyer's total inputs
 panel_shock <- panel_share %>%
   left_join(firm_exposure %>%
               select(vat, year, cost_share_total),
             by = c("seller" = "vat", "year")) %>%
-  mutate(pair_shock = ifelse(seller_is_ets == 1,
-                             ifelse(is.na(cost_share_total), 0,
-                                    cost_share_total) * pair_share,
-                             0))
+  left_join(buyer_inputs, by = c("buyer", "year")) %>%
+  mutate(
+    # ETS cost-share with NA -> 0 for pair-shock products
+    fcs = ifelse(seller_is_ets == 1 & !is.na(cost_share_total),
+                 cost_share_total, 0),
+    # (b) pair_shock at NACE-4d denominator -- existing
+    pair_shock = ifelse(seller_is_ets == 1, fcs * pair_share, 0),
+    # (c) pair_shock at total-inputs denominator -- new
+    #     = firm_cost_share x corr_sales / inputs_VAT
+    #     NA when inputs_VAT is missing (allows clean filtering)
+    pair_shock_total = ifelse(seller_is_ets == 1 & !is.na(inputs_VAT_total) &
+                              inputs_VAT_total > 0,
+                              fcs * corr_sales / inputs_VAT_total,
+                              NA_real_)
+  )
 
 # Diagnostic: how many treated cells, how many active
 cat(sprintf("Total panel rows: %d\n", nrow(panel_shock)))
@@ -276,6 +297,120 @@ write.csv(moment4_full,
           file.path(OUTPUT_TAB, "phase5_moment4_pair_shock_distribution.csv"),
           row.names = FALSE)
 cat("Saved:", file.path(OUTPUT_TAB, "phase5_moment4_pair_shock_distribution.csv"), "\n")
+
+# ===========================================================================
+# Moment 4(c) -- pair_shock_total: pair-shock at TOTAL-inputs denominator
+# ===========================================================================
+#
+#   pair_shock_total_{j,b,t} = firm_cost_share_{j,t} × corr_sales_{j,b,t} / inputs_VAT_{b,t}
+#
+# Apples-to-apples comparator with sigma_share = sd(Δlog(inputs/revenue)).
+# Tells us "how much does this seller's carbon shock raise the buyer's
+# TOTAL input bill?", which can be compared directly to the noise floor
+# of buyer's total input cost variation.
+# ===========================================================================
+cat("\n=== Moment 4(c): pair_shock_total (denominator = total inputs_VAT) ===\n")
+
+m4c_treated <- panel_shock %>%
+  filter(corr_sales > 0, seller_is_ets == 1, !is.na(pair_shock_total))
+
+cat(sprintf("Treated active pair-years with inputs_VAT defined: %d / %d\n",
+            nrow(m4c_treated),
+            sum(panel_shock$corr_sales > 0 & panel_shock$seller_is_ets == 1)))
+
+moment4c_treated <- m4c_treated %>%
+  group_by(phase5) %>%
+  summarise(
+    n_treated_pairs = n(),
+    p50  = quantile(pair_shock_total, 0.50, na.rm = TRUE),
+    p75  = quantile(pair_shock_total, 0.75, na.rm = TRUE),
+    p90  = quantile(pair_shock_total, 0.90, na.rm = TRUE),
+    p95  = quantile(pair_shock_total, 0.95, na.rm = TRUE),
+    p99  = quantile(pair_shock_total, 0.99, na.rm = TRUE),
+    mean = mean(pair_shock_total, na.rm = TRUE),
+    sales_wmean = sum(pair_shock_total * corr_sales, na.rm = TRUE) /
+                  sum(corr_sales, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+cat("\nDistribution of pair_shock_total over TREATED active pair-years:\n")
+print(as.data.frame(moment4c_treated), digits = 4)
+
+write.csv(moment4c_treated,
+          file.path(OUTPUT_TAB, "phase5_moment4c_pair_shock_total_distribution.csv"),
+          row.names = FALSE)
+
+# Phase IV by buyer NACE 2d
+moment4c_buyer_nace <- m4c_treated %>%
+  filter(phase5 == "IV") %>%
+  group_by(buyer_nace2d) %>%
+  summarise(
+    n_treated_pairs = n(),
+    p50  = quantile(pair_shock_total, 0.50, na.rm = TRUE),
+    p90  = quantile(pair_shock_total, 0.90, na.rm = TRUE),
+    p95  = quantile(pair_shock_total, 0.95, na.rm = TRUE),
+    p99  = quantile(pair_shock_total, 0.99, na.rm = TRUE),
+    mean = mean(pair_shock_total, na.rm = TRUE),
+    sales_wmean = sum(pair_shock_total * corr_sales, na.rm = TRUE) /
+                  sum(corr_sales, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(p90))
+
+cat("\npair_shock_total (TREATED, Phase IV) by BUYER NACE 2d:\n")
+print(as.data.frame(moment4c_buyer_nace), digits = 4)
+
+write.csv(moment4c_buyer_nace,
+          file.path(OUTPUT_TAB, "phase5_moment4c_pair_shock_total_by_buyer_nace2d_phase4.csv"),
+          row.names = FALSE)
+
+# ===========================================================================
+# Moment 4(a) -- buyer_total_shock: per-buyer aggregate (sum over j)
+# ===========================================================================
+#
+#   buyer_total_shock_{b,t} = sum_j (pair_shock_total_{j,b,t})
+#                           = sum_j firm_cost_share_j × corr_sales_{j,b,t} / inputs_VAT_{b,t}
+#
+# Buyer's total ETS exposure across ALL their ETS sellers, as fraction of
+# total input bill. Aggregates across the buyer's substitution decisions --
+# less informative for substitution per se, useful for macro cost-burden.
+# ===========================================================================
+cat("\n=== Moment 4(a): buyer_total_shock (sum across buyer's ETS sellers) ===\n")
+
+# Sum pair_shock_total across all the buyer's pairs (treated + non-treated;
+# non-treated contribute 0 because firm_cost_share=0 -> pair_shock_total=0).
+# Restrict to active pairs (corr_sales > 0) only.
+buyer_year_total <- panel_shock %>%
+  filter(corr_sales > 0, !is.na(pair_shock_total) | seller_is_ets == 0) %>%
+  group_by(buyer, year, phase5) %>%
+  summarise(buyer_total_shock = sum(pair_shock_total, na.rm = TRUE),
+            n_pairs = n(),
+            n_treated_pairs = sum(seller_is_ets == 1),
+            .groups = "drop") %>%
+  filter(!is.na(buyer_total_shock))
+
+cat(sprintf("Buyer-year cells with buyer_total_shock defined: %d\n",
+            nrow(buyer_year_total)))
+
+moment4a <- buyer_year_total %>%
+  group_by(phase5) %>%
+  summarise(
+    n_buyers       = n(),
+    p50  = quantile(buyer_total_shock, 0.50, na.rm = TRUE),
+    p75  = quantile(buyer_total_shock, 0.75, na.rm = TRUE),
+    p90  = quantile(buyer_total_shock, 0.90, na.rm = TRUE),
+    p95  = quantile(buyer_total_shock, 0.95, na.rm = TRUE),
+    p99  = quantile(buyer_total_shock, 0.99, na.rm = TRUE),
+    mean = mean(buyer_total_shock, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+cat("\nDistribution of buyer_total_shock by phase:\n")
+print(as.data.frame(moment4a), digits = 4)
+
+write.csv(moment4a,
+          file.path(OUTPUT_TAB, "phase5_moment4a_buyer_total_shock_distribution.csv"),
+          row.names = FALSE)
 
 # Phase IV by buyer NACE 2d (treated sellers only) -- which downstream
 # sectors actually face meaningful exposure?

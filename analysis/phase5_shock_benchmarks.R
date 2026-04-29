@@ -397,6 +397,116 @@ write.csv(ds_summary,
           file.path(OUTPUT_TAB, "phase5_moment5_inputsVAT_vs_domestic_check.csv"),
           row.names = FALSE)
 
+# ===========================================================================
+# (b)-comparator: NACE-4d-specific scale-stripped sigma
+# ===========================================================================
+#
+# For comparing pair_shock (denominator = NACE-4d-specific input spend)
+# against a noise floor on the same denominator, compute:
+#
+#   nace_share_{b,n,t} = NACE-4d-spending_{b,n,t} / turnover_VAT_{b,t}
+#   sigma_nace_{b,n}    = sd_t( Δlog(nace_share_{b,n,t}) )
+#
+# where NACE-4d-spending_{b,n,t} = Σ_{j in seller_nace4d == n} corr_sales_{j,b,t}
+#
+# This is the within-(buyer × NACE 4d) standard deviation of how much the
+# buyer's spending in that NACE 4d swings as a fraction of their revenue.
+# Apples-to-apples with pair_shock (option (b) in user's framing).
+#
+# Caveat: NACE-4d spending here uses domestic B2B-aggregated values from
+# b2b_cmdj_panel; misses imports and intra-firm transactions in that NACE.
+# This is the closest measurable proxy.
+# ===========================================================================
+cat("\n=== sigma_nace: scale-stripped sigma at (buyer x NACE 4d) level ===\n")
+
+# Step 1: aggregate B2B to (buyer, seller_nace4d, year)
+buyer_nace_year_spend <- panel %>%
+  filter(corr_sales > 0) %>%
+  group_by(buyer, seller_nace4d, year) %>%
+  summarise(nace_spend = sum(corr_sales, na.rm = TRUE),
+            buyer_nace2d = first(buyer_nace2d),
+            .groups = "drop")
+
+cat(sprintf("(buyer x NACE 4d x year) cells with positive spend: %d\n",
+            nrow(buyer_nace_year_spend)))
+
+# Step 2: divide by buyer's revenue (turnover_VAT)
+buyer_revenue <- aa_inputs %>%
+  filter(!is.na(turnover_VAT), turnover_VAT > 0) %>%
+  select(vat, year, turnover_VAT)
+
+buyer_nace_share <- buyer_nace_year_spend %>%
+  left_join(buyer_revenue, by = c("buyer" = "vat", "year")) %>%
+  filter(!is.na(turnover_VAT), turnover_VAT > 0, nace_spend > 0) %>%
+  mutate(nace_share = nace_spend / turnover_VAT)
+
+# Step 3: Δlog within (buyer × NACE 4d) over consec years
+buyer_nace_diffs <- buyer_nace_share %>%
+  arrange(buyer, seller_nace4d, year) %>%
+  group_by(buyer, seller_nace4d) %>%
+  mutate(dlog = log(nace_share) - log(lag(nace_share)),
+         dyear = year - lag(year)) %>%
+  ungroup() %>%
+  filter(!is.na(dlog), dyear == 1)
+
+cat(sprintf("(buyer x NACE 4d) consec-year diffs: %d\n", nrow(buyer_nace_diffs)))
+
+# Step 4: sigma per (buyer × NACE 4d) cell
+compute_sigma_nace <- function(diffs, year_min, year_max, min_n) {
+  diffs %>%
+    filter(year >= year_min, year <= year_max) %>%
+    group_by(buyer, seller_nace4d, buyer_nace2d) %>%
+    summarise(n_diffs = n(),
+              sigma_nace = sd(dlog, na.rm = TRUE),
+              .groups = "drop") %>%
+    filter(n_diffs >= min_n, !is.na(sigma_nace), sigma_nace > 0)
+}
+
+sigma_nace_pre  <- compute_sigma_nace(buyer_nace_diffs, 2005, 2019, min_n = 3)
+sigma_nace_post <- compute_sigma_nace(buyer_nace_diffs, 2019, 2022, min_n = 2)
+sigma_nace_full <- compute_sigma_nace(buyer_nace_diffs, 2005, 2022, min_n = 3)
+
+cat(sprintf("Cells with usable sigma_nace (2005-2019, n_diffs>=3): %d\n",
+            nrow(sigma_nace_pre)))
+cat(sprintf("Cells with usable sigma_nace (2019-2022, n_diffs>=2): %d\n",
+            nrow(sigma_nace_post)))
+cat(sprintf("Cells with usable sigma_nace (2005-2022, n_diffs>=3): %d\n",
+            nrow(sigma_nace_full)))
+
+# Step 5: cross-cell distribution
+sigma_nace_table <- bind_rows(
+  qtab(sigma_nace_pre$sigma_nace,  "2005-2019 (pre-shock)"),
+  qtab(sigma_nace_post$sigma_nace, "2019-2022 (Phase IV / pandemic)"),
+  qtab(sigma_nace_full$sigma_nace, "2005-2022 (pooled)")
+) %>% as_tibble() %>% rename(n_cells = n_buyers)
+
+cat("\nCross-cell distribution of sigma_nace at (buyer x NACE 4d) level:\n")
+print(sigma_nace_table, digits = 4)
+
+write.csv(sigma_nace_table,
+          file.path(OUTPUT_TAB, "phase5_moment5_sigma_nace_distribution.csv"),
+          row.names = FALSE)
+
+# By BUYER NACE 2d (which downstream sectors face most/least NACE-4d-specific volatility)
+sigma_nace_bynace_pre <- sigma_nace_pre %>%
+  filter(!is.na(buyer_nace2d)) %>%
+  group_by(buyer_nace2d) %>%
+  summarise(n_cells = n(),
+            p25  = quantile(sigma_nace, 0.25),
+            p50  = quantile(sigma_nace, 0.50),
+            p75  = quantile(sigma_nace, 0.75),
+            p90  = quantile(sigma_nace, 0.90),
+            mean = mean(sigma_nace),
+            .groups = "drop") %>%
+  arrange(desc(p50))
+
+cat("\nsigma_nace by BUYER NACE 2d (2005-2019, pre-shock):\n")
+print(as.data.frame(sigma_nace_bynace_pre), digits = 4)
+
+write.csv(sigma_nace_bynace_pre,
+          file.path(OUTPUT_TAB, "phase5_moment5_sigma_nace_by_buyer_nace2d.csv"),
+          row.names = FALSE)
+
 # Also compute sigma_b on the domestic-only series, full window, as
 # robustness -- if conclusion changes between inputs_VAT and input_cost,
 # something is off.
