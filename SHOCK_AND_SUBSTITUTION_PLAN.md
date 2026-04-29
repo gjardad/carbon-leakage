@@ -287,6 +287,22 @@ where `firm_cost_share_regressor_j` is the time-invariant pre-shock measure from
 
 **Test F (cross-border alternative-source price diagnostic).** Dropped. The original framing (small gap + no switching = stickiness; large gap + no switching = concentration) is testing whether non-ETS *country* sourcing is a feasible alternative to ETS *country* sourcing. That is a different question than whether *Belgian* high-intensity sellers can be substituted by other *Belgian* sellers in the same NACE 4d (the domestic stickiness-vs-concentration question). The cross-border price gap doesn't speak to the domestic-substitution null at the heart of [B2B_LEAKAGE.md](B2B_LEAKAGE.md).
 
+#### Add-on test (open) — Across-NACE-category substitution under ETS exposure
+
+The existing battery (Tests A, B, G) operates at the **within-NACE-4d, between-Belgian-sellers** level — does buyer reroute among sellers of the same product category? The China-shock work in [CHINA_SHOCK_DIAGNOSTICS_PLAN.md](CHINA_SHOCK_DIAGNOSTICS_PLAN.md) (E3 Version A) raises a complementary question we have not asked of the ETS shock:
+
+> **Do Belgian buyers shift their input *category* mix away from ETS-regulated NACE 4d categories toward non-regulated ones in response to ETS-driven cost increases?**
+
+The China shock has natural product-level variation (different HS6 categories saw different ChinaShare gains), which makes a category-level reduced form natural. The ETS shock has natural firm-level variation (different sellers within an NACE 4d have different `firm_cost_share`), which is why the existing battery is firm-level. But the ETS shock also has category-level variation: average `firm_cost_share` differs across NACE 4ds (cement vs pharma vs machinery), and the regulated-vs-not distinction is itself a category-level variable.
+
+A future test — call it **Test H** — would regress:
+```
+Δlog(B2B sales to Belgian buyers from sellers in NACE 4d n) ~ avg_firm_cost_share_n × Post + ε
+```
+or the cleaner regulated-vs-not version. Identification is across NACE 4d categories, pooled across sellers within each category. Negative slope = buyers shift away from regulated/high-cost categories at the input-category level. Together with Test G (within-category seller substitution), Test H would close the loop on whether the leakage null is a within-category null, an across-category null, or both.
+
+Not implemented yet. Logged here for symmetry with the China-shock E3 design and as a candidate addition once the China-shock work establishes whether category-level substitution is a meaningful margin in Belgian B2B. If the China shock E3 Version A returns a clean negative slope, Test H becomes more interesting — it would let us compare the across-category substitution elasticity for two very different shocks (carbon, China) on the same Belgian B2B network.
+
 ### Plan B — Decision rule (joint pattern)
 
 Summary table at head of `STICKINESS_VS_CONCENTRATION.md`:
