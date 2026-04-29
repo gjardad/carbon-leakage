@@ -11,6 +11,33 @@ Before specifying a P&R-style θ regression, we need two diagnostics that the or
 1. **Within-sector variability in Belgian firm exposure to Chinese imports** — required for any specification with output-industry × year FE.
 2. **Magnitude of the input-cost change attributable to the China shock** — required to avoid replicating the SHOCK_MAGNITUDE.md problem (well-identified shock that is too small to act on).
 
+## Findings as of 2026-04-29 — what's been run, what survives
+
+The eyeball stage and a first pass of D2 have been run. Three results that revise the framing of the project below:
+
+**E1, E2 PASS (load-bearing for project viability).** The shifter has variation across HS6 products (trade-weighted SD = 8.85pp, effective shifts = 191) and transmits to Belgian unit values via the pro-competitive channel (non-China 10-yr ψ = -1.34 per fractional unit ≈ -1.34% per pp ChinaShare, F = 195, comparable to P&R's per-pp price elasticity). The China shock is a credible identifying shock for Belgian B2B prices.
+
+**E3 (downsampled local-1) returns a partial:** Version A (Δlog domestic B2B sales) and Version A2 (Δ Belgian-seller share of expenditure) are both null but underpowered (N = 113, wide CIs); Version B (Δ China share of Belgian imports) is cleanly positive (F = 14.7). Belgian buyers tilt their direct imports toward China where the shock hits hardest, but the domestic-substitution channel may or may not be alive — RMD full-B2B re-run pending.
+
+**D2 (B2B-side, local-1) revises the original motivation.** The China shock is **not uniformly larger than the carbon shock at the buyer level**. The two shocks have different distributional shapes:
+
+- *Carbon shock* (Phase IV, annual): narrow but deep. p50 = p75 = p90 = 0% (most buyers have zero ETS exposure); concentrated at the top tail (p99 = 6.9%/yr). Tags cement / steel / refining / chemicals.
+- *China shock* (10-yr LR, B2B-side cumulative): broad but shallow. Almost every buyer feels something via their NACE-4d input mix (p99 = 1.13% cumulative ≈ 0.11%/yr). Tags manufacturers with import-substitutable inputs.
+
+At p95 (where both shocks have non-zero values) and on annualized basis, the two shocks are within 1.5× of each other. At the high-exposure tail, the carbon shock dominates by ~6× annualized. The two shocks tag *different* Belgian buyers.
+
+**Implication for the project:**
+
+1. The original "China is a much bigger shock, so a null on China cleanly identifies stickiness" framing is no longer supported. A null on E3 with the China shock is still subject to "shock too small" critiques in the same way the carbon-leakage null was, just for a different population of buyers.
+
+2. What does survive: the China shock and the carbon shock tag *different* firms. If Belgian B2B substitution is observable anywhere in the data, the China shock at least gives a different test population to look at. A **joint** null across both shocks would be a stronger statement about Belgian B2B as an institution than either shock alone supports.
+
+3. E2's clean first stage (F = 195) is a methodological contribution in its own right — the first published China-shock first stage on Belgian B2B-relevant data — independent of any second-stage substitution result.
+
+4. The buyer-side analog of the existing seller-side leakage null is the open question — **noted as Test H in [SHOCK_AND_SUBSTITUTION_PLAN.md](SHOCK_AND_SUBSTITUTION_PLAN.md)**. Both shocks should now be run through Test H's framework once the data side is set.
+
+**Decision: keep going with the China shock (run RMD E3, then re-evaluate).** Do not invest in D1 / full θ-estimation infrastructure until RMD E3 returns. If E3 confirms a domestic-side null on full B2B, the most defensible paper write-up is a *joint* LR-null across the two shocks rather than a clean elasticity estimate. If E3 turns negative-and-significant on full B2B, D1 / θ-estimation becomes worth building.
+
 ## Substitution framings the China shock can support
 
 The leakage paper's existing question (within input-NACE-4d substitution between Belgian sellers in response to carbon costs) is **one** framing the China shock could speak to, but not the only one — and not necessarily the natural one for a trade shock. Three viable framings, ordered from closest-to-existing-paper to most P&R-faithful:
@@ -177,23 +204,31 @@ The whole point of this diagnostic is to compare to the carbon shock. Reuse the 
 
 **M2.4** — Sector breakdown. Report M2.1 and M2.2 by output-NACE 2d. Expected high-exposure sectors (per literature): textiles (NACE 13), apparel (14), leather (15), wood (16), basic metals (24), fabricated metal (25), electronics (26), machinery (28), furniture (31). Expected low-exposure: food (10), beverages (11), pharma (21), services. If the high-exposure sectors don't actually show high `heavy_china_share`, concordance is broken.
 
-### Decision rule for D2
+### Decision rule for D2 (revised after the 2026-04-29 run)
 
-| `heavy_china_share_i` p90 (or implied shock p90 at 7-yr) | Verdict |
-|---|---|
-| > 30% (heavy) or > 10% (implied) | Shock is large at the upper tail — clearly bigger than carbon. Proceed. |
-| 10–30% (heavy) or 3–10% (implied) | Moderate. Bigger than carbon but not dramatically. Proceed, flag. |
-| < 10% (heavy) or < 3% (implied) | Even the China shock fails the magnitude test for Belgian B2B. Same problem as carbon — abandon, look elsewhere. |
+The original decision rule (top of this section, kept above for reference) assumed the China shock would be "much bigger than carbon" and used absolute-magnitude thresholds. The actual D2 result on local-1 (B2B-side, 10-yr LR; see [output/tables/phase6_d2_china_shock_magnitude.txt](output/tables/phase6_d2_china_shock_magnitude.txt)) does not support that framing: at the buyer level, the China shock is **broader** (almost every buyer feels something) but **shallower** (1.13% cumulative at p99 ≈ 0.11%/yr) than the carbon shock (Phase IV p99 = 6.9%/yr concentrated in cement/steel/refining buyers).
 
-## Joint decision: D1 × D2 × framing
+The revised reading:
+
+| Outcome | What it implies | Action |
+|---|---|---|
+| China shock comparable to carbon at p95 (annualized), broader distribution | China shock isn't decisively larger; "use a bigger shock to settle magnitude" framing is dead. **But** China and carbon tag different firms, so the shocks are still complementary. | Proceed to E3 / RMD. Reframe project as joint-LR-null vs single-shock LR-null, depending on E3 result. |
+| China shock dramatically larger than carbon at high tail (≥3× at p95+ on annualized basis) — **not what we found** | "China is the cleaner shock" framing is supported. | Would have justified investing heavily in the China-only paper. |
+| China shock dramatically smaller than carbon everywhere (≤0.5× at all percentiles) — **not what we found** | China shock too small to identify substitution; abandon. | Would have ended the project here. |
+
+**The first row is what D2 returned.** Project survives but with reduced ambition: a clean θ estimate from China alone is not the headline — the headline is whether Belgian B2B substitutes under either shock at the buyer level.
+
+## Joint decision: D1 × D2 × framing (revised)
+
+D2's actual reading isn't "pass / fail" — it's a third middle outcome ("China and carbon are comparable in magnitude, complementary in coverage"). The D1 × D2 grid below is updated to reflect this:
 
 |  | D1 pass | D1 borderline | D1 fail |
 |---|---|---|---|
-| **D2 pass** | F1, F2, F3 all viable. Choose framing on substantive grounds. | F1, F2 noisy; F3 clean. Lean F3 unless the leakage-paper tie-in (F1) is critical. | F1, F2 dead; F3 still viable — pivot to between-category θ. |
-| **D2 borderline** | All three viable but underpowered. Spec event-study to extract maximum signal. | One or both halves weak; expect SE to swallow point estimate. | F3 only, expect noisy estimate. |
-| **D2 fail** | Abandon: shock too small at firm level for any framing. | Abandon. | Abandon. |
+| **D2 = "comparable to carbon"** (current state) | F1, F2, F3 all viable in principle, but expect underpowered θ given moderate shock. Framing emphasis shifts to *joint* China + carbon analysis (Test H + buyer-side carbon test) rather than China-alone θ. | F1, F2 weak; F3 cleaner. Same emphasis on joint analysis. | F1, F2 dead; F3 still viable but small per-shift dispersion of the China shock will give noisy θ. Joint analysis with carbon still informative. |
+| **D2 = "China dominates carbon"** (hypothetical, not what happened) | F1, F2, F3 all viable. China-alone θ is the headline. | F3 clean; F1/F2 noisy. | F3 only. |
+| **D2 = "even China is too small"** (hypothetical, not what happened) | Abandon project. | Abandon. | Abandon. |
 
-A D2 fail kills the China shock entirely — same problem as carbon, just with a different shock. A D1 fail narrows the framing to F3 (the actual P&R parameter) but doesn't kill the project.
+A D1 fail under D2 = "comparable" still leaves F3 + joint-shock analysis viable. The most likely-to-survive path through this plan is now: **E3 RMD result → if domestic-side null, write joint LR-null paper using both shocks; if substitution exists, build D1 to support a within-NACE-4d θ estimate.**
 
 ## Does P&R run these diagnostics?
 
@@ -201,19 +236,23 @@ A D2 fail kills the China shock entirely — same problem as carbon, just with a
 
 **D1 (within-sector variability): no.** Their identification is plant-level shift-share with plant FE, identifying off **within-plant input-mix variation × cross-input tariff variation**. Their substitution question (between κ=8 broad input categories — analog of our F3) doesn't require within-output-industry variation. P&R can skip D1 because they're estimating F3-style. We need it because two of our three candidate framings (F1, F2) require within-NACE-4d identification.
 
-## Files to create
+## Files — built vs to-build
 
-**Eyeball stage (run first, gates everything below):**
-- `analysis/phase6_eyeball_e1_shifter_dispersion.R` — E1 distribution plot. Two versions: Belgian-Customs-only preview, BACI-based proper.
-- `analysis/phase6_eyeball_e2_first_stage.R` — E2 BACI shifter vs Belgian HS6 unit-value scatter (P&R Figure 2 analog).
-- `analysis/phase6_eyeball_e3_reduced_form.R` — E3 BACI shifter vs Belgian-supplier-share change.
-- `analysis/phase6_eyeball_e4_heterogeneity.R` — E4 buyer-decile plot of import-share change.
+**Built and run (local-1 + RMD pending):**
+- [analysis/phase6_eyeball_e1_shifter_dispersion.R](analysis/phase6_eyeball_e1_shifter_dispersion.R) — E1, PASS.
+- [analysis/phase6_eyeball_e2_first_stage.R](analysis/phase6_eyeball_e2_first_stage.R) — E2, PASS (F = 195).
+- [analysis/phase6_eyeball_e3_reduced_form.R](analysis/phase6_eyeball_e3_reduced_form.R) — E3, partial on local-1 (B alive, A/A2 underpowered). Re-run on RMD with full B2B pending.
+- [analysis/phase6_d2_china_shock_magnitude.R](analysis/phase6_d2_china_shock_magnitude.R) — D2 buyer-level magnitude vs SHOCK_MAGNITUDE.md, B2B-side only. Result: "China shock comparable to carbon, different distributional shape" (see Findings section above).
 
-**D1/D2 stage (run only after eyeballs pass):**
-- `analysis/phase6_build_china_exposure.R` — Concordance work + firm-level `china_exposure_i` and `heavy_china_share_i` construction. The bulk of the work is the NACE-4d ↔ HS6 mapping (B2B is at NACE; Customs is at HS6/CN8); document the assumptions explicitly.
-- `analysis/phase6_d1_within_sector_variability.R` — M1.1–M1.4
-- `analysis/phase6_d2_magnitude.R` — M2.1–M2.4
-- `CHINA_SHOCK_DIAGNOSTICS.md` — consolidated doc with verdict at the head, mirroring SHOCK_MAGNITUDE.md format. Eyeball figures appear at the top of the doc as the visual punchline before the regression-style moments.
+**To build only if RMD E3 returns substitution (negative-and-significant Version A2):**
+- `analysis/phase6_build_china_exposure.R` — Concordance work + firm-level `china_exposure_i` and `heavy_china_share_i` construction.
+- `analysis/phase6_d1_within_sector_variability.R` — M1.1–M1.4 (per the plan above).
+- `analysis/phase6_d2_china_shock_magnitude_full.R` — Customs-side addition to D2 (firm-level Customs exposure to ChinaShare-shocked HS6).
+- `analysis/phase6_eyeball_e4_heterogeneity.R` — E4 buyer-decile plot, deferred.
+- `CHINA_SHOCK_DIAGNOSTICS.md` — consolidated doc with verdict at the head, mirroring SHOCK_MAGNITUDE.md format.
+
+**To build regardless (joint-shock framing for the LR-null paper):**
+- `analysis/phase6_test_h_carbon_buyer_substitution.R` — buyer-side analog of E3 for the carbon shock (Test H from [SHOCK_AND_SUBSTITUTION_PLAN.md](SHOCK_AND_SUBSTITUTION_PLAN.md)). Symmetric to China-shock E3 Version A2 but using carbon `firm_cost_share` × `Post` interacted with NACE-4d aggregation. Required for the joint-LR-null write-up.
 
 ## Data caveats
 
