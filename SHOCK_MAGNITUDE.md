@@ -1,6 +1,6 @@
 # Shock Magnitude: How Big is the ETS Cost Shock to Belgian B2B?
 
-*Plan A of [streamed-leaping-tide.md](C:\Users\jota_\.claude\plans\streamed-leaping-tide.md). Six descriptive moments characterizing how big the ETS cost shock is at the firm-year, sector-year, and pair-year levels, by ETS phase. Anchors whether the null leakage finding in [B2B_LEAKAGE.md](B2B_LEAKAGE.md) and [IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md) is informative or mechanically driven by a too-small shock. Numbers below are from the **full Belgian B2B universe and full Annual Accounts** computed on RMD; the upstream `firm_year_belgian_euets.RData` reflects the corrected `is_regulated`-aware build.*
+*Plan A of [SHOCK_AND_SUBSTITUTION_PLAN.md](SHOCK_AND_SUBSTITUTION_PLAN.md). Six descriptive moments characterizing how big the ETS cost shock is at the firm-year, sector-year, and pair-year levels, by ETS phase. Anchors whether the null leakage finding in [B2B_LEAKAGE.md](B2B_LEAKAGE.md) and [IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md) is informative or mechanically driven by a too-small shock. Numbers below are from the **full Belgian B2B universe and full Annual Accounts** computed on RMD; the upstream `firm_year_belgian_euets.RData` reflects the corrected `is_regulated`-aware build.*
 
 ## Verdict
 

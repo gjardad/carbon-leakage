@@ -2,7 +2,7 @@
 # phase5_shock_benchmarks.R
 #
 # PURPOSE:
-#   Plan A, Moment 5 (per streamed-leaping-tide.md).
+#   Plan A, Moment 5 (per SHOCK_AND_SUBSTITUTION_PLAN.md).
 #
 #   Calibrate the magnitude of the pair-shock against benchmarks of "what
 #   cost difference plausibly induces a sourcing switch in normal trade."
