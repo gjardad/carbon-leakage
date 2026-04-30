@@ -2,7 +2,7 @@
 # phase6_eyeball_e2_first_stage.R
 #
 # PURPOSE:
-#   Eyeball E2 from CHINA_SHOCK_DIAGNOSTICS_PLAN.md.
+#   Eyeball E2 from ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md (China shock section).
 #
 #   Belgian first stage: does the BACI ΔChinaShare shifter actually predict
 #   changes in Belgian HS6 unit values? Direct analog of P&R Figure 2
@@ -76,8 +76,11 @@ cat(sprintf("Belgium numeric codes (incl. historical): %s\n",
             paste(sort(belgium_numeric), collapse = ", ")))
 
 # ---- Years to load ----
-years    <- c(2002, 2007, 2012, 2017, 2022)
-horizons <- c(2007, 2012, 2017, 2022)  # all paired against 2002
+# Added {2003, 2005, 2009} on 2026-04-30 so Component 2 of the China-shock
+# revisit can report sigma at h in {1, 3, 5, 7, 10, 15, 20}, directly
+# comparable to BLP (2022) Figure 2 horizons.
+years    <- c(2002, 2003, 2005, 2007, 2009, 2012, 2017, 2022)
+horizons <- c(2003, 2005, 2007, 2009, 2012, 2017, 2022)  # all paired against 2002
 
 # ---- Loader: read one BACI year, keep only EU-26 ∪ Belgium importers ----
 load_baci_year <- function(year) {
@@ -298,7 +301,7 @@ p_first_stage <- ggplot() +
     x        = "Delta-ChinaShare 2002 -> 2012 (China share of EU-26 imports, excl. BE)",
     y        = "Delta log(unit value) of Belgian imports, 2002 -> 2012",
     colour   = "Source of Belgian imports",
-    caption  = "Source: BACI HS02 V202601. Eyeball E2, CHINA_SHOCK_DIAGNOSTICS_PLAN.md."
+    caption  = "Source: BACI HS02 V202601. Eyeball E2, ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md."
   ) +
   theme_minimal(base_size = 11) +
   theme(legend.position = "bottom",
