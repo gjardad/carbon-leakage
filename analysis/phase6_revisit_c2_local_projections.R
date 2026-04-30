@@ -122,14 +122,15 @@ build_price_horizon <- function(h) {
 }
 price_panel <- rbindlist(lapply(HORIZONS, build_price_horizon))
 
-# Trim 1% tails of dlog_p_ratio within horizon
+# Trim 1% tails of dlog_p_ratio within horizon. Use `horiz` for the loop
+# variable so it doesn't shadow the data.table column named `h`.
 for (col in c("dlog_p_china", "dlog_p_nonchina", "dlog_p_ratio")) {
-  for (h in HORIZONS) {
-    x <- price_panel[h == h, get(col)]
+  for (horiz in HORIZONS) {
+    x <- price_panel[h == horiz, get(col)]
     if (sum(!is.na(x)) > 50) {
       lo <- quantile(x, TRIM_PCT,     na.rm = TRUE)
       hi <- quantile(x, 1 - TRIM_PCT, na.rm = TRUE)
-      price_panel[h == h & !is.na(get(col)) & (get(col) < lo | get(col) > hi),
+      price_panel[h == horiz & !is.na(get(col)) & (get(col) < lo | get(col) > hi),
                   (col) := NA]
     }
   }
@@ -168,11 +169,13 @@ trim_tails <- function(dt, col) {
   dt
 }
 
-run_horizon <- function(h) {
+run_horizon <- function(horiz) {
+  # `horiz` (not `h`) is the local horizon variable, so it doesn't shadow
+  # the data.table column named `h` inside iv_panel / price_panel filters.
   base <- cust_w[year == BASE_YEAR,
                   .(vat, hs6, nace2d,
                     v_china_b = v_china, v_nonchina_b = v_nonchina)]
-  endd <- cust_w[year == BASE_YEAR + h,
+  endd <- cust_w[year == BASE_YEAR + horiz,
                   .(vat, hs6,
                     v_china_e = v_china, v_nonchina_e = v_nonchina)]
   ph <- merge(base, endd, by = c("vat", "hs6"))
@@ -182,10 +185,10 @@ run_horizon <- function(h) {
        (log(v_china_e) - log(v_nonchina_e)) -
        (log(v_china_b) - log(v_nonchina_b))]
   ph <- trim_tails(ph, "dlog_share_ratio")
-  ph[, h := h]
+  ph[, h := horiz]
 
-  iv_h    <- iv_panel[h == h, .(hs6, delta_china_share, value_total_base)]
-  price_h <- price_panel[h == h, .(hs6, dlog_p_china, dlog_p_nonchina, dlog_p_ratio)]
+  iv_h    <- iv_panel[h == horiz, .(hs6, delta_china_share, value_total_base)]
+  price_h <- price_panel[h == horiz, .(hs6, dlog_p_china, dlog_p_nonchina, dlog_p_ratio)]
 
   ph <- merge(ph, iv_h, by = "hs6", all.x = FALSE)
   ph <- merge(ph, price_h, by = "hs6", all.x = TRUE)
@@ -195,9 +198,9 @@ run_horizon <- function(h) {
 
   if (nrow(ph_reg) < 100) {
     return(list(
-      horizon = h,
+      horizon = horiz,
       panel   = ph_reg,
-      result  = data.table(h = h, n = nrow(ph_reg), beta = NA_real_,
+      result  = data.table(h = horiz, n = nrow(ph_reg), beta = NA_real_,
                            se = NA_real_, ci_lo = NA_real_, ci_hi = NA_real_,
                            sigma = NA_real_, sigma_lo = NA_real_,
                            sigma_hi = NA_real_, f_stat = NA_real_)
@@ -218,10 +221,10 @@ run_horizon <- function(h) {
                     error = function(e) NA_real_)
 
   list(
-    horizon = h,
+    horizon = horiz,
     panel   = ph_reg,
     result  = data.table(
-      h        = h,
+      h        = horiz,
       n        = nobs(m_iv),
       beta     = est,
       se       = se,
