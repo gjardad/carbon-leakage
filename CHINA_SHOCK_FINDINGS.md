@@ -1,8 +1,16 @@
 # China Shock Diagnostics — Findings
 
-## Verdict at the head
+## Verdict at the head (updated 2026-04-30 after C1/C2/C3 revisit)
 
-We instrumented Belgian input prices with a Bartik-style shift-share built from China's expansion of exports into the rest of the EU (2002–2012). The instrument is strong: the shifter has substantial cross-product variation and transmits to Belgian unit values with an F-statistic of 195. Belgian buyers do tilt their direct imports toward China where the shock hits hardest. But on full RMD B2B, the load-bearing test of domestic substitution — Belgian buyers reducing the share of input expenditure they direct to Belgian sellers in China-shocked categories — returns a small negative point estimate (β = −0.103) that is not statistically distinguishable from zero (p = 0.27, 95% CI [−0.29, +0.08]). The China shock turns out to be **broader but not uniformly larger** than the carbon shock at the buyer level; at the high-exposure tail (p99) the carbon shock dominates, while at p50–p95 the China shock dominates. The original ambition — use a much-bigger shock to identify the substitution elasticity that the carbon shock was too small to see — does not survive contact with the data. What survives is a clean first stage and an ambiguous reduced form, both consistent with the Belgian-B2B-stickiness reading of the leakage paper.
+The China-shock pipeline went through two phases. **Phase 1 (E1, E2, E3, D2)** tested whether Belgian buyers substitute *between Belgian sellers within a NACE 4d* under the China shock — the carbon-leakage paper's elasticity. Result: clean first stage (F = 195), ambiguous null reduced form (β = −0.103, 95% CI [−0.29, +0.08]). **Phase 2 (C1, C2, C3)** pivoted to identifying the *Armington elasticity across import origins among Belgian importers* — a different elasticity, BLP/AIK-comparable. Result: the structural 2SLS for σ is dead at every horizon and every importance bin (F < 3 across the board) due to a price-channel cancellation we hadn't anticipated; the reduced form (importer share-tilt on the BACI shifter) is statistically alive but **partly tautological** because the IV is a common shock to all EU markets including Belgium.
+
+Two clean findings survive both phases:
+1. **The Belgian first stage is strong** (E2: ψ_nonChina = −1.34, F = 195). The pro-competitive channel is alive.
+2. **Belgian importers do tilt toward China** when the EU does (C1 reduced form: ρ̂ = 3.96, t = 5). But this is co-movement with the EU, not Belgium-specific substitution.
+
+What this means for the carbon-leakage paper: the China shock cannot, on its own, identify a clean substitution elasticity at any margin we can measure on this data. The original aspiration — "use a clean LR shock to identify the substitution Belgian B2B is hiding from the carbon shock" — does not work. The cross-section dispersion is wrong (the carbon shock is concentrated on a few buyers; the China shock is broader but with co-movement contamination), and at the import-origin margin the IV cancels structurally and conflates substitution with variety/quality entry.
+
+The natural next-step IV is **EU anti-dumping duties** — origin-specific, non-symmetric across origins, large, persistent, and not contaminated by variety/quality entry the way the China shifter is. Documented as the candidate alternative in [ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md](ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md).
 
 ---
 
@@ -302,26 +310,151 @@ The data we have so far does not distinguish between these. Plan B's full batter
 
 ---
 
-## 8. What's settled, what isn't, and next steps
-
-### Settled
+## 8. (Phase 1 wrap) What was settled before the revisit
 
 - The China shock has substantial cross-product variation in the EU-26 (E1).
 - That variation transmits to Belgian unit values via both the direct and pro-competitive channels (E2). The first stage is strong and comparable in magnitude to P&R's tariff-instrument first stage.
 - Belgian imports tilt toward China where the EU does, at attenuated magnitude (E3 Version B).
 - The buyer-level B2B-side China shock distribution is broader but not uniformly larger than the carbon shock (D2). The two shocks tag different Belgian buyers.
 
-### Not settled
+What was *not* settled at the end of Phase 1 was whether Belgian buyers substitute *Belgian* sellers under the China shock — E3 A2's point estimate (−0.103, 95% CI [−0.29, +0.08]) was in the right direction but indistinguishable from zero. That ambiguity motivated Phase 2.
 
-- Whether Belgian buyers substitute *Belgian* sellers under the China shock at the buyer level (E3 Version A2). The point estimate is in the right direction but the CI includes zero with wide tails.
-- Whether the same null holds for the carbon shock at the buyer level. Not yet tested (Test H from [SHOCK_AND_SUBSTITUTION_PLAN.md](SHOCK_AND_SUBSTITUTION_PLAN.md)).
-- Whether sector-level heterogeneity is hiding meaningful substitution in some NACE 2d cells.
-- Whether finer aggregation (NACE 3d, firm-level) or alternative outcome specifications would tighten the A2 estimate enough to distinguish among the three readings.
+---
 
-### Next steps, in order of cost-effectiveness
+## 9. Phase 2 — Importer-side Armington σ revisit (Components 1, 2, 3)
 
-1. **Build the carbon-shock buyer-side analog (Test H).** Parallel structure to E3 Version A2 but using `firm_cost_share` × Post interacted with NACE-4d aggregation as the shifter. About 2 days of work using existing infrastructure. This is the cheapest piece of new evidence and is symmetric to the China-shock A2 result, so the joint pattern is interpretable as a Belgian-B2B claim rather than a single-shock claim.
+### 9.1. What we tried
 
-2. **Run sector-level heterogeneity on E3 Version A2.** Decompose β = −0.103 into NACE-2d-specific slopes; identify whether any sector tail shows clear substitution that the population average is masking. About 1 day of work.
+If we couldn't identify substitution between Belgian sellers (Phase 1's null), we asked whether we could at least identify substitution at a different margin: **across foreign origins of the same HS6 product among Belgian importers**. That's the BLP / AIK Armington elasticity, structurally distinct from the carbon-leakage σ but informative as evidence that *some* substitution operates in Belgian customs data when shocks are large enough.
 
-3. **Decide whether to invest in D1 / firm-level θ estimation.** Only if Test H also returns a null (joint LR-null is the headline) or only if the heterogeneity decomposition reveals a clear sectoral pattern worth identifying θ off. Otherwise the eyeball-level findings already tell the substantive story.
+The structural specification:
+
+```
+Δlog(s_China_{i,k} / s_nonChina_{i,k}) = α + (1 - σ) · Δlog(P^China_k / P^nonChina_k) + FE_NACE2d + e
+                          IV: Δ ChinaShare_k,EU26-excl-BE
+```
+
+at h = 10 (Component 1), at h ∈ {1, 3, 5, 7, 10, 15, 20} (Component 2), and with `Δlog(P_China/P_nonChina) × 1{input_share high}` interaction (Component 3).
+
+Sample: importer × HS6 cells with positive China and non-China imports of HS6 k in both endpoints, restricted to importers in the AA selected sample. Customs aggregated via `phase6_build_customs_selected_sample.R`. Prices from BACI EU-aggregate unit values (E2). FE: importer NACE 2d. Cluster: HS6.
+
+### 9.2. C1 — Headline 2SLS at h = 10 (broken)
+
+| Spec | β | SE | F | N |
+|---|---:|---:|---:|---:|
+| IV: relative-price form (headline) | 13.54 | 26.62 | 1.7 | 1925 |
+| IV: asymmetric (China-side only) | −31.88 | 111.55 | NA | 1923 |
+| Reduced form (outcome on IV) | **+3.96** | **0.78** | — | **1925** |
+| First stage (price-ratio on IV) | 0.293 | 0.575 | 1.7 | 1925 |
+
+**The 2SLS for σ is dead.** The first stage on the relative price has F = 1.7. β explodes (β̂ = +13.54, σ̂ = −12.5, CI [−65, +40]). Asymmetric spec — instrumenting `dlog_p_china` with the IV, controlling for `dlog_p_nonchina` — also fails (F NA from fixest; β̂ = −31.9 ± 111). Same root cause both times.
+
+The reduced form is statistically alive: ρ̂ = +3.96, t = 5.07. EU-wide ChinaShare gain at HS6 k → Belgian importers' Chinese-vs-non-Chinese share-ratio rises in proportion. Sources: [output_rmd/tables/phase6_revisit_c1_summary.txt](output_rmd/tables/phase6_revisit_c1_summary.txt), [output_rmd/figures/phase6_revisit_c1_first_and_second_stage.pdf](output_rmd/figures/phase6_revisit_c1_first_and_second_stage.pdf).
+
+### 9.3. C2 — Multi-horizon σ (broken at every horizon)
+
+| h | N | β | F | σ |
+|---:|---:|---:|---:|---:|
+| 5 | 2,642 | −17.73 | 1.40 | 18.7 |
+| 10 | 1,927 | 13.85 | 1.68 | −12.9 |
+| 15 | 1,380 | 9.69 | 2.61 | −8.7 |
+| 20 | 1,098 | 9.59 | 2.77 | −8.6 |
+
+F-stat rises monotonically with h (1.4 → 2.8) but never gets close to usable. σ flips sign between h=5 and h=10 — pure noise. **No "LR > SR" pattern** can be read from this. The structural 2SLS is broken at every horizon for the same reason as C1. Sources: [output_rmd/tables/phase6_revisit_c2_summary.txt](output_rmd/tables/phase6_revisit_c2_summary.txt), [output_rmd/figures/phase6_revisit_c2_impulse_response.pdf](output_rmd/figures/phase6_revisit_c2_impulse_response.pdf).
+
+### 9.4. C3 — Importance heterogeneity (broken)
+
+| spec | N | β | F |
+|---|---:|---:|---:|
+| Pooled w/ interaction (high) | 1,925 | 35.66 | 0.22 |
+| Pooled w/ interaction (low) | 1,925 | 1.62 | 0.22 |
+| Separate IV: high-importance | 947 | 18.84 | 0.66 |
+| Separate IV: low-importance | 969 | 7.92 | 1.13 |
+
+Splitting (importer × HS6) cells into high- and low-importance bins divides the already-weak relative-price first-stage variation in two. F drops below 1 in three of four cells. Wald test for `β_high = β_low` couldn't even compute (NA). **Useless for σ.** Sources: [output_rmd/tables/phase6_revisit_c3_summary.txt](output_rmd/tables/phase6_revisit_c3_summary.txt), [output_rmd/figures/phase6_revisit_c3_importance_heterogeneity.pdf](output_rmd/figures/phase6_revisit_c3_importance_heterogeneity.pdf).
+
+### 9.5. Diagnosis — why the 2SLS broke
+
+E2's HS6-level first stages already gave the answer; we just didn't connect the dots until Phase 2 ran:
+
+| h | ψ_China (price first stage on IV) | ψ_nonChina | ψ_China − ψ_nonChina |
+|---:|---:|---:|---:|
+| 5 | −1.180 (F = 30) | −1.149 (F = 149) | −0.03 |
+| **10** | **−1.086** (F = 30) | **−1.338** (F = 195) | **+0.25** |
+| 15 | +0.095 (F < 1) | −0.427 (F = 22) | +0.52 |
+| 20 | −0.985 (F = 31) | −1.895 (F = 353) | +0.91 |
+
+Both prices fall by similar amounts in response to the IV. The **relative price** (P_China / P_nonChina) is therefore moved by only the *difference* of two strong-but-correlated negative numbers — small in magnitude (~0.3 at h=10) and noisy. That's exactly what C1's first-stage row reports (β = 0.29, F = 1.7).
+
+Mechanically: the IV moves Chinese-side prices down (direct supply expansion) AND moves non-Chinese-side prices down (pro-competitive response to Chinese pressure, E2's headline finding). The CES Armington structural form requires a *relative*-price shift to identify σ; the IV doesn't deliver one because both prices move together.
+
+**This is a structural feature of the China shifter, not a sample-size or specification issue.** No subset of the data, no horizon, no importance bin produces a usable first stage on the relative price. The 2SLS for σ in this design is permanently dead.
+
+---
+
+## 10. The co-movement tautology — even the reduced form has a critique
+
+Phase 2 left ρ̂ = 3.96 (t = 5) as the only live coefficient. We considered promoting the reduced form to the headline — but it has a serious identification critique that makes it unsuitable as the central evidence for the paper claim.
+
+### 10.1. The structural critique
+
+The IV is `Δ ChinaShare_k,EU26-excl-Belgium` — the change in China's share of HS6 k imports across 25 EU countries. The LHS is `Δlog(s_China / s_nonChina)_{i,k}` — the change in the China-vs-non-China share ratio for Belgian importer i of HS6 k. **Both LHS and IV are share variables that measure substantively the same thing at different aggregation levels.**
+
+A positive ρ̂ tells us: "Belgian importers tilt toward China in HS6s where the rest of Europe also tilted toward China." Belgium is in the EU customs union, importing from the same Chinese exporters under the same trade rules; whatever Chinese supply expansion drove EU shares to shift also drove Belgian shares to shift. The reduced form is **partly mechanical co-movement**, not Belgium-specific substitution.
+
+The leave-one-out construction (excluding Belgium from the IV computation) addresses *simultaneity* (Belgium not driving the EU shifter — Belgium is ~3% of EU GDP). It does **not** address the *common-shock* problem: Belgium and the rest of the EU both respond to the same Chinese supply expansion, so a positive ρ̂ is what we'd predict mechanically even with no Belgian-specific decision-making.
+
+### 10.2. What ρ̂ does and doesn't say
+
+What it does say: Belgian importers don't have idiosyncratic frictions strong enough to decouple them from EU-wide sourcing patterns. They follow the European trend.
+
+What it doesn't say: that this following is "substitution" in the policy-relevant sense — Belgian importers actively dropping non-Chinese suppliers because of price competition. The reduced form lumps together (a) genuine price substitution, (b) variety expansion (new Chinese HS10 codes appearing within HS6 k), (c) quality upgrading (Khandelwal-style; Chinese unit values are quality-mixed). Channels (b) and (c) push the China share up without any Belgian importer making an active substitution decision.
+
+### 10.3. Things we considered and rejected
+
+- **Volume-of-non-China LHS** (Δlog v_nonchina_{i,k}). Not literally an accounting identity with the IV, but suffers a softer version of the same issue: when Chinese supply expands, non-China volume falls in equilibrium for reasons that include both substitution (what we want) and demand-pie effects (what we don't). User judgement: not clean enough to carry the paper claim.
+- **Extensive-margin terminations** (count of non-China origins dropped). Not bound by any identity, IV-correlated only through importer-level decisions. Cleaner identification, but tests an extensive-margin object the user explicitly does not want for this paper.
+- **Promote ρ̂ as the headline anyway.** Defensible but weakens the paper's substantive claim. Reviewers will flag the co-movement issue immediately.
+
+The conclusion: **the China shock does not have Belgium-specific identifying variation**. Whatever happens in Belgium also happens in the rest of the EU. Any well-identified Belgium-specific substitution claim from this design is a stretch.
+
+---
+
+## 11. Where this leaves the project (advisor-discussion frame)
+
+### Three things to bring to the advisor meeting
+
+**(1) Two clean methodological findings.**
+- Belgian first stage on the China shifter (E2: ψ_nonChina = −1.34, F = 195). To our knowledge first published Belgium-side first stage of the China shock. Comparable in identifying power to P&R's India tariff first stage.
+- Cancellation diagnosis (Phase 2 §9.5): the China shifter moves the China-side and non-China-side price by similar amounts, killing the relative-price 2SLS that an Armington σ estimation requires. Not previously documented in the China-shock literature.
+
+**(2) Two well-estimated nulls / failed identifications.**
+- E3 Version A2: Belgian buyers don't measurably substitute between Belgian sellers (β = −0.103, CI [−0.29, +0.08]).
+- C1/C2/C3: the structural σ-via-IV is dead at every horizon and every importance bin.
+
+**(3) One unresolved descriptive finding.**
+- C1 reduced form: ρ̂ = 3.96, t = 5. Belgian importers tilt toward China where the EU does. Subject to the co-movement critique in §10. Not the substitution evidence we wanted, but worth keeping as a magnitude calibration anchor.
+
+### Three options for what comes next
+
+**(A) Stop here and write up the China-shock work as a methodological note + null result.** Pivot the leakage paper around the seller-side null (Phase 1 + B2B_LEAKAGE.md) plus stickiness mechanism (Heise relational-capital reading). The China shock contributes the magnitude comparison (D2) and the cancellation diagnosis but no substitution finding.
+
+**(B) Switch to EU anti-dumping duties as the identifying shock.** AD duties at the (HS6 × origin × year) level deliver origin-specific, persistent (5–10 yr), large (20–80%) price wedges that don't conflate substitution with variety/quality entry. Documented as the candidate alternative shock in [ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md](ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md). About 4–6 weeks of new infrastructure (TARIC parsing, AD-treatment construction, repeated-treatment panel design).
+
+**(C) Continue with the China shock at a different margin.** Two possibilities, both more speculative:
+- *Within-quality / within-variety subsample of C1.* Restrict to (importer × HS6) cells where the count of distinct CN8-from-China codes within HS6 k didn't change much over the period. This dampens the variety channel. Quality remains contaminated.
+- *Carbon-equivalence calibration anyway.* Use C1's reduced-form ρ̂ (with the co-movement caveat) and D2's magnitude comparison to compute the carbon-price-equivalent of the China shock for the descriptive policy claim, even without a clean σ.
+
+The user's preference, as of 2026-04-30, is to bring this stocktake to advisors before committing to (A), (B), or (C).
+
+### What's still owed if we continue
+
+- Test H (carbon-shock buyer-side analog, Plan B). Parallel structure to E3 Version A2 with `firm_cost_share` × Post as the shifter. About 2 days. Useful regardless of which path forward (A/B/C) is chosen because it pins down whether Belgian buyer-side substitution is null under the carbon shock too.
+- D4 / carbon-equivalence calculation. About 1 day. Lands the paper's policy sentence ("carbon price of $X for Y years would induce substitution") even under Path (A).
+- A short note documenting the cancellation diagnosis (§9.5) as a methodological contribution. About 2 hours.
+
+### What we explicitly stopped doing
+
+- Pursuing structural σ identification through the China shifter. Dead; no resurrection path identified.
+- Promoting the share-on-share reduced form as the headline. Co-movement-tautology critique is too strong.
+- Building D1 / firm-level θ estimation infrastructure. The structural target is gone, so the estimator has no parameter to recover.
