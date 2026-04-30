@@ -103,6 +103,9 @@ cat(sprintf("    B2B rows with seller in treated NACE 4d: %d\n", nrow(b2b_t)))
 # COUNT 2 -- buyers with >= 2 suppliers in same NACE 4d (in treated set)
 # ---------------------------------------------------------------------------
 # (buyer, NACE 4d, year) cell: distinct sellers active.
+# setkey before by-grouping uses data.table's sorted path -- a large speedup
+# on the RMD-scale panel (millions of cells).
+setkey(b2b_t, buyer, seller_nace4d, year)
 cell_2 <- b2b_t[, .(n_sellers      = uniqueN(seller),
                     n_ets_sellers  = uniqueN(seller[seller_is_ets == 1L])),
                 by = .(buyer, seller_nace4d, year)]
