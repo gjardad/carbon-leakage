@@ -127,6 +127,17 @@ panel[is.na(fcs_reg), fcs_reg := 0]
 ets_with_fcs <- cost_share_regressor$vat
 panel <- panel[!(seller_is_ets == 1L & !(seller %in% ets_with_fcs))]
 
+# Winsorize firm_cost_share_regressor at p99 across ETS sellers. Without this,
+# a small number of extreme-fcs sellers blow up the LPM coefficients in the
+# sector decomposition (RMD run produced |coefs| > 4000 in some sectors,
+# clearly outlier-driven). p99 winsorization keeps the bulk of the
+# distribution intact while preventing single-cell outliers from dominating.
+fcs_p99 <- quantile(panel[fcs_reg > 0]$fcs_reg, 0.99, na.rm = TRUE)
+n_winsor <- panel[fcs_reg > fcs_p99, .N]
+cat(sprintf("Winsorizing firm_cost_share_regressor at p99 = %.4f (%d rows above).\n",
+            fcs_p99, n_winsor))
+panel[fcs_reg > fcs_p99, fcs_reg := fcs_p99]
+
 # ---------------------------------------------------------------------------
 # 4. Restrict to estimation sample: pair_age >= 1, year in [YEAR_LO, YEAR_HI]
 # ---------------------------------------------------------------------------

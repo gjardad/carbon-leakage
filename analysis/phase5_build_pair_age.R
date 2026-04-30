@@ -26,20 +26,20 @@ while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DI
 source(file.path(REPO_DIR, "paths.R"))
 
 library(data.table)
-library(haven)
 
 B2B_FIRST_YEAR <- 2002L  # earliest year present in B2B
 
 # ---------------------------------------------------------------------------
-# 1. Load raw B2B (full universe on RMD; downsampled on local-1)
+# 1. Load B2B (selected sample). Project convention: work with selected
+# samples, not raw .dta files.
 # ---------------------------------------------------------------------------
-b2b_path <- file.path(RAW_DATA, "NBB", "B2B_ANO.dta")
+b2b_path <- file.path(PROC_DATA, "b2b_selected_sample.RData")
 cat("Reading", b2b_path, "...\n")
-b2b <- as.data.table(read_dta(b2b_path,
-                              col_select = c("vat_i_ano", "vat_j_ano", "year")))
-setnames(b2b,
-         old = c("vat_i_ano", "vat_j_ano"),
-         new = c("seller", "buyer"))
+load(b2b_path)
+b2b <- as.data.table(df_b2b_selected_sample)[, .(seller = vat_i_ano,
+                                                  buyer  = vat_j_ano,
+                                                  year)]
+rm(df_b2b_selected_sample)
 b2b[, year := as.integer(year)]
 cat("Raw B2B rows:", nrow(b2b), "\n")
 cat("Year range:  ", min(b2b$year, na.rm = TRUE), "-",

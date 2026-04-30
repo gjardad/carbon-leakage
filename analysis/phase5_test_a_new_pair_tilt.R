@@ -73,12 +73,11 @@ YEAR_HI <- 2022L
 REF_YEAR <- 2004L
 
 # ---------------------------------------------------------------------------
-# 1. Load raw B2B + pair age + firm_cost_share_outcome + NACE
+# 1. Load B2B (selected sample) + pair age + firm_cost_share_outcome + NACE
 # ---------------------------------------------------------------------------
-b2b_path <- file.path(RAW_DATA, "NBB", "B2B_ANO.dta")
-b2b <- as.data.table(read_dta(b2b_path,
-                              col_select = c("vat_i_ano", "vat_j_ano",
-                                             "year", "corr_sales_ij")))
+load(file.path(PROC_DATA, "b2b_selected_sample.RData"))
+b2b <- as.data.table(df_b2b_selected_sample)
+rm(df_b2b_selected_sample)
 setnames(b2b,
          c("vat_i_ano", "vat_j_ano", "corr_sales_ij"),
          c("seller", "buyer", "corr_sales"))
@@ -91,11 +90,11 @@ b2b <- merge(b2b, pair_age, by = c("seller", "buyer"), all.x = TRUE)
 b2b[, pair_age_t   := year - first_year_pair]
 b2b[, is_new_pair_t := as.integer(year == first_year_pair)]
 
-# Annual accounts -- NACE 2d/4d for buyer and seller.
-aa_path <- file.path(RAW_DATA, "NBB", "Annual_Accounts_MASTER_ANO.dta")
-aa <- as.data.table(read_dta(aa_path,
-                             col_select = c("vat_ano", "year", "nace5d")))
-setnames(aa, "vat_ano", "vat")
+# Annual accounts (selected sample) -- NACE 2d/4d for buyer and seller.
+load(file.path(PROC_DATA, "annual_accounts_more_selected_sample.RData"))
+aa <- as.data.table(df_annual_accounts_more_selected_sample)[
+  , .(vat = vat_ano, year, nace5d)]
+rm(df_annual_accounts_more_selected_sample)
 aa[, year   := as.integer(year)]
 aa[, nace4d := substr(sprintf("%05d", as.integer(nace5d)), 1, 4)]
 aa[, nace2d := substr(nace4d, 1, 2)]
