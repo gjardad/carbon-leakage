@@ -34,25 +34,25 @@ Sample:
   HS6 in shifter: 5033
   HS6 mapped to a NACE 4d: 4675
   NACE 4d cells in shifter: 216
-  NACE 4d cells in regression A: 113
+  NACE 4d cells in regression A: 184
   NACE 4d cells in regression B: 209
 
 Results:
-                                              spec     n     beta      se
-                                            <char> <int>    <num>   <num>
-1:          Version A:  domestic B2B sales (level)   113  4.47158 5.84555
-2: Version A2: Belgian-seller share of expenditure   112 -0.08943 0.12990
-3:      Version B:  China share of Belgian imports   209  0.14626 0.03815
-    t_stat   p_value    ci_lo   ci_hi  f_stat       r2
-     <num>     <num>    <num>   <num>   <num>    <num>
-1:  0.7650 0.4459218 -7.11177 16.0549  0.5852 0.005244
-2: -0.6885 0.4926170 -0.34686  0.1680  0.4740 0.004290
-3:  3.8341 0.0001672  0.07105  0.2215 14.7005 0.066308
+                                              spec     n    beta      se  t_stat   p_value
+                                            <char> <int>   <num>   <num>   <num>     <num>
+1:          Version A:  domestic B2B sales (level)   184 -1.1936 1.23988 -0.9627 0.3369816
+2: Version A2: Belgian-seller share of expenditure   183 -0.1027 0.09323 -1.1013 0.2722461
+3:      Version B:  China share of Belgian imports   209  0.1463 0.03815  3.8341 0.0001672
+      ci_lo   ci_hi  f_stat       r2
+      <num>   <num>   <num>    <num>
+1: -3.64000 1.25277  0.9268 0.005066
+2: -0.28664 0.08129  1.2128 0.006656
+3:  0.07105 0.22147 14.7005 0.066308
 
 ================================================================
 Verdict (joint reading; A2 is the load-bearing domestic-substitution test)
-  Version A  (level)        : beta = 4.4716, F = 0.6, p = 0.4459, N = 113
-  Version A2 (share)        : beta = -0.0894, F = 0.5, p = 0.4926, N = 112
+  Version A  (level)        : beta = -1.1936, F = 0.9, p = 0.337, N = 184
+  Version A2 (share)        : beta = -0.1027, F = 1.2, p = 0.2722, N = 183
   Version B  (import share) : beta = 0.1463, F = 14.7, p = 0.0001672, N = 209
 
   PARTIAL (LR-null on domestic side): import margin alive (B positive)
