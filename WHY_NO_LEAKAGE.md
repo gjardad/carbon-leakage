@@ -6,9 +6,14 @@ For the planning context, see [SHOCK_AND_SUBSTITUTION_PLAN.md](SHOCK_AND_SUBSTIT
 
 ## Verdict
 
-**The leakage null in Belgian B2B is driven by the carbon shock being too small to motivate substitution at the buyer-total-cost level.** Concentration (no alternatives) is ruled out. Stickiness (relational frictions) is consistent with the data but is not the load-bearing channel — it is set aside as a paper claim.
+**The leakage null in Belgian B2B is consistent with the carbon shock being too small to motivate substitution at the buyer-total-cost level.** Concentration (no alternatives) is ruled out cleanly. Stickiness (relational frictions) is consistent with the data but is not the load-bearing channel — it is set aside as a paper claim.
 
-The verdict survives the most demanding empirical test in the battery: among the 9% of B2B buyers facing a real substitution decision (≥2 suppliers in same NACE 4d, ≥1 of them ETS-treated), restricted to cells where that NACE 4d is the *heaviest* part of the buyer's input bill (top quartile of pre-shock spending share), the differential reweighting against the most-exposed ETS supplier post-2015 is **β = +0.03 (SE 1.39, p = 0.98)** — a precise zero. SE rules out any β below −2.7, i.e. no economically meaningful substitution.
+The verdict is **directionally well-supported but not tightly estimated** at the regression level — see "Caveats" below. Two pillars hold up the claim:
+
+1. **Magnitude evidence ([SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md))** — pair-shock at the buyer-total-cost level is well below the σ_share noise floor for all sectors except cement, anchored to a real quantitative threshold. This is the load-bearing pillar.
+2. **Direct DiD evidence (Test H)** — among the 9% of buyers facing a real substitution decision, the intensive-margin DiD on the share of the most-exposed ETS supplier returns null (β = +1.34, p = 0.16, n = 110,870) and the version restricted to where the NACE 4d is heaviest in the buyer's input bill returns β = +0.03 (SE = 1.39, p = 0.98). This is corroborative, not load-bearing on its own.
+
+Test H's null is consistent with no substitution but does not tightly bound it — see Caveats. The most defensible paper framing is to lean on the magnitude story as primary and present Test H as confirming evidence with the caveats acknowledged.
 
 ## Three facts that pin the verdict
 
@@ -59,22 +64,68 @@ If substitution depends on whether the cost shock is large enough to matter at t
 | above_median | 11,872 | +0.75 | 1.02 | 0.47 |
 | below_median | 11,871 | +1.46 | 1.32 | 0.27 |
 
-**Q4 — the cells where buyers have the strongest economic incentive to substitute — shows β = 0.03, precise zero.** SE rules out any β below roughly −2.7 (i.e., even a modest 2-3 pp share loss per fcs unit is incompatible with the data). The above-median half (Q3+Q4 combined) is also tightly null: β = 0.75, SE 1.02.
+**Q4 — the cells where buyers have the strongest economic incentive to substitute — shows β = +0.03, point-estimate near zero.** 95% CI is roughly [−2.7, +2.8]. At fcs = p99 ≈ 0.05 of the regressor distribution, the lower bound corresponds to a ~13.5 pp share loss; we rule out very large substitution but not modest substitution at the high-fcs tail. The above-median half (Q3+Q4 combined) is similar: β = +0.75, SE 1.02.
 
 Sector decomposition reinforces: cement buyers (NACE 23, the most-shocked sector per [SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md)) show β = +4.42 (p=0.17, wrong sign). Chemicals buyers (NACE 20) show β = +2.74 (p=0.06, wrong sign).
 
 Extensive-margin robustness (R2: outcome = 1(j* active in year t)) gives β = −3.61 (p=0.014) — statistically significant but economically tiny: at p90 of fcs (≈ 0.0014), the predicted drop in j*-activity probability is ~0.5 percentage points.
 
-## Why this is the right verdict
+## Why this is a defensible verdict
 
-The story is clean and identification-friendly:
+Two facts pull in the same direction:
 
 - **Pair-shock magnitudes** (per [SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md)): population p90 of pair-shock at total-cost level is ~0.23%; cement is 0.27% (signal-to-noise = 0.68σ); everything else is below 0.1σ of buyer's σ_share input-cost noise floor.
-- **Substitution test in the most-favorable subset** (Test H Q4): β = 0.03, precise zero.
+- **Substitution test in the most-favorable subset** (Test H Q4): β = +0.03, n.s.
 
-These two facts say the same thing from opposite directions. Pair-shock magnitude is below the noise floor → no rational substitution incentive. Direct DiD on the buyers most exposed → no observed substitution. The leakage null is overdetermined by the magnitude story alone.
+The magnitude story does not require any behavioral / institutional / relational friction — it is anchored to a quantitative threshold (σ_share ≈ 15% pre-shock, vs maximum pair-shock-total ≈ 0.5%). The Test H direct DiD adds confirming evidence on 32K cells of buyers facing real substitution decisions.
 
-This verdict does not require any behavioral / institutional / relational friction. It is a magnitude-only story, anchored to a quantitative threshold (σ_share ≈ 15% pre-shock, vs maximum pair-shock-total ≈ 0.5%) and verified by direct test on 32K cells of buyers facing real substitution decisions.
+## Caveats — Test H is not airtight
+
+The Test H regression evidence has known weaknesses. The current results support the verdict directionally but should not be load-bearing on their own.
+
+### 1. Pre-trend in the event study (parallel trends fail)
+`phase5_test_h_event_study.csv`, ref year 2014:
+
+| Year | β |
+|---|---|
+| 2010 | **−5.70** (p < 0.05) |
+| 2011 | **−5.05** (p < 0.05) |
+| 2014 | 0 (ref) |
+| 2015 | −0.54 (n.s.) |
+| 2017 | −1.92 (n.s.) |
+
+High-fcs j*s were already losing share *before* the 2015 shock — the 2010-11 pre-coefficients are significantly negative. The post-2015 coefficients are estimated against a contaminated baseline. The post-shock movement cannot be cleanly attributed to the shock under standard DiD interpretation.
+
+### 2. Extensive margin contradicts the strict null
+Test H's R2 (extensive-margin outcome 1(j* active in year t)): β = −3.61 (SE 1.47, **p = 0.014**). j* exits *do* concentrate in high-fcs cells post-2015 — a statistically significant rejection of the strict no-substitution null at the seller-exit margin.
+
+Economic magnitude is small at typical fcs (0.5 pp drop in active probability at p90 fcs ≈ 0.0014), but the result is a real signal. The headline framing of "no substitution" should be qualified to "no observable intensive-margin reweighting; small but detectable extensive-margin seller exits, economically negligible at typical exposure."
+
+### 3. Q4 SE is wider than the headline suggests
+β = +0.03 with SE = 1.39 gives 95% CI ≈ [−2.7, +2.8]. At high-fcs cells (p99 fcs ≈ 0.05), the lower bound corresponds to a 13.5 pp share loss — not a tight bound. We rule out *large* substitution effects but not *modest* ones at the high-fcs tail. "Precise zero" was an overstatement in earlier framings of this result.
+
+### 4. Sector decomposition is uninterpretable without winsorization
+`phase5_test_h_by_buyer_nace2d.csv` has extreme outliers: NACE 73 β = +3,600; NACE 26 β = −1,906; NACE 22 β = +6,121. These are LPM coefficients dominated by extreme-fcs cells in small sectors. Cannot read sectoral patterns without bounding fcs first.
+
+The cleaner sectors are also unhelpful for the magnitude story:
+- **Cement (NACE 23)**: β = +4.42 (p = 0.17). Wrong sign. Cement is the only sector where pair-shock signal-to-noise > 0.5σ, so we'd expect substitution there if anywhere — and it's the wrong sign.
+- **Chemicals (NACE 20)**: β = +2.74 (p = 0.06). Wrong sign, marginal.
+
+### 5. fcs distribution is heavy-skewed
+The regressor `firm_cost_share_regressor` has p50 ≈ 3.3×10⁻⁵ and p99 ≈ 0.056. Most cells contribute near-zero to the identification of β. The pooled β can hide offsetting effects across the fcs distribution that would only be visible with a more flexible specification (e.g., fcs quantile dummies × Post).
+
+## Possible upgrades (open question whether to do them)
+
+If we want a tighter, more identification-clean substitution null in addition to the magnitude story, the following would help. Listed roughly in order of expected payoff vs cost. Whether any of these are worth pursuing depends on how load-bearing we want Test H to be in the paper.
+
+1. **Detrend or triple-difference to handle the pre-trend.** Either (a) fit a linear pre-trend on 2005-2014 and subtract it from post-2015 coefficients, or (b) construct a triple-difference outcome like `share_top − cell_mean_non_ETS_share` to absorb cell-level common trends. Costs: re-running Test H with the new outcome.
+2. **Winsorize fcs at p99** the same way Test B was patched. Re-runs sector decomposition with bounded coefficients so we can read sector-level patterns. Cheap.
+3. **Reconcile R2 and headline.** Acknowledge the extensive-margin signal in WHY_NO_LEAKAGE.md and the paper. Either reframe the verdict to "no intensive-margin reweighting; small but detectable extensive-margin exit, economically negligible," or run a follow-up that directly bounds the magnitude of the exit channel. Free / cheap.
+4. **Anchor Test H on pair-shock magnitude rather than seller fcs.** Replace `firm_cost_share_{j*(n)}` with `pair_shock_total_{j*(n), b, t} = fcs_{j*} × corr_sales / inputs_VAT_b`. This makes the regressor *economically* meaningful (% of buyer's total cost at risk) rather than seller-side intensity. Should reduce the noise from the heavy-skewed fcs distribution. Re-runs the regression with new construction.
+5. **Cement-specific test.** Restrict Test H to NACE 23 cement-input pairs and run with proper winsorization + detrending. Cement has the largest signal-to-noise per SHOCK_MAGNITUDE.md (0.68σ), so it's the most powered test in the data. If we still see no substitution there with a clean spec, it's a powerful sector-anchored result. The current cement coefficient (β = +4.42, wrong sign) is concerning enough that we should look at it carefully.
+6. **Quantile-flexible spec.** Replace the linear `fcs_{j*} × Post` with `(fcs quartile dummies) × Post`. Lets us see whether the pooled β = 0 hides offsetting effects across the fcs distribution.
+
+None of these is essential for the paper's core claim if we lean on magnitude as primary. They become essential if we want the regression evidence to be load-bearing.
 
 ## Parked (not in paper)
 
