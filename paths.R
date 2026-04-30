@@ -12,12 +12,14 @@
 
 if (tolower(Sys.info()[["user"]]) == "jardang") {
   # RMD: code on C:, data on X:
-  DATA_DIR <- "X:/Documents/JARDANG/data"
-  REPO_DIR <- "C:/Users/jardang/Documents/carbon-leakage"
+  DATA_DIR    <- "X:/Documents/JARDANG/data"
+  REPO_DIR    <- "C:/Users/jardang/Documents/carbon-leakage"
+  MACHINE_TAG <- "rmd"
 } else if (tolower(Sys.info()[["user"]]) == "jota_") {
   # Local 1
-  DATA_DIR <- "C:/Users/jota_/Documents/NBB_data"
-  REPO_DIR <- "C:/Users/jota_/Documents/carbon-leakage"
+  DATA_DIR    <- "C:/Users/jota_/Documents/NBB_data"
+  REPO_DIR    <- "C:/Users/jota_/Documents/carbon-leakage"
+  MACHINE_TAG <- "local"
 } else {
   stop("paths.R: define directories for this user (",
        Sys.info()[["user"]], ")")
@@ -26,8 +28,15 @@ if (tolower(Sys.info()[["user"]]) == "jardang") {
 PROC_DATA  <- file.path(DATA_DIR, "processed")
 RAW_DATA   <- file.path(DATA_DIR, "raw")
 OUT_DATA   <- file.path(REPO_DIR, "data", "processed")
-OUTPUT_FIG <- file.path(REPO_DIR, "output", "figures")
-OUTPUT_TAB <- file.path(REPO_DIR, "output", "tables")
+
+# Per-machine output folders so a local-1 run can never overwrite an RMD run
+# (and vice versa) when both push to the same git repo.
+#   output_rmd/   <- RMD writes here
+#   output_local/ <- local-1 writes here
+# The legacy `output/` folder is kept for historical phase 0-4 outputs but
+# is not written to by any active script.
+OUTPUT_FIG <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "figures")
+OUTPUT_TAB <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "tables")
 
 dir.create(OUT_DATA,   recursive = TRUE, showWarnings = FALSE)
 dir.create(OUTPUT_FIG, recursive = TRUE, showWarnings = FALSE)
