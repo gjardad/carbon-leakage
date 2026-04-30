@@ -2,7 +2,7 @@
 # phase6_d2_china_shock_magnitude.R
 #
 # PURPOSE:
-#   D2 from CHINA_SHOCK_DIAGNOSTICS_PLAN.md.
+#   D2 from ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md (China shock section).
 #
 #   Compute the buyer-level magnitude of the China shock — % of each
 #   buyer's total input cost moved by the 2002-2012 China shock, expressed
@@ -292,7 +292,7 @@ p_hist <- ggplot(plot_dt[shock == "China shock (B2B-side, 10-yr LR)" & !is.na(va
     subtitle = sprintf("|china_buyer_shock_b2b|, N = %d Belgian buyers; carbon-shock Phase IV p99 marked for comparison", nrow(china_buyer)),
     x        = "abs(china_buyer_shock_b2b) — % of buyer's 2002 input bill",
     y        = "Number of buyers",
-    caption  = "Source: BACI HS02 + B2B + Annual Accounts. CHINA_SHOCK_DIAGNOSTICS_PLAN.md D2."
+    caption  = "Source: BACI HS02 + B2B + Annual Accounts. ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md D2."
   ) +
   theme_minimal(base_size = 11) +
   theme(plot.title.position = "plot",

@@ -289,7 +289,7 @@ where `firm_cost_share_regressor_j` is the time-invariant pre-shock measure from
 
 #### Add-on test (open) — Across-NACE-category substitution under ETS exposure
 
-The existing battery (Tests A, B, G) operates at the **within-NACE-4d, between-Belgian-sellers** level — does buyer reroute among sellers of the same product category? The China-shock work in [CHINA_SHOCK_DIAGNOSTICS_PLAN.md](CHINA_SHOCK_DIAGNOSTICS_PLAN.md) (E3 Version A) raises a complementary question we have not asked of the ETS shock:
+The existing battery (Tests A, B, G) operates at the **within-NACE-4d, between-Belgian-sellers** level — does buyer reroute among sellers of the same product category? The China-shock work in [ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md](ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md) (E3 Version A) raises a complementary question we have not asked of the ETS shock:
 
 > **Do Belgian buyers shift their input *category* mix away from ETS-regulated NACE 4d categories toward non-regulated ones in response to ETS-driven cost increases?**
 

@@ -1,6 +1,12 @@
-# China Shock Diagnostics — Plan
+# Alternative Shocks to Estimate Elasticity of Substitution — Plan
 
-## Context
+## Scope
+
+This plan documents the search for shocks that generate sufficient *price dispersion across suppliers* to identify a meaningful elasticity of substitution among Belgian firms. The carbon-pricing and China shocks are the two designs we have invested in to date; both have produced well-estimated nulls or imprecise small elasticities. The plan now also covers candidate alternative shocks (anti-dumping duties, others to be added) so we can document findings across multiple identifying designs in one place rather than maintaining a per-shock plan file.
+
+The bulk of the document remains the China-shock diagnostics, since that work is furthest along. New sections at the bottom cover (i) anti-dumping duties as a future identifying design and (ii) a revisited China design that pivots from substitution-among-Belgian-suppliers to elasticity-of-substitution-toward-Chinese-imports among Belgian importers, with explicit short-run vs long-run and importance-weighted heterogeneity tests.
+
+## Context (China shock — original motivation, retained)
 
 [SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md) established that the carbon-pricing shock is small at the typical Belgian ETS pair-year (pair-shock-total p90 = 1.16% in Phase IV; only cement-buyer cells reach signal-to-noise > 0.5σ). Peter & Ruane (2025) argues that **long-run** elasticities are an order of magnitude larger than short-run ones (θ_LR ≈ 2.47 vs θ_SR ≈ 0.5) and that estimating the LR requires a **permanent** shock with a **7+ year horizon**. Their identification: India's 1991 trade liberalization, with shift-share IV using 1989 input shares × 5-digit ASICC tariff cuts.
 
@@ -357,3 +363,148 @@ The remaining China-shock work stops if **all three** of the following hold simu
 - D2's distributional pattern doesn't change qualitatively under any reasonable robustness re-spec.
 
 In that case the substantive claim stabilizes around: "Belgian B2B does not show buyer-side substitution under either the carbon shock or a clean LR China shock at the NACE 4d level. This is consistent with relational stickiness (Heise 2024) or with concentration (no within-NACE alternatives), but our identification cannot distinguish between them at this aggregation." The eyeball-level results + Path 1 + Path 2 are then the paper.
+
+---
+
+## Anti-dumping duties — note on a candidate alternative shock
+
+**Status: candidate, not yet scoped.** Anti-dumping (AD) duties imposed by the EU on specific (CN8/HS6 product × origin country) cells are a promising alternative source of identifying variation, with several features that compare favorably to both the carbon and China shocks for our purposes:
+
+- **Persistent.** A typical EU AD duty is set for 5 years and is frequently renewed for another 5 (10+ years is common). Same horizon as our other "permanent" shocks.
+- **Large.** EU AD duties on Chinese products are typically 20–80%, sometimes >100% — well above the typical China-shock implied price wedge (D2 found p99 cumulative China shock ≈ 1.13%) and above the carbon shock at all but the cement tail.
+- **Persistent, predictable, rule-based.** Investigations follow a published WTO-compatible procedure with provisional and definitive duty stages; firms know they're coming. Same "anticipatable regime change" character as carbon pricing in Phase IV.
+- **Origin- and product-specific.** Generates *within-product across-origin* price dispersion — exactly the variation that the China shock and carbon shock lack at the cross-section. A Belgian importer sourcing the same HS6 product from China + Korea + Turkey suddenly faces a wedge on the China leg only.
+- **Numerous.** EU runs ~100 AD measures at any given time. Bown's *Global Antidumping Database* + EU TARIC give a panel of staggered (product × origin × year) treatments.
+
+Closest design templates in the literature: Flaaen, Hortaçsu & Tintelnot (2020 AER) on washing machines; Erbahar & Zi (2017 JIE) and Konings & Vandenbussche (2008 JIE) on EU AD measures with Belgian/EU-firm focus; Boehm, Levchenko & Pandalai-Nayar (2022) for the local-projection short-run vs long-run framework.
+
+**Not building this out yet** — kept here so we don't forget the option. If the China-shock revisit (next section) and Test H both stall, the AD-duty design is the next thing to scope.
+
+---
+
+## Revisiting the China shock — importer-side elasticity of substitution toward Chinese goods
+
+### Why pivot
+
+The leakage paper's natural elasticity is between *Belgian suppliers within an input category*. E3's downsampled run on local-1 and the RMD A2 result are at-best a marginally significant point estimate with wide CI for that elasticity. The substitution channel that the data may actually support more cleanly is the one *one notch up the supply chain*: Belgian importers reweighting between **Chinese imports and other origins** as Chinese prices fall.
+
+Two caveats need to be visible up front:
+
+1. **Selection.** Belgian importers are not representative of Belgian firms — they are larger, better-managed, and disproportionately multi-national-affiliated (the same selection problem ADH-on-firms has). A Chinese-elasticity finding among importers does not automatically transfer to the broader Belgian firm population. The paper's claim cannot be "Belgian firms substitute toward China" without qualification — it has to be "Belgian *importers* substitute toward China, on the *origin-of-imports* margin," and we should be explicit about how unrepresentative this population is (size distribution, NACE composition, multi-national share, vs Belgian firm universe in B2B + Annual Accounts).
+2. **Margin.** This is the import-origin margin (China vs. non-China origins of HS6 product k), not the domestic-vs-imported margin and not the within-Belgian-supplier margin. It is closer to the standard Armington / trade-elasticity literature than to P&R's input-category θ.
+
+With those caveats, the design has three components, ordered from most-standard to most-novel:
+
+### Component 1 — Estimate the elasticity of substitution toward China
+
+For each Belgian importer i, HS6 product k, year t, define:
+
+```
+ChinaShare_{i,k,t} = (imports from China of k by i in year t) / (total imports of k by i in year t)
+```
+
+Estimate, across (i, k) pairs over a long-difference horizon (2002 → 2012, with robustness 2002 → 2007 and 2002 → 2022):
+
+```
+Δlog ChinaShare_{i,k} = α + θ × Δlog P^China_{k} + γ × Δlog P^non-China_{k} + FEs + ε_{i,k}
+```
+
+or in CES form on log-relative-shares:
+
+```
+Δlog (ChinaShare_{i,k} / NonChinaShare_{i,k}) = α + (1 − θ) × Δlog (P^China_k / P^non-China_k) + FEs + ε_{i,k}
+```
+
+**Identification — IV.** Use the ADH non-Belgian-EU shifter `ΔChinaShare_k,EU-excl-Belgium,2002→2012` as the instrument for the fall in Chinese unit values delivered to Belgium. Decomposes into:
+
+- First stage (already estimated, F = 195 in E2, ψ = −1.34): `Δlog P^China_k = ψ × ΔChinaShare_k + ξ`.
+- Reduced form: `Δlog ChinaShare_{i,k} = ρ × ΔChinaShare_k + ν`.
+- IV estimate: `θ̂ = 1 + ρ̂ / ψ̂` (sign convention depends on whether the LHS is China share or its complement; pin down once).
+
+**Fixed effects.** HS6 FE is automatic via the long-difference. Importer FE in long differences is a constant per importer; soaks up importer-level mean substitution propensity. Add NACE-2d × HS-section interactions if heterogeneity by sector pollutes the average.
+
+**Sample frame.** Belgian importers with positive imports of HS6 product k in both endpoint years (intensive margin), with a separate analysis on the importer × HS6 cells with extensive-margin transitions (zero in 2002, positive in 2012, or vice versa) to avoid losing the firms that newly tilt toward China. Boehm-Levchenko-Pandalai-Nayar's IHS treatment of zeros is the right template.
+
+**Output.** A point estimate of θ on the import-origin margin with a CI, a first-stage F, and an explicit comparison to: (a) BLP's long-run trade elasticity (−1.75 to −2.25); (b) Amiti-Itskhoki-Konings-style elasticities; (c) any θ from Components 2 and 3.
+
+### Component 2 — Short-run vs long-run
+
+Run Component 1 at horizons h = 1, 2, 3, 5, 7, 10 (and 12, 15, 20 if the panel extends to 2022). Use **local projections à la Jordà / BLP**: a separate long-difference regression at each horizon h, with the IV constructed from the BACI shifter cumulated over the same window:
+
+```
+Δ_h log ChinaShare_{i,k,t} = α_h + θ^h × Δ_h log P^China_{k,t} + FEs + ε
+```
+
+instrumented by `Δ_h ChinaShare_k,EU-excl-Belgium`. The full impulse response of θ^h vs h is the headline figure (analog of BLP Figure 2; Peter-Ruane Figure 4).
+
+**Useful looks like:** θ^1 small (0.5–1.5), θ^7 large (2–4), monotone or convex transition; CIs at h ≥ 7 narrower than at h ≤ 3 (because LR variation is bigger).
+
+**Killer:** flat across horizons, or LR < SR. Either kills the "elasticity bites in LR" claim or signals identification problems (e.g., the IV is stronger at SR than LR, opposite to what we want).
+
+**This is the central narrative claim** — even more than the level of θ, the *shape* of θ^h vs h is what matches Peter-Ruane and BLP. A clean LR-rises-above-SR pattern is the publishable result, regardless of the level.
+
+### Component 3 — Heterogeneity in importance: high-cost-share vs low-cost-share importers
+
+For each (importer i, HS6 k, base year 2002), compute the cost-share weight of HS6 k in importer i's total input bill:
+
+```
+input_share_{i,k,2002} = (importer i's 2002 expenditure on HS6 k, all origins) / (importer i's 2002 total input bill)
+```
+
+The expectation under standard CES with adjustment costs / search costs is:
+
+- **High input_share_{i,k}** (HS6 k is a major cost line for importer i): the gain from reallocating origin is large enough to clear the fixed cost of finding and qualifying a new Chinese supplier. Substitution θ_{i,k} should be measurable and positive.
+- **Low input_share_{i,k}** (HS6 k is a marginal cost line): the gain from reallocating origin is small relative to the fixed cost of switching. Substitution θ_{i,k} should be near zero.
+
+Test by interacting Component 1's regression with importance bins:
+
+```
+Δlog ChinaShare_{i,k} = α + θ_high × Δlog P^China_k × 1{input_share_{i,k,2002} > median}
+                              + θ_low × Δlog P^China_k × 1{input_share_{i,k,2002} ≤ median} + FEs
+```
+
+with separate first stages for the two interactions (the IV is interacted with the same indicator).
+
+**Useful looks like:** θ_high significantly above θ_low; the contrast itself is the headline. This is a *cleaner* heterogeneity finding than a single-coefficient estimate because it predicts cross-sectional variation in substitution that is ex-ante observable from the cost-share data alone.
+
+**Why this is novel.** Most trade-elasticity papers (BLP, ADH) estimate a population-average θ. Peter-Ruane's heterogeneity is across input *categories* κ, not across firm × product cells. The cross-cell heterogeneity along the importance margin is closest in spirit to the Boehm-Pandalai-Nayar input-linkage literature and to Carvalho et al.'s shock-propagation work — but on the substitution rather than the propagation side. A clean cost-share-weighted heterogeneity result would be a distinctive finding even if the population-average θ is modest.
+
+**Operational note.** `input_share_{i,k,2002}` is the same object D1 needs for the original framing. Building it once supports both Component 3 here and the original P&R-style θ regression. The concordance work (`HS6 → CN8 → cn8_to_nace4d.csv`) already exists in repo.
+
+### How Components 1, 2, 3 sit together for the paper
+
+The narrative the three components jointly support is:
+
+> Among Belgian importers, the elasticity of substitution toward Chinese imports is [θ̂] in the long run, [substantially / modestly] higher than in the short run, and concentrated in (importer, product) pairs where the imported product is a meaningful cost line. We can identify this elasticity in the trade margin even though the same firms' B2B substitution toward Belgian suppliers is [null / weak] under both the carbon shock (Test H) and the China shock at the within-Belgian-supplier margin (E3 A2).
+
+The contribution rests on:
+
+1. A clean import-origin θ estimate where the literature's elasticities mostly concern other margins (BLP: aggregate trade elasticity; P&R: input-category θ; ADH: labor-market exposure).
+2. An LR-vs-SR shape that matches the recent literature (BLP, P&R) and disciplines the elasticity for use in calibrated GE models on Belgian data.
+3. An importance-weighted heterogeneity result that gives a structural interpretation to why Belgian B2B substitution is weak: at the typical (firm × supplier) pair, the input is too small a cost line to clear the fixed cost of switching.
+
+The selection caveat (importers ≠ Belgian-firm population) bounds the external validity claim but does not undermine the structural interpretation.
+
+### Files to build
+
+- `analysis/phase6_revisit_c1_china_origin_theta.R` — Component 1, long-difference 2SLS at h = 10. Reuses E2's first stage.
+- `analysis/phase6_revisit_c2_local_projections.R` — Component 2, the θ^h panel at h = 1..10. BLP-style 2SLS at each h.
+- `analysis/phase6_revisit_c3_importance_heterogeneity.R` — Component 3, interacted regression with `input_share_{i,k,2002}` bins. Depends on building the importer × HS6 cost-share matrix.
+
+### Sequencing
+
+1. Component 1 first (cheapest, depends only on existing E2 first stage + Customs).
+2. Component 3 next (requires building the importer × HS6 cost-share matrix from B2B + Customs, but no new external data).
+3. Component 2 last (most regressions, needs the panel of horizons; useful for the headline figure but doesn't change the existence claim).
+
+This sequencing front-loads the existence test (Component 1) before the panel work (Component 2).
+
+### Decision rule
+
+| Component 1 | Component 2 | Component 3 | Verdict |
+|---|---|---|---|
+| significant θ, F > 10 | LR > SR with clear transition | high-importance bin θ > low-importance bin θ | **Headline result.** Three-component import-origin-substitution paper. |
+| significant θ | LR > SR | flat across importance | Two-component paper, with note that importance margin doesn't bite. |
+| significant θ | flat across h | — | Component 1 alone is the result; LR-vs-SR claim is dropped. Paper is shorter but still publishable. |
+| null θ in Component 1 | — | — | Even the import-origin margin is null among importers. Combined with E3 A2 + Test H nulls, this is a strong joint-null claim about Belgian substitution at every margin we can measure. Different paper, same project. |
+

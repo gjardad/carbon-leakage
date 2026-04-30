@@ -2,7 +2,7 @@
 # phase6_eyeball_e1_shifter_dispersion.R
 #
 # PURPOSE:
-#   Eyeball E1 from CHINA_SHOCK_DIAGNOSTICS_PLAN.md.
+#   Eyeball E1 from ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md (China shock section).
 #
 #   Distribution of Delta-ChinaShare_k,EU-excl-BE,2002→2012 across HS6 products.
 #   Direct analog of Peter & Ruane (2025) Appendix Figure B.3 (distribution
@@ -262,7 +262,7 @@ p_hist <- ggplot(plot_dt, aes(x = delta_china_share)) +
       100 * stats_trim$sd, 100 * stats_w$sd, n_eff),
     x        = "Delta-ChinaShare = China share of EU-26 imports of HS6 k, 2012 minus 2002",
     y        = "Number of HS6 codes",
-    caption  = "Source: BACI HS02 V202601. Eyeball E1, CHINA_SHOCK_DIAGNOSTICS_PLAN.md."
+    caption  = "Source: BACI HS02 V202601. Eyeball E1, ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md."
   ) +
   theme_minimal(base_size = 11) +
   theme(plot.title.position = "plot",

@@ -2,7 +2,7 @@
 # phase6_eyeball_e3_reduced_form.R
 #
 # PURPOSE:
-#   Eyeball E3 from CHINA_SHOCK_DIAGNOSTICS_PLAN.md.
+#   Eyeball E3 from ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md (China shock section).
 #
 #   E1 showed the China shifter has cross-product variation. E2 showed the
 #   shifter transmits to Belgian unit values (F = 195, slope per pp ≈ -1.3%).
@@ -316,7 +316,7 @@ p_combined <- (p_a | p_a2 | p_b) +
   plot_annotation(
     title    = "Eyeball E3 -- Reduced-form: do Belgian buyers reroute? (2002 -> 2012)",
     subtitle = "One observation per input-NACE-4d. Trade-weighted (2002 EU-26 import value). 1% tails of outcome trimmed.",
-    caption  = "Source: BACI HS02 V202601 + B2B + Annual Accounts. Eyeball E3, CHINA_SHOCK_DIAGNOSTICS_PLAN.md."
+    caption  = "Source: BACI HS02 V202601 + B2B + Annual Accounts. Eyeball E3, ALTERNATIVE_SHOCKS_TO_ESTIMATE_ELASTICITY.md."
   ) & theme(plot.title.position = "plot")
 
 ggsave(file.path(OUTPUT_FIG, "phase6_eyeball_e3_reduced_form.pdf"),
