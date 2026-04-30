@@ -1,0 +1,10 @@
+count,n
+[1] # NACE 4d sectors w/ >=1 ETS firm,117
+[1b] Total NACE 4d sectors in B2B,540
+[2] (buyer-year) cells: >=2 suppliers in same NACE 4d (treated set),1574640
+[2b] Distinct buyers in [2],214675
+[3] (buyer-year) cells: [2] AND >=1 ETS supplier,146892
+[3b] Distinct buyers in [3],27053
+[3'] (buyer-year) cells: [2] AND >=2 ETS suppliers (Test G's filter),44680
+[3'b] Distinct buyers in [3'],8480
+Total B2B buyers (universe),307536
