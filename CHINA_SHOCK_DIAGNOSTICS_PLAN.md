@@ -294,3 +294,66 @@ The "scarce concordance" risk earlier flagged in the plan does not bite — `cn8
 3. **2002→2012 vs 2002→2007:** the 5-year slice should show a smaller but directionally consistent shock. Sanity check on horizon dependence.
 4. **Cross-check with literature:** Belgian-aggregate Chinese-import-penetration time series should match published ADH-Europe or Bloom–Draca–Van Reenen-style series for Belgium where available.
 5. **D1 robustness:** report variance ratio with NACE 4d, NACE 3d, and NACE 2d as the partition. The within ratio should fall as the partition coarsens; if it doesn't, something is wrong.
+
+## Next-step options (post-RMD-E3 stocktake, 2026-04-29)
+
+After running E1, E2, E3 (full RMD), and D2 (full RMD), the picture is documented in [CHINA_SHOCK_FINDINGS.md](CHINA_SHOCK_FINDINGS.md):
+
+- **E1, E2 PASS**: clean first stage, ψ = −1.34 (per fractional unit), F = 195. Comparable in identifying power to P&R.
+- **E3 ambiguous**: A2 (the load-bearing buyer-side substitution test) returns β = −0.103 with 95% CI [−0.29, +0.08] on full RMD B2B (N = 183 NACE 4d cells). Point estimate is in the predicted direction; CI includes zero with wide tails.
+- **D2 nuanced**: China shock is broader but not uniformly larger than carbon. Carbon dominates at p99 (cement/steel tail); China dominates at p50–p95.
+- **Original ambition narrowed**: "use a much-bigger shock to identify substitution under conditions where the carbon shock was too small" is no longer supported as the framing. Surviving narrower contributions: a clean first stage on Belgian data, and an ambiguous reduced form whose interpretation depends on what we do next.
+
+Three candidate paths forward, in increasing order of cost. They are not mutually exclusive; sequencing matters.
+
+### Path 1 — Test H: carbon-shock buyer-side analog (~2 days)
+
+**Goal:** estimate the same regression as E3 Version A2, but using `firm_cost_share` × Post as the shifter instead of ΔChinaShare. Buyer-side analog of [B2B_LEAKAGE.md](B2B_LEAKAGE.md)'s seller-side null. The detailed spec lives in [SHOCK_AND_SUBSTITUTION_PLAN.md](SHOCK_AND_SUBSTITUTION_PLAN.md) Plan B's "Add-on test (open) — Across-NACE-category substitution under ETS exposure" section.
+
+**Why it's the cheapest first move:** uses existing infrastructure (no new data, no new concordance work). Gives a parallel result on a complementary shock. The joint reading of A2-China + Test H-carbon is more informative than either alone:
+
+- Both null with overlapping CIs → joint LR-null on Belgian B2B at the buyer level. **Strong paper claim** that doesn't depend on either single-shock identification holding up to all critiques.
+- One null, one significant → contrast: substitution exists for one shock but not the other. The contrast is the finding; pinpoints which shock features matter for substitution (magnitude vs persistence vs price-channel-cleanness).
+- Both significant → buyer-side substitution exists; reframes the leakage paper around "substitution exists at the buyer level but not at the seller level," which sharpens the relational-stickiness vs concentration question.
+
+**File to build:** `analysis/phase6_test_h_carbon_buyer_substitution.R`. Should mirror the structure of `phase6_eyeball_e3_reduced_form.R`. Outcome: Δ(Belgian-seller share of expenditure on NACE 4d n) 2010→2022 (or whichever pre/post window matches the Plan B Test G window). Shifter: NACE-4d-aggregated `firm_cost_share` (using Plan B Prep 2's `firm_cost_share_regressor_j`, weighted by ETS sellers' B2B sales 2010 base).
+
+### Path 2 — Sector-level heterogeneity decomposition of E3 A2 (~1 day)
+
+**Goal:** decompose A2's β = −0.103 into NACE-2d-specific slopes. Identify whether some sectors show a clear negative slope that the population average is masking, or whether the population average is genuinely the right summary.
+
+**Why it's worth running:** A2's NACE 4d N=183 is small enough that a single-coefficient population estimate may average over real heterogeneity. P&R's own results vary by industry; some industries have θ ≈ 4 while others have θ ≈ 1. The same heterogeneity is plausible for our Belgian-buyer reduced form.
+
+**Specifically:**
+- Run A2 separately for the top-China-exposure NACE 2d cells (textiles 13, apparel 14, wood 16, furniture 31 — see D2 sector breakdown).
+- Run A2 separately for low-exposure cells (food 10, pharma 21, services).
+- Report sector-by-sector slopes and CIs. Look for: (a) clean negative in the high-exposure tail = within-sector substitution exists, but is sector-specific; (b) flat across all sectors = the null is a robust feature of Belgian B2B.
+
+**File to build:** extend `phase6_eyeball_e3_reduced_form.R` with a sector-decomposition branch. ~50 lines.
+
+### Path 3 — D1 + firm-level θ regression (~1–2 weeks)
+
+**Goal:** the original P&R-style θ estimation. Build firm-level `china_exposure_i` from B2B + Customs + concordances, run the variance-decomposition diagnostic (D1), then estimate θ via 2SLS.
+
+**Why this is now harder to justify:** the magnitude comparison (D2) shows the China shock is not the dramatic improvement over carbon we hoped for. A D1 + θ regression that returns a noisy null estimate is a substantial investment with low payoff; if D1 reveals the within-NACE variance ratio is low (forcing F3 framing) or if E3's hint of substitution doesn't survive sector decomposition, we'd be building an estimator without a target.
+
+**When to run it:** only if Path 1 or Path 2 produces a clear positive-substitution signal. In particular:
+- If Path 1's Test H also returns null with tight CI: Path 3 is unlikely to recover a θ estimate worth publishing, because the across-shock null says Belgian buyers don't substitute much under any shock at this aggregation level.
+- If Path 2 reveals a clean negative slope concentrated in a few sectors: Path 3 makes sense restricted to those sectors.
+- If Path 1 returns substitution on the carbon shock that A2 missed: that contrast is itself the contribution; Path 3 may not add much.
+
+### Recommended sequence
+
+1. **Run Path 1 (Test H) first.** Cheapest, most informative for the paper-level claim, leverages all existing infrastructure.
+2. **Run Path 2 (sector decomposition) in parallel or immediately after.** Cheap, helps interpret both A2 and Test H by exposing heterogeneity.
+3. **Decide on Path 3 only after Paths 1 and 2 are in.** The decision criterion: is there a credible single-shock or joint-shock signal that a θ estimate would refine into a publishable number? If yes, build D1. If no, the eyeball-level findings + Path 1 + Path 2 already constitute the paper.
+
+### What stops the project
+
+The remaining China-shock work stops if **all three** of the following hold simultaneously after Paths 1 and 2:
+
+- A2 sector decomposition (Path 2) reveals no sector with a clean substitution signal.
+- Test H (Path 1) returns null with tight CI.
+- D2's distributional pattern doesn't change qualitatively under any reasonable robustness re-spec.
+
+In that case the substantive claim stabilizes around: "Belgian B2B does not show buyer-side substitution under either the carbon shock or a clean LR China shock at the NACE 4d level. This is consistent with relational stickiness (Heise 2024) or with concentration (no within-NACE alternatives), but our identification cannot distinguish between them at this aggregation." The eyeball-level results + Path 1 + Path 2 are then the paper.
