@@ -39,15 +39,15 @@
 #   - Same caveats as Component 1 (importer != Belgian-firm population;
 #     intensive-margin only; trim 1% tails per horizon).
 #   - The IV at horizon h is delta_h ChinaShare = ChinaShare_{2002+h} -
-#     ChinaShare_{2002}. We don't currently have a multi-horizon BACI
-#     shifter cached (E1 only built 2002 -> 2012). This script reconstructs
-#     it from the BACI raw files via the same loop pattern as E1/E2.
-#     For local-1 prototyping we cap h at min(20, max BACI year - 2002).
+#     ChinaShare_{2002}, computed directly from shifter_panel (saved by E2)
+#     -- no raw BACI dependency at runtime, so this script runs on RMD too.
+#   - Achievable horizons = (years in uv_panel / shifter_panel) - 2002.
+#     Re-run E2 with the extended years vector (and copy the resulting
+#     phase6_belgian_unit_values.RData to RMD) to expand the horizon set.
 #   - First-stage F is reported per horizon. Expect F to fall as h grows
 #     (longer windows accumulate more measurement error).
-#   - Local projections use OVERLAPPING long differences when run on a
-#     single base year. We rely on the cluster (HS6) SE for serial
-#     correlation; the BLP paper does the same.
+#   - Local projections use OVERLAPPING long differences from a single base
+#     year. We rely on cluster (HS6) SE for serial correlation -- BLP same.
 ###############################################################################
 
 rm(list = ls())
@@ -63,57 +63,35 @@ REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
 while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
 source(file.path(REPO_DIR, "paths.R"))
 
-BACI_DIR <- file.path(RAW_DATA, "BACI_HS02_V202601")
-stopifnot(dir.exists(BACI_DIR))
-
 # ---- Tunables ----
 BASE_YEAR <- 2002L
 HORIZONS  <- c(1L, 3L, 5L, 7L, 10L, 15L, 20L)
 CHINA_ISO <- c("CN", "HK")
 TRIM_PCT  <- 0.01
 
-# ---- 1. Load shifter / EU country lookups (from E1) ----
-load(file.path(OUT_DATA, "phase6_china_shifter_2002_2012.RData"))
-# eu26_numeric, china_numeric, eu26_iso3 in scope.
+# ---- 1. Load E2 panel (uv_panel + shifter_panel) ----
 load(file.path(OUT_DATA, "phase6_belgian_unit_values.RData"))
-# uv_panel: HS6 x year x {uv_china, uv_nonchina}; covers 2002, 2007, 2012, 2017, 2022.
+# uv_panel:      HS6 x year x {uv_china, uv_nonchina, v_china_be, v_nonchina_be}
+# shifter_panel: HS6 x year x {value_total, value_china, china_share}
+# Both panels span the years configured in E2's `years` vector.
 
-uv_panel    <- as.data.table(uv_panel)
-years_uv    <- sort(unique(uv_panel$year))
-years_avail <- intersect(BASE_YEAR + HORIZONS, years_uv)
-HORIZONS    <- intersect(HORIZONS, years_uv - BASE_YEAR)
-cat("Horizons available given E2 uv_panel coverage:",
-    paste(HORIZONS, collapse = ", "), "\n")
+uv_panel        <- as.data.table(uv_panel)
+shifter_by_year <- as.data.table(shifter_panel)
 
-# ---- 2. BACI shifter at multiple horizons (reuse E1 logic) ----
-build_baci_shifter_year <- function(year) {
-  f <- file.path(BACI_DIR, sprintf("BACI_HS02_Y%d_V202601.csv", year))
-  if (!file.exists(f)) {
-    warning(sprintf("BACI file missing for %d: %s", year, f))
-    return(NULL)
-  }
-  dt <- fread(f, colClasses = c(t = "integer", i = "integer", j = "integer",
-                                k = "character", v = "numeric"))
-  dt <- dt[j %in% eu26_numeric]
-  dt[, k := formatC(as.integer(k), width = 6, flag = "0")]
-  v_total <- dt[, .(value_total = sum(v, na.rm = TRUE)), by = k]
-  v_china <- dt[i %in% china_numeric,
-                .(value_china = sum(v, na.rm = TRUE)), by = k]
-  s <- merge(v_total, v_china, by = "k", all.x = TRUE)
-  s[is.na(value_china), value_china := 0]
-  s <- s[value_total > 0]
-  s[, china_share := value_china / value_total]
-  s[, year := year]
-  s
+# Cap HORIZONS to what's actually in the cached panels.
+years_uv      <- sort(unique(uv_panel$year))
+years_shifter <- sort(unique(shifter_by_year$year))
+years_common  <- intersect(years_uv, years_shifter)
+HORIZONS      <- intersect(HORIZONS, years_common - BASE_YEAR)
+cat("Horizons available given E2 panel coverage (",
+    paste(years_common, collapse = ", "), "):\n  ",
+    paste(HORIZONS, collapse = ", "), "\n", sep = "")
+if (length(HORIZONS) == 0) {
+  stop("No usable horizons. Re-run E2 with the extended years vector and ",
+       "copy phase6_belgian_unit_values.RData to this machine.")
 }
 
-needed_baci_years <- c(BASE_YEAR, BASE_YEAR + HORIZONS)
-shifter_by_year <- rbindlist(
-  lapply(needed_baci_years, build_baci_shifter_year),
-  fill = TRUE
-)
-
-# Build delta_h ChinaShare per (HS6 x horizon)
+# Build delta_h ChinaShare per (HS6 x horizon) directly from shifter_panel.
 build_iv_horizon <- function(h) {
   base <- shifter_by_year[year == BASE_YEAR,
                            .(k, china_share_base = china_share,
