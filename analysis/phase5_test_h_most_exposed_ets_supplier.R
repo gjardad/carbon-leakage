@@ -383,4 +383,110 @@ print(sector_results)
 fwrite(sector_results,
        file.path(OUTPUT_TAB, "phase5_test_h_by_buyer_nace2d.csv"))
 
+# ---------------------------------------------------------------------------
+# 11. Sample split by buyer's NACE 4d share of total input cost
+# ---------------------------------------------------------------------------
+# Substitution should be more visible in cells where the NACE 4d is a heavy
+# part of the buyer's input bill. Define
+#   nace_share_pre_{b,n} = mean over 2010-2014 of
+#                          (Σ_j corr_sales_{j,b in n,t} / inputs_VAT_{b,t})
+# i.e., the buyer's pre-shock average expenditure share on NACE 4d n out of
+# total declared inputs. Time-invariant per cell, anchored pre-MSR-binding.
+#
+# Splits: above/below median; top quartile (Q4) vs bottom three (Q1-Q3).
+# Run spec (a+b) regression on each subset separately.
+# ---------------------------------------------------------------------------
+NSHARE_LO <- 2010L
+NSHARE_HI <- 2014L
+
+# Buyer's total declared inputs (from VAT returns) per buyer-year.
+load(file.path(PROC_DATA, "annual_accounts_more_selected_sample.RData"))
+buyer_inputs <- as.data.table(df_annual_accounts_more_selected_sample)[
+  !is.na(inputs_VAT) & inputs_VAT > 0,
+  .(buyer = vat_ano, year, inputs_VAT_total = inputs_VAT)]
+rm(df_annual_accounts_more_selected_sample)
+
+# Cell's pre-shock annual sales total, joined with buyer's pre-shock total
+# inputs. Compute a per-(b,n,t) ratio then average across t in [2010, 2014].
+cell_sales_pre <- cell_yr[year %between% c(NSHARE_LO, NSHARE_HI),
+                           .(buyer, seller_nace4d, year,
+                             sales_cell = total_sales_cell)]
+cell_sales_pre <- merge(cell_sales_pre, buyer_inputs,
+                         by = c("buyer", "year"), all.x = FALSE)
+cell_sales_pre[, nace_share_yr := sales_cell / inputs_VAT_total]
+nace_share_pre <- cell_sales_pre[, .(nace_share_pre = mean(nace_share_yr)),
+                                  by = .(buyer, seller_nace4d)]
+
+cat(sprintf("\nCells with nace_share_pre defined (pre-shock %d-%d): %d\n",
+            NSHARE_LO, NSHARE_HI, nrow(nace_share_pre)))
+cat("Distribution of nace_share_pre:\n")
+print(quantile(nace_share_pre$nace_share_pre,
+               c(0.1, 0.25, 0.5, 0.75, 0.9), na.rm = TRUE))
+
+# Bring nace_share_pre into the regression panel.
+samp_ab_split <- merge(samp_ab, nace_share_pre,
+                        by = c("buyer", "seller_nace4d"), all.x = FALSE)
+cat(sprintf("Spec (a+b) sample with nace_share_pre defined: %d cell-years across %d cells\n",
+            nrow(samp_ab_split),
+            uniqueN(samp_ab_split[, .(buyer, seller_nace4d)])))
+
+# Compute quartile thresholds OVER CELLS (not over cell-years), so each cell
+# is in exactly one bucket regardless of how many years it contributes.
+cell_share <- unique(samp_ab_split[, .(buyer, seller_nace4d, nace_share_pre)])
+qs <- quantile(cell_share$nace_share_pre, c(0.25, 0.5, 0.75), na.rm = TRUE)
+cat(sprintf("Quartile thresholds: Q1=%.4f, median=%.4f, Q3=%.4f\n",
+            qs[1], qs[2], qs[3]))
+
+samp_ab_split[, nshare_above_median := as.integer(nace_share_pre >= qs[2])]
+samp_ab_split[, nshare_quartile := fcase(
+  nace_share_pre <  qs[1], "Q1",
+  nace_share_pre <  qs[2], "Q2",
+  nace_share_pre <  qs[3], "Q3",
+  nace_share_pre >= qs[3], "Q4",
+  default = NA_character_
+)]
+samp_ab_split[, nshare_top_q4 := as.integer(nshare_quartile == "Q4")]
+
+run_subset <- function(d, label) {
+  if (nrow(d) < 50L || uniqueN(d$year) < 2L ||
+      uniqueN(d[fcs_j_star > 0]$fcs_j_star) < 2L) {
+    return(data.table(subset = label, n_cells = uniqueN(d[, .(buyer, seller_nace4d)]),
+                      n_obs = nrow(d), estimate = NA_real_, se = NA_real_,
+                      tval = NA_real_, pval = NA_real_))
+  }
+  m <- tryCatch(feols(share_top ~ treat_post | cell + sn4d_year,
+                      data = d, cluster = ~ buyer),
+                error = function(e) NULL)
+  if (is.null(m)) {
+    return(data.table(subset = label, n_cells = uniqueN(d[, .(buyer, seller_nace4d)]),
+                      n_obs = nrow(d), estimate = NA_real_, se = NA_real_,
+                      tval = NA_real_, pval = NA_real_))
+  }
+  ct <- as.data.table(summary(m)$coeftable, keep.rownames = "term")
+  setnames(ct, c("term", "estimate", "se", "tval", "pval"))
+  ct <- ct[term == "treat_post"]
+  data.table(subset = label,
+             n_cells = uniqueN(d[, .(buyer, seller_nace4d)]),
+             n_obs = nobs(m),
+             estimate = ct$estimate, se = ct$se,
+             tval = ct$tval, pval = ct$pval)
+}
+
+split_results <- rbindlist(list(
+  run_subset(samp_ab_split,                                     "all_with_share"),
+  run_subset(samp_ab_split[nshare_above_median == 1L],          "above_median"),
+  run_subset(samp_ab_split[nshare_above_median == 0L],          "below_median"),
+  run_subset(samp_ab_split[nshare_quartile == "Q1"],            "Q1_lowest"),
+  run_subset(samp_ab_split[nshare_quartile == "Q2"],            "Q2"),
+  run_subset(samp_ab_split[nshare_quartile == "Q3"],            "Q3"),
+  run_subset(samp_ab_split[nshare_quartile == "Q4"],            "Q4_highest"),
+  run_subset(samp_ab_split[nshare_top_q4 == 1L],                "top_quartile_Q4"),
+  run_subset(samp_ab_split[nshare_top_q4 == 0L],                "bottom_three_quartiles_Q1Q3")
+), use.names = TRUE, fill = TRUE)
+
+cat("\n=== Test H spec (a+b) split by buyer's NACE 4d input-cost share ===\n")
+print(split_results)
+fwrite(split_results,
+       file.path(OUTPUT_TAB, "phase5_test_h_by_nace_share_split.csv"))
+
 cat("\nTest H complete.\n")
