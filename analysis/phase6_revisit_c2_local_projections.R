@@ -236,7 +236,7 @@ run_horizon <- function(h) {
   est <- ce[rn, "Estimate"]
   se  <- ce[rn, "Std. Error"]
   ci  <- est + c(-1, 1) * 1.96 * se
-  fs_F <- tryCatch(unname(fitstat(m_iv, "ivf1", simplify = TRUE)),
+  fs_F <- tryCatch(unname(fitstat(m_iv, "ivf1", simplify = TRUE)["stat"]),
                     error = function(e) NA_real_)
 
   list(

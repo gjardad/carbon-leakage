@@ -173,7 +173,7 @@ extract_iv <- function(m, label, endo) {
   est <- ce[rn, "Estimate"]
   se  <- ce[rn, "Std. Error"]
   ci  <- est + c(-1, 1) * 1.96 * se
-  fs_F <- tryCatch(unname(fitstat(m, "ivf1", simplify = TRUE)),
+  fs_F <- tryCatch(unname(fitstat(m, "ivf1", simplify = TRUE)["stat"]),
                     error = function(e) NA_real_)
   data.table(
     spec     = label,

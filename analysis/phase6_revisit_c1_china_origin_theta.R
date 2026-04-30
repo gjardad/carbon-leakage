@@ -272,10 +272,13 @@ results_dt <- rbindlist(list(
   extract_ols(m_fs,     "First stage (price-ratio on IV)",    "delta_china_share")
 ), fill = TRUE)
 
-# First-stage F (Sanderson-Windmeijer) from the IV model
-fs_F_iv <- fitstat(m_iv, "ivf1", simplify = TRUE)
-results_dt[spec == "IV: relative-price form (headline)",
-           f_stat := unname(fs_F_iv)]
+# First-stage F from the IV model. fitstat() returns a length-4 named vector
+# (stat, p, df1, df2); we only want the F statistic itself.
+fs_F_iv <- tryCatch(
+  unname(fitstat(m_iv, "ivf1", simplify = TRUE)["stat"]),
+  error = function(e) NA_real_
+)
+results_dt[spec == "IV: relative-price form (headline)", f_stat := fs_F_iv]
 
 print(results_dt, digits = 4)
 
