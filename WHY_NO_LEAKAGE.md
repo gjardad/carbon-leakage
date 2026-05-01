@@ -6,14 +6,15 @@ For the planning context, see [SHOCK_AND_SUBSTITUTION_PLAN.md](SHOCK_AND_SUBSTIT
 
 ## Verdict
 
-**The leakage null in Belgian B2B is consistent with the carbon shock being too small to motivate substitution at the buyer-total-cost level.** Concentration (no alternatives) is ruled out cleanly. Stickiness (relational frictions) is consistent with the data but is not the load-bearing channel — it is set aside as a paper claim.
+**The leakage null in Belgian B2B holds at both substitution margins we can test.** Test H (within NACE 4d, across suppliers) and Test I (across NACE 4d categories, within buyer) both find null. Combined with strong evidence of ETS pass-through into regulated PPI ([PASSTHROUGH.md](PASSTHROUGH.md): Phase IV +21pp regulated vs unregulated; Känzig CPShock LP +4.08 at h=12), the picture is: **prices rose, buyers paid them, neither side reorganized.** Concentration (no alternatives) is ruled out cleanly; stickiness (relational frictions) is consistent with the data but not separately identified.
 
-The verdict is **directionally well-supported but not tightly estimated** at the regression level — see "Caveats" below. Two pillars hold up the claim:
+The verdict has three pillars:
 
-1. **Magnitude evidence ([SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md))** — pair-shock at the buyer-total-cost level is well below the σ_share noise floor for all sectors except cement, anchored to a real quantitative threshold. This is the load-bearing pillar.
-2. **Direct DiD evidence (Test H)** — among the 9% of buyers facing a real substitution decision, the intensive-margin DiD on the share of the most-exposed ETS supplier returns null (β = +1.34, p = 0.16, n = 110,870) and the version restricted to where the NACE 4d is heaviest in the buyer's input bill returns β = +0.03 (SE = 1.39, p = 0.98). This is corroborative, not load-bearing on its own.
+1. **Magnitude evidence ([SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md))** — pair-shock-total at the buyer-total-cost level is well below the σ_share noise floor for all sectors except cement. Anchored quantitatively against P&R below.
+2. **Within-NACE-4d substitution (Test H)** — among the 9% of buyers facing a real substitution decision, the intensive-margin DiD on the share of the most-exposed ETS supplier returns null. After detrending and pair-exposure anchoring (upgrades #1, #4, #5), β stays close to zero across all specifications. The Q4 high-magnitude split (where the carbon shock would actually bite) is also null.
+3. **Across-NACE-4d substitution (Test I, May 2026)** — across input categories within a buyer, the binary regulated × Post coefficient is essentially zero (β = -0.0026, p = 0.76); the event study post-2015 coefficients are positive in every clean year (against substitution); the only spec showing substitution (I.2 with continuous trend) hangs on a linear-trend assumption that the event-study evidence shows doesn't fit the data.
 
-Test H's null is consistent with no substitution but does not tightly bound it — see Caveats. The most defensible paper framing is to lean on the magnitude story as primary and present Test H as confirming evidence with the caveats acknowledged.
+The most defensible paper framing is to lead with the magnitude story (anchored by the P&R comparison) and present Tests H and I as the joint null on observable substitution at both margins, with the caveat that we cannot separately identify whether what remains is technological rigidity, relational stickiness, or shock-too-small power limits.
 
 ## Three facts that pin the verdict
 
@@ -223,6 +224,73 @@ Restrict to buyer NACE 2d == "23" (cement / non-metallic minerals — the only s
 - **β by quartile of pair_exposure_pre.** If the Q4 coefficient is large and negative while Q1-Q3 are zero, that's a Huneeus-style kink and the "$X would generate substitution" narrative gains support. If the gradient stays flat across quartiles (the result we got with `nace_share_pre`), the kink-based version of the narrative is dead.
 - **Cement detrended event study.** If post-2017 coefficients drift down and pre-2014 coefficients are flat, cement substitution is real and we have a sector-anchored result (the headline becomes "cement substitutes; nothing else does"). If both pre and post stay flat, even the most-powered test fails to find substitution and the magnitude story stands alone.
 
+## Test I — across-NACE-4d category substitution (May 2026)
+
+[analysis/phase5_test_i_cross_nace_substitution.R](analysis/phase5_test_i_cross_nace_substitution.R) is the buyer-side analog of CMdG's regulated-vs-unregulated PPI event study, but on the **input-mix** rather than the output-PPI margin. It asks: when carbon pricing raises the average price of input category n (driven by category n's average ETS exposure), do Belgian buyers reweight expenditure away from category n toward less-exposed categories?
+
+### Construction
+
+```
+nace_exposure_n = Σ_{j ∈ ETS sellers in n} mean_{2010-14}[corr_sales_j] × fcs_j
+                  ÷
+                  Σ_{j ∈ all sellers in n} mean_{2010-14}[corr_sales_j]
+```
+Time-invariant per NACE 4d. Captures category-level price-shock exposure under full pass-through.
+
+```
+share_{b, n, t} = Σ_{j: nace4d_j = n} corr_sales_{j, b, t} / inputs_VAT_total_{b, t}
+```
+Buyer's expenditure on category n as fraction of total inputs. Sample = (buyer × NACE 4d) cells where buyer had positive spending in at least one pre-shock year (2010-14). N = 71.7M cell-years across 5.7M cells.
+
+Identification: buyer × year FE absorbs each buyer's overall scale and time path; buyer × NACE 4d FE absorbs persistent buyer-specific category preferences. β identifies whether high-`nace_exposure` cells saw additional share decline post-2015 vs the buyer's other active categories.
+
+### Results
+
+| Spec | β | SE | p | Direction |
+|---|---|---|---|---|
+| I.1 pooled (no detrend) | +34.5 | 15.2 | 0.023 | wrong sign, significant |
+| I.2 detrended POST | −43.3 | 12.5 | 0.0005 | right sign, but artifact of linear-trend imposition (see below) |
+| I.2 detrended TREND | +9.1 | 2.2 | <0.001 | strong full-sample drift (high-exposure categories grew their share over 2005-2022) |
+| **I.3 binary regulated × Post (CMdG-domestic analog)** | **−0.0026** | **0.0087** | **0.76** | **null** |
+| Robustness: log(spend) | +153.96 | 13.4 | <1e-30 | wrong sign, very significant |
+
+Detrended event study (year-by-year coefficient on `nace_exposure × year_f`, post-hoc detrended on the 2005-2014 linear fit):
+
+| Year | Detrended coef |
+|---|---|
+| 2014 | 0 (ref) |
+| **2015** | **+9.1** |
+| **2016** | **+13.5** |
+| **2017** | **+20.4** |
+| **2018** | **+22.8** |
+| **2019** | **+26.4** |
+| 2020 | −24.7 (COVID) |
+| 2021 | +36.8 |
+| 2022 | +433.6 (post-COVID / gas-crisis outlier) |
+
+**All clean post-2015 years (2015-2019, 2021) have POSITIVE coefficients** — high-exposure categories saw their within-buyer share *grow* relative to the pre-trend extrapolation, not shrink.
+
+### Why the I.2 negative β is not load-bearing
+
+I.2 imposes a *single linear trend* fit on the full panel. The event-study evidence shows the data does not fit a single linear trend: pre-period coefficients jump between −24.5 (2011, financial-crisis aftermath) and +33.8 (2012, post-crisis rebound). Imposing a single slope of +9.09/year on this jagged series forces the post-period level shift to be negative even though the year-by-year detrended event-study coefficients are uniformly positive.
+
+The cleaner specifications — I.3 (binary regulated dummy, the most direct CMdG-domestic analog), I.4 (event study with pre-period-only trend), and the log-spend robustness — all point in the opposite direction: no substitution, or the wrong sign.
+
+### Test I quartile split: degenerate
+
+Same zero-mass issue as Test H: most NACE 4d categories have `nace_exposure = 0` (no ETS sellers), so Q1, Q2, Q3 collapse and only Q4 has positive mass. The Q4 result equals the all-data result (β = −43.3) because Q4 contains all the variation. Not a useful kink test.
+
+### Combined verdict on substitution
+
+| Margin | Test | Headline | Most-favorable subset |
+|---|---|---|---|
+| Within NACE 4d, across suppliers | Test H | β ≈ 0 across all specs | Q4 of pair_exposure: β = +29 (n.s., wrong sign); cement pe-anchored: β = −213 (right sign, n.s.) |
+| Across NACE 4d, within buyer | Test I | β ≈ 0 (binary, event study); wrong-signed in I.1 and log-spend | Q4 = full sample (degenerate) |
+
+Buyers absorbed the carbon-driven price increases at both substitution margins. The reallocation channel of leakage is null at the supplier level AND at the category level.
+
+---
+
 ## Other possible upgrades (not implemented)
 
 1. **Triple-difference using a synthetic placebo j*.** Construct `share_top - cell_mean_non_ETS_share` to absorb cell-level common trends. Detrending (#1 above) is the lighter-weight version and was implemented first.
@@ -274,5 +342,16 @@ Outputs from the most recent RMD run, under `output_rmd/tables/`:
 - `phase5_test_h_event_study.csv` — year-by-year coefficients showing the pre-trend.
 - `phase5_test_h_by_nace_share_split.csv` — quartile split with the Q4 = 0.03 result.
 - `phase5_test_h_by_buyer_nace2d.csv` — sector decomposition.
+- `phase5_test_h_upgrades_main_up1.csv` — Upgrade #1 (detrended fcs).
+- `phase5_test_h_upgrades_main_up4.csv` — Upgrade #4 (pair-exposure regressor).
+- `phase5_test_h_upgrades_pair_exposure_split.csv` — quartile split by pair_exposure_pre.
+- `phase5_test_h_upgrades_cement.csv` — Upgrade #5 (cement, detrended + winsorized).
+- `phase5_test_h_upgrades_event_study_detrended_{fcs,pe}.csv` — fixed event studies.
+- `phase5_test_h_upgrades_cement_event_study.csv`.
+- `phase5_test_i_main.csv` — Test I pooled, detrended, regulated dummy.
+- `phase5_test_i_quartile_split.csv` — degenerate (zero-mass).
+- `phase5_test_i_event_study.csv` — clean year-by-year, detrended.
+- `phase5_test_i_robustness_logspend.csv` — wrong-signed log(spend) outcome.
+- `phase5_test_i_nace_exposure_distribution.csv` — category-level treatment distribution.
 
 Tests A, B, C, G outputs in the same folder are parked.
