@@ -114,18 +114,48 @@ The cleaner sectors are also unhelpful for the magnitude story:
 ### 5. fcs distribution is heavy-skewed
 The regressor `firm_cost_share_regressor` has p50 ≈ 3.3×10⁻⁵ and p99 ≈ 0.056. Most cells contribute near-zero to the identification of β. The pooled β can hide offsetting effects across the fcs distribution that would only be visible with a more flexible specification (e.g., fcs quantile dummies × Post).
 
-## Possible upgrades (open question whether to do them)
+## Anchoring "shock too small" against the carbon-leakage literature
 
-If we want a tighter, more identification-clean substitution null in addition to the magnitude story, the following would help. Listed roughly in order of expected payoff vs cost. Whether any of these are worth pursuing depends on how load-bearing we want Test H to be in the paper.
+The "shock too small" verdict needs an anchor — what's a big enough shock? Two reference points from papers that *do* find substitution responses:
 
-1. **Detrend or triple-difference to handle the pre-trend.** Either (a) fit a linear pre-trend on 2005-2014 and subtract it from post-2015 coefficients, or (b) construct a triple-difference outcome like `share_top − cell_mean_non_ETS_share` to absorb cell-level common trends. Costs: re-running Test H with the new outcome.
-2. **Winsorize fcs at p99** the same way Test B was patched. Re-runs sector decomposition with bounded coefficients so we can read sector-level patterns. Cheap.
-3. **Reconcile R2 and headline.** Acknowledge the extensive-margin signal in WHY_NO_LEAKAGE.md and the paper. Either reframe the verdict to "no intensive-margin reweighting; small but detectable extensive-margin exit, economically negligible," or run a follow-up that directly bounds the magnitude of the exit channel. Free / cheap.
-4. **Anchor Test H on pair-shock magnitude rather than seller fcs.** Replace `firm_cost_share_{j*(n)}` with `pair_shock_total_{j*(n), b, t} = fcs_{j*} × corr_sales / inputs_VAT_b`. This makes the regressor *economically* meaningful (% of buyer's total cost at risk) rather than seller-side intensity. Should reduce the noise from the heavy-skewed fcs distribution. Re-runs the regression with new construction.
-5. **Cement-specific test.** Restrict Test H to NACE 23 cement-input pairs and run with proper winsorization + detrending. Cement has the largest signal-to-noise per SHOCK_MAGNITUDE.md (0.68σ), so it's the most powered test in the data. If we still see no substitution there with a clean spec, it's a powerful sector-anchored result. The current cement coefficient (β = +4.42, wrong sign) is concerning enough that we should look at it carefully.
-6. **Quantile-flexible spec.** Replace the linear `fcs_{j*} × Post` with `(fcs quartile dummies) × Post`. Lets us see whether the pooled β = 0 hides offsetting effects across the fcs distribution.
+- **Peter & Ruane (2024, India tariff cuts).** Indian MFN tariffs on intermediate inputs fell by 15-20 percentage points on individual HS products. For an importer where the input is 5% of the bill, that's a 0.75-1.0 percentage point change in *total* input cost — at least 2-4× larger than the population p90 pair-shock-total in our data (1.16% in Phase IV; cement 8.80%). They identify σ ≈ 4-5 from these cuts.
+- **Arkolakis, Huneeus & Miyauchi (2025, Chile-US/China FTAs).** Bilateral tariffs fell from ~6-7% to near-zero on most HS lines — a ~6.5pp tariff cut on individual inputs. They observe firms expanding the number of foreign suppliers (extensive margin) and shifting expenditure toward newly-cheaper foreign sources (intensive margin). A 6.5pp tariff cut on a 5%-of-bill input is again ~0.3pp of total cost — comparable to our Phase IV cement signal but 30-50× larger than our population pair-shock-total.
 
-None of these is essential for the paper's core claim if we lean on magnitude as primary. They become essential if we want the regression evidence to be load-bearing.
+For a typical Belgian buyer, EU ETS at 2018-2020 prices (€25-30/tCO₂) translates to a 0.06-0.1pp change in total input cost per ETS supplier of typical emissions intensity. **One to two orders of magnitude smaller than the smallest shocks where the literature has identified substitution.** This is the anchor that makes "too small" quantitative rather than asserted.
+
+A back-of-the-envelope extrapolation: at ~€100/tCO₂ (4× the 2005-2020 average), the typical buyer's pair-shock-total would still be ~0.3-0.4pp — comparable to AHM's per-input shock magnitude and approaching P&R's. Whether that's enough for substitution depends on the ratio of pair-shock-total to buyer-side input-cost noise (σ_share). At cement-buyer σ_share ≈ 13% and a hypothetical Phase IV signal scaled 4× to 35%, signal-to-noise rises from 0.68σ to ~2.7σ — clearly above detection threshold. For non-cement sectors with σ_share ≈ 15% and current p90 < 0.5%, even 4× scaling lifts signal-to-noise only to ~0.13σ. **The "$X would be different" claim is plausible for cement and basically nowhere else.**
+
+## Upgrades implemented (April 2026)
+
+[analysis/phase5_test_h_upgrades.R](analysis/phase5_test_h_upgrades.R) implements three tightening upgrades to Test H without retiring the original spec. Outputs go to `output_<machine>/tables/` and `output_<machine>/figures/`.
+
+### Upgrade #1 — Detrending the 2010-11 pre-trend
+The event study (ref 2014) shows β_2010 = -5.70 and β_2011 = -5.05 for the seller-side regressor `fcs_{j*}`. We add `fcs_{j*} × year_c` as a continuous control alongside the Post interaction. β is then identified from the *deviation* of post-2015 coefficients from the 2005-2014 linear drift. Output: `phase5_test_h_upgrades_main_up1.csv` (pooled DiD), `phase5_test_h_upgrades_event_study_detrended_fcs.{csv,pdf}` (year-by-year, detrended).
+
+### Upgrade #4 — Pair-exposure-anchored regressor
+Replace the seller-side `fcs_{j*}` with a buyer-side magnitude:
+```
+pair_exposure_pre_{n} = fcs_{j*(n)} × s_{j*(n)}_pre
+s_{j*(n)}_pre        = mean_{2010..2014}[ corr_sales_{j*, b, t} / inputs_VAT_{b, t} ]
+```
+Units: % of buyer b's *total* input cost that would be at risk if j*'s carbon shock pass-through is full and b doesn't substitute. Same units as Moment 4(c) `pair_shock_total` from [SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md), but time-invariant per cell.
+
+Quartile split by `pair_exposure_pre` is the economically-meaningful version of the existing `nace_share_pre` split — the latter splits on how much of the buyer's bill is in the seller's NACE 4d, which is a necessary but not sufficient condition for the carbon shock to bite hard. `pair_exposure_pre` directly measures the shock magnitude that would hit the buyer through j*. Output: `phase5_test_h_upgrades_main_up4.csv`, `phase5_test_h_upgrades_pair_exposure_split.csv`, `phase5_test_h_upgrades_event_study_detrended_pe.{csv,pdf}`.
+
+### Upgrade #5 — Cement-specific clean test
+Restrict to buyer NACE 2d == "23" (cement / non-metallic minerals — the only sector where pair-shock signal-to-noise exceeds 0.5σ per [SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md)) and apply both #1 (detrending) and #4 (pair-exposure regressor), with the regressor winsorized at its cement-subsample p99 to bound LPM coefficients on the heavy-tailed distribution. The current cement coefficient in the original Test H is β = +4.42 (p=0.17, wrong sign); this version asks whether that flips or sharpens once trend and outliers are handled. Output: `phase5_test_h_upgrades_cement.csv`, `phase5_test_h_upgrades_cement_event_study.{csv,pdf}`.
+
+### How to read the output
+- **β on pair_exposure × Post (detrended), pooled.** If still ≈ 0 with a tighter SE, the magnitude verdict tightens — the most economically-meaningful regressor finds no substitution where the shock could actually bite.
+- **β by quartile of pair_exposure_pre.** If the Q4 coefficient is large and negative while Q1-Q3 are zero, that's a Huneeus-style kink and the "$X would generate substitution" narrative gains support. If the gradient stays flat across quartiles (the result we got with `nace_share_pre`), the kink-based version of the narrative is dead.
+- **Cement detrended event study.** If post-2017 coefficients drift down and pre-2014 coefficients are flat, cement substitution is real and we have a sector-anchored result (the headline becomes "cement substitutes; nothing else does"). If both pre and post stay flat, even the most-powered test fails to find substitution and the magnitude story stands alone.
+
+## Other possible upgrades (not implemented)
+
+1. **Triple-difference using a synthetic placebo j*.** Construct `share_top - cell_mean_non_ETS_share` to absorb cell-level common trends. Detrending (#1 above) is the lighter-weight version and was implemented first.
+2. **Reconcile R2 and headline.** The extensive-margin R2 (β = -3.61, p = 0.014) is small but significant. Either reframe the headline as "no intensive-margin reweighting; small but detectable extensive-margin exits, economically negligible at typical exposure" or run a follow-up that bounds the exit channel directly.
+3. **Quantile-flexible spec.** Replace `pair_exposure_pre × Post` with `(pe_quartile dummies) × Post` to see whether a pooled β ≈ 0 hides offsetting effects across the distribution. Adds one column to the existing `pair_exposure_split.csv`.
+4. **Refresh the pair-exposure window.** The current pre-shock window is 2010-2014. If MSR-binding (Phase IV, post-2018) is the relevant treatment date, the cleaner pre-window is 2013-2016. Cheap to swap.
 
 ## Parked (not in paper)
 

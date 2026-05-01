@@ -1,0 +1,527 @@
+###############################################################################
+# phase5_test_h_upgrades.R
+#
+# Three upgrades to phase5_test_h_most_exposed_ets_supplier.R, motivated by
+# WHY_NO_LEAKAGE.md "Caveats" + "Possible upgrades":
+#
+#   #1 DETRENDING: the event study (ref 2014) shows beta_2010 = -5.70 (p<.05)
+#      and beta_2011 = -5.05 (p<.05). High-fcs j*s were already losing share
+#      before the 2015 shock. We add a linear trend in fcs_{j*(n)} alongside
+#      the Post interaction. Identifies beta from the *deviation* of post-2015
+#      from the 2005-2014 linear drift.
+#
+#   #4 PAIR-SHOCK MAGNITUDE ANCHORING: replace the seller-side regressor
+#      `firm_cost_share_{j*(n)}` with a buyer-side magnitude
+#         pair_exposure_pre_{n} = fcs_{j*(n)} * s_{j*(n)}_pre
+#         s_{j*(n)}_pre        = mean_{2010..2014}[ corr_sales_{j*, b, t}
+#                                                  / inputs_VAT_{b, t} ]
+#      Units: fraction of buyer b's TOTAL input cost that would be at risk if
+#      j*'s carbon shock passes through fully and b doesn't substitute. This
+#      is the same units as Moment 4(c)'s `pair_shock_total` from
+#      SHOCK_MAGNITUDE.md, but time-invariant per cell (averaged pre-shock).
+#      Quartile split by pair_exposure_pre is the economically-meaningful
+#      version of the existing nace_share_pre split.
+#
+#   #5 CEMENT-SPECIFIC CLEAN TEST: restrict to buyer NACE 2d == "23" and apply
+#      both #1 (detrending) and #4 (pair-shock anchoring), with the regressor
+#      winsorized at p99 to bound LPM coefficients on the heavy-tailed
+#      regressor distribution. Cement is the only sector where pair-shock
+#      signal-to-noise > 0.5 sigma per SHOCK_MAGNITUDE.md, so it's the most
+#      powered cell-level test we have.
+#
+# All three upgrades retain the existing Test H sample construction (cells with
+# j*(n) defined, n_active_sellers >= 2, j*'s tenure for type-b cells).
+# Outputs go to OUTPUT_TAB / OUTPUT_FIG (per-machine via paths.R).
+###############################################################################
+
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) {
+  parent <- dirname(REPO_DIR)
+  if (parent == REPO_DIR) stop("paths.R not found walking up from ",
+                                normalizePath(getwd(), winslash = "/"),
+                                ". cd into the repo root first.")
+  REPO_DIR <- parent
+}
+source(file.path(REPO_DIR, "paths.R"))
+
+if (!requireNamespace("fixest", quietly = TRUE))
+  install.packages("fixest", repos = "https://cloud.r-project.org")
+if (!requireNamespace("ggplot2", quietly = TRUE))
+  install.packages("ggplot2", repos = "https://cloud.r-project.org")
+
+library(data.table)
+library(fixest)
+library(ggplot2)
+
+YEAR_LO   <- 2005L
+YEAR_HI   <- 2022L
+POST_FROM <- 2015L
+PRE_LO    <- 2010L
+PRE_HI    <- 2014L
+
+# ---------------------------------------------------------------------------
+# 1. Load B2B sample, NACE, EUETS flag, firm_cost_share, buyer total inputs
+#    -- exactly as in phase5_test_h_most_exposed_ets_supplier.R
+# ---------------------------------------------------------------------------
+load(file.path(PROC_DATA, "b2b_selected_sample.RData"))
+b2b <- as.data.table(df_b2b_selected_sample)[, .(seller = vat_i_ano,
+                                                  buyer  = vat_j_ano,
+                                                  year,
+                                                  corr_sales = corr_sales_ij)]
+rm(df_b2b_selected_sample)
+b2b[, year := as.integer(year)]
+b2b <- b2b[year %between% c(YEAR_LO, YEAR_HI) &
+             !is.na(corr_sales) & corr_sales > 0]
+cat(sprintf("B2B active rows in [%d, %d]: %d\n", YEAR_LO, YEAR_HI, nrow(b2b)))
+
+load(file.path(PROC_DATA, "annual_accounts_more_selected_sample.RData"))
+aa <- as.data.table(df_annual_accounts_more_selected_sample)[
+  , .(vat = vat_ano, year, nace5d, inputs_VAT)]
+rm(df_annual_accounts_more_selected_sample)
+aa[, year   := as.integer(year)]
+aa[, nace4d := substr(sprintf("%05d", as.integer(nace5d)), 1, 4)]
+aa[, nace2d := substr(nace4d, 1, 2)]
+
+# Seller NACE 4d
+seller_nace <- unique(aa[, .(seller = vat, year, seller_nace4d = nace4d,
+                              seller_nace2d = nace2d)])
+b2b <- merge(b2b, seller_nace, by = c("seller", "year"), all.x = TRUE)
+b2b <- b2b[!is.na(seller_nace4d)]
+
+# Buyer NACE 2d (for cement filter and robustness)
+buyer_nace_yr <- unique(aa[, .(buyer = vat, year, buyer_nace2d = nace2d)])
+b2b <- merge(b2b, buyer_nace_yr, by = c("buyer", "year"), all.x = TRUE)
+
+# Buyer's total inputs from VAT returns -- the denominator for pair-shock-total
+buyer_inputs <- unique(aa[!is.na(inputs_VAT) & inputs_VAT > 0,
+                           .(buyer = vat, year, inputs_VAT_total = inputs_VAT)])
+
+# ETS flag and time-invariant firm_cost_share_regressor
+load(file.path(PROC_DATA, "firm_year_belgian_euets.RData"))
+ets_vats <- unique(as.data.table(firm_year_belgian_euets)$vat)
+b2b[, seller_is_ets := as.integer(seller %in% ets_vats)]
+
+load(file.path(PROC_DATA, "firm_cost_share_flavors.RData"))
+b2b <- merge(b2b,
+             cost_share_regressor[, .(seller = vat,
+                                      fcs_reg = firm_cost_share_regressor)],
+             by = "seller", all.x = TRUE)
+b2b[is.na(fcs_reg), fcs_reg := 0]
+
+# Drop contaminated VATs from 2021+ (per project_nace24_eutl_break_post2020 memory)
+contaminated_vats <- c(
+  "68A2F4B84714EC1829E0AC28D29F204FDEBFF70F71F2A22FDE65461FF3ADDDFF",
+  "F8F1FAA7804D5A5B8495B44A8586C93F19689545D2D96B5CBBB19221519EC076",
+  "1061796C42F184760E3BAF45DC443875C42284348C2B209B70F02ED964EDAC7E"
+)
+b2b <- b2b[!(seller %in% contaminated_vats & year >= 2021L)]
+
+# Drop ETS sellers without an fcs_reg value (consistent with Test H)
+ets_with_fcs <- cost_share_regressor$vat
+b2b <- b2b[!(seller_is_ets == 1L & !(seller %in% ets_with_fcs))]
+
+cat(sprintf("After cleaning: %d rows; %d distinct buyers; %d distinct ETS sellers\n",
+            nrow(b2b), uniqueN(b2b$buyer),
+            uniqueN(b2b[seller_is_ets == 1L]$seller)))
+
+# ---------------------------------------------------------------------------
+# 2. Cell-year stats and j*(n) identification
+# ---------------------------------------------------------------------------
+setkey(b2b, buyer, seller_nace4d, year)
+cell_yr <- b2b[, .(n_active_sellers = .N,
+                   n_ets_sellers    = sum(seller_is_ets == 1L),
+                   total_sales_cell = sum(corr_sales)),
+               by = .(buyer, seller_nace4d, year)]
+
+ets_in_cell <- unique(b2b[seller_is_ets == 1L,
+                          .(buyer, seller_nace4d, seller, fcs_reg)])
+setorder(ets_in_cell, buyer, seller_nace4d, -fcs_reg, seller)
+j_star <- ets_in_cell[, .SD[1L], by = .(buyer, seller_nace4d)]
+setnames(j_star, c("seller", "fcs_reg"), c("j_star", "fcs_j_star"))
+
+j_star_b2b <- merge(b2b[, .(buyer, seller_nace4d, year, seller, corr_sales)],
+                    j_star, by = c("buyer", "seller_nace4d"))
+j_star_b2b <- j_star_b2b[seller == j_star]
+j_window <- j_star_b2b[, .(t_first_j_star = min(year),
+                            t_last_j_star  = max(year),
+                            n_years_j_star_active = uniqueN(year)),
+                       by = .(buyer, seller_nace4d, j_star, fcs_j_star)]
+j_window[, is_type_a := as.integer(
+  t_first_j_star == YEAR_LO &
+  t_last_j_star  == YEAR_HI &
+  n_years_j_star_active == (YEAR_HI - YEAR_LO + 1L))]
+
+# ---------------------------------------------------------------------------
+# 3. Pre-shock (2010-14) j* spending share = mean[ corr_sales_{j*,b,t}
+#    / inputs_VAT_total_{b,t} ]. Time-invariant per cell.
+# ---------------------------------------------------------------------------
+j_star_pre <- merge(j_star_b2b[year %between% c(PRE_LO, PRE_HI),
+                                .(buyer, seller_nace4d, j_star, year,
+                                  corr_sales_j_star = corr_sales)],
+                    buyer_inputs, by = c("buyer", "year"), all.x = FALSE)
+j_star_pre[, s_j_star_yr := corr_sales_j_star / inputs_VAT_total]
+j_star_share_pre <- j_star_pre[, .(s_j_star_pre = mean(s_j_star_yr)),
+                                by = .(buyer, seller_nace4d, j_star)]
+
+cat(sprintf("Cells with j*: %d\n", nrow(j_star)))
+cat(sprintf("Cells with j*'s pre-shock spending share defined: %d\n",
+            nrow(j_star_share_pre)))
+
+# Pair-exposure regressor for upgrade #4
+j_window <- merge(j_window, j_star_share_pre,
+                  by = c("buyer", "seller_nace4d", "j_star"), all.x = TRUE)
+j_window[, pair_exposure_pre := fcs_j_star * s_j_star_pre]
+cat("Distribution of pair_exposure_pre (cells with both factors defined):\n")
+print(quantile(j_window$pair_exposure_pre,
+               c(0.5, 0.75, 0.9, 0.95, 0.99), na.rm = TRUE))
+
+# ---------------------------------------------------------------------------
+# 4. j*'s annual sales (NA when j* inactive) and regression panel
+# ---------------------------------------------------------------------------
+j_star_sales <- j_star_b2b[, .(buyer, seller_nace4d, year,
+                                corr_sales_j_star = corr_sales)]
+setkey(j_star_sales, buyer, seller_nace4d, year)
+
+panel <- cell_yr[n_active_sellers >= 2L]
+panel <- merge(panel, j_window, by = c("buyer", "seller_nace4d"))
+panel <- merge(panel, j_star_sales,
+               by = c("buyer", "seller_nace4d", "year"), all.x = TRUE)
+panel[, j_star_active := as.integer(!is.na(corr_sales_j_star))]
+panel[is.na(corr_sales_j_star), corr_sales_j_star := 0]
+panel[, share_top := corr_sales_j_star / total_sales_cell]
+
+# Buyer NACE 2d (one classification per buyer, latest non-missing)
+buyer_nace2d <- unique(buyer_nace_yr[!is.na(buyer_nace2d),
+                                      .(buyer, year, buyer_nace2d)])
+setorder(buyer_nace2d, buyer, -year)
+buyer_nace2d <- buyer_nace2d[, .SD[1L], by = buyer][, .(buyer, buyer_nace2d)]
+panel <- merge(panel, buyer_nace2d, by = "buyer", all.x = TRUE)
+
+panel[, post := as.integer(year >= POST_FROM)]
+panel[, year_c := year - YEAR_LO]                 # for linear trend
+panel[, cell      := paste(buyer, seller_nace4d, sep = "_")]
+panel[, sn4d_year := paste(seller_nace4d, year, sep = "_")]
+
+# Type-a + type-b restricted to j*'s tenure (the spec_a_b sample)
+samp_ab <- panel[is_type_a == 1L |
+                   (year >= t_first_j_star & year <= t_last_j_star)]
+
+cat(sprintf("\nSpec (a+b) sample: %d cell-years across %d cells\n",
+            nrow(samp_ab), uniqueN(samp_ab[, .(buyer, seller_nace4d)])))
+
+# Subsample with pair_exposure_pre defined (requires j* to be active in
+# 2010-14 and inputs_VAT_total to be observed for those years)
+samp_pe <- samp_ab[!is.na(pair_exposure_pre)]
+cat(sprintf("Spec (a+b) sample with pair_exposure_pre defined: %d cell-years across %d cells\n",
+            nrow(samp_pe), uniqueN(samp_pe[, .(buyer, seller_nace4d)])))
+
+# Build interactions (a) baseline fcs * post and fcs * year_c (upgrade #1);
+#                   (b) pair_exposure * post and pair_exposure * year_c (upgrade #4)
+samp_ab[, fcs_post     := fcs_j_star      * post]
+samp_ab[, fcs_yearc    := fcs_j_star      * year_c]
+samp_pe[, pe_post      := pair_exposure_pre * post]
+samp_pe[, pe_yearc     := pair_exposure_pre * year_c]
+
+# ---------------------------------------------------------------------------
+# Helper to extract a single coefficient's stats from a feols summary
+# ---------------------------------------------------------------------------
+extract_one <- function(model, term_name, label, n_cells) {
+  if (is.null(model)) return(NULL)
+  ct <- as.data.table(summary(model)$coeftable, keep.rownames = "term")
+  setnames(ct, c("term", "estimate", "se", "tval", "pval"))
+  row <- ct[term == term_name]
+  if (nrow(row) == 0L) return(NULL)
+  row[, spec := label]
+  row[, n    := nobs(model)]
+  row[, n_cells := n_cells]
+  row[, .(spec, term, estimate, se, tval, pval, n, n_cells)]
+}
+
+# =============================================================================
+# UPGRADE #1: DETRENDED Test H (baseline regressor = fcs_j_star)
+# =============================================================================
+cat("\n\n=== UPGRADE #1: DETRENDED Test H (regressor = fcs_{j*}) ===\n")
+
+# (1a) Baseline replication of spec (a+b) -- so the new file is self-contained
+m_baseline <- feols(share_top ~ fcs_post | cell + sn4d_year,
+                    data = samp_ab, cluster = ~ buyer)
+# (1b) Detrended: add fcs_{j*} * year_c as continuous control
+m_detrended <- feols(share_top ~ fcs_post + fcs_yearc | cell + sn4d_year,
+                     data = samp_ab, cluster = ~ buyer)
+
+cat("\n--- spec_ab baseline (no detrending) ---\n"); print(summary(m_baseline))
+cat("\n--- spec_ab detrended (fcs * year_c control) ---\n"); print(summary(m_detrended))
+
+up1_out <- rbindlist(list(
+  extract_one(m_baseline,  "fcs_post",  "fcs_baseline_spec_ab",
+              uniqueN(samp_ab[, .(buyer, seller_nace4d)])),
+  extract_one(m_detrended, "fcs_post",  "fcs_detrended_spec_ab",
+              uniqueN(samp_ab[, .(buyer, seller_nace4d)])),
+  extract_one(m_detrended, "fcs_yearc", "fcs_detrended_TREND",
+              uniqueN(samp_ab[, .(buyer, seller_nace4d)]))
+), use.names = TRUE)
+fwrite(up1_out, file.path(OUTPUT_TAB, "phase5_test_h_upgrades_main_up1.csv"))
+
+# Detrended event study: i(year_f, fcs) interactions plus fcs * year_c control
+samp_ab[, year_f := factor(year)]
+ref_year <- 2014L
+samp_ab[, year_f := relevel(year_f, ref = as.character(ref_year))]
+m_es_detrended <- feols(
+  share_top ~ i(year_f, fcs_j_star, ref = as.character(ref_year))
+              + fcs_yearc
+              | cell + sn4d_year,
+  data = samp_ab, cluster = ~ buyer)
+cat("\n--- detrended event study (with fcs_yearc control) ---\n")
+print(summary(m_es_detrended))
+
+es_dt <- as.data.table(summary(m_es_detrended)$coeftable, keep.rownames = "term")
+setnames(es_dt, c("term", "estimate", "se", "tval", "pval"))
+es_dt <- es_dt[grepl("year_f::", term)]
+es_dt[, year := suppressWarnings(as.integer(gsub(".*::([0-9]+):.*", "\\1", term)))]
+es_dt <- es_dt[!is.na(year)]
+es_dt[, ci_lo := estimate - 1.96 * se]
+es_dt[, ci_hi := estimate + 1.96 * se]
+es_dt <- rbind(es_dt[, .(year, estimate, se, ci_lo, ci_hi)],
+               data.table(year = ref_year, estimate = 0, se = 0,
+                          ci_lo = 0, ci_hi = 0),
+               fill = TRUE)
+setorder(es_dt, year)
+fwrite(es_dt, file.path(OUTPUT_TAB,
+                         "phase5_test_h_upgrades_event_study_detrended_fcs.csv"))
+
+p_es <- ggplot(es_dt, aes(x = year, y = estimate)) +
+  geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
+  geom_vline(xintercept = ref_year + 0.5, linetype = "dotted", colour = "grey50") +
+  geom_pointrange(aes(ymin = ci_lo, ymax = ci_hi),
+                  size = 0.3, colour = "navy") +
+  labs(title = "Test H detrended event study (regressor = fcs_{j*})",
+       subtitle = paste0("Coef on fcs_{j*} x year_f, with fcs_{j*} x year_c linear trend control. ",
+                          "Cell + seller_NACE4d x year FE; cluster on buyer."),
+       x = NULL, y = "Coef on fcs_{j*} x year (detrended)") +
+  theme_minimal(base_size = 11)
+ggsave(file.path(OUTPUT_FIG,
+                  "phase5_test_h_upgrades_event_study_detrended_fcs.pdf"),
+       p_es, width = 9, height = 4.5)
+
+# =============================================================================
+# UPGRADE #4: PAIR-EXPOSURE-ANCHORED Test H (regressor = pair_exposure_pre)
+# =============================================================================
+cat("\n\n=== UPGRADE #4: PAIR-EXPOSURE-ANCHORED Test H ===\n")
+
+m_pe_baseline   <- feols(share_top ~ pe_post              | cell + sn4d_year,
+                         data = samp_pe, cluster = ~ buyer)
+m_pe_detrended  <- feols(share_top ~ pe_post + pe_yearc   | cell + sn4d_year,
+                         data = samp_pe, cluster = ~ buyer)
+cat("\n--- pair-exposure baseline ---\n");      print(summary(m_pe_baseline))
+cat("\n--- pair-exposure + detrending ---\n");  print(summary(m_pe_detrended))
+
+up4_out <- rbindlist(list(
+  extract_one(m_pe_baseline,  "pe_post",  "pe_baseline_spec_ab",
+              uniqueN(samp_pe[, .(buyer, seller_nace4d)])),
+  extract_one(m_pe_detrended, "pe_post",  "pe_detrended_spec_ab",
+              uniqueN(samp_pe[, .(buyer, seller_nace4d)])),
+  extract_one(m_pe_detrended, "pe_yearc", "pe_detrended_TREND",
+              uniqueN(samp_pe[, .(buyer, seller_nace4d)]))
+), use.names = TRUE)
+fwrite(up4_out, file.path(OUTPUT_TAB, "phase5_test_h_upgrades_main_up4.csv"))
+
+# Detrended event study with pair_exposure
+samp_pe[, year_f := factor(year)]
+samp_pe[, year_f := relevel(year_f, ref = as.character(ref_year))]
+m_es_pe <- feols(
+  share_top ~ i(year_f, pair_exposure_pre, ref = as.character(ref_year))
+              + pe_yearc
+              | cell + sn4d_year,
+  data = samp_pe, cluster = ~ buyer)
+cat("\n--- pair-exposure detrended event study ---\n"); print(summary(m_es_pe))
+
+es_pe <- as.data.table(summary(m_es_pe)$coeftable, keep.rownames = "term")
+setnames(es_pe, c("term", "estimate", "se", "tval", "pval"))
+es_pe <- es_pe[grepl("year_f::", term)]
+es_pe[, year := suppressWarnings(as.integer(gsub(".*::([0-9]+):.*", "\\1", term)))]
+es_pe <- es_pe[!is.na(year)]
+es_pe[, ci_lo := estimate - 1.96 * se]
+es_pe[, ci_hi := estimate + 1.96 * se]
+es_pe <- rbind(es_pe[, .(year, estimate, se, ci_lo, ci_hi)],
+               data.table(year = ref_year, estimate = 0, se = 0,
+                          ci_lo = 0, ci_hi = 0), fill = TRUE)
+setorder(es_pe, year)
+fwrite(es_pe, file.path(OUTPUT_TAB,
+                         "phase5_test_h_upgrades_event_study_detrended_pe.csv"))
+
+p_es_pe <- ggplot(es_pe, aes(x = year, y = estimate)) +
+  geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
+  geom_vline(xintercept = ref_year + 0.5, linetype = "dotted", colour = "grey50") +
+  geom_pointrange(aes(ymin = ci_lo, ymax = ci_hi),
+                  size = 0.3, colour = "darkred") +
+  labs(title = "Test H detrended event study (regressor = pair_exposure_pre)",
+       subtitle = paste0("pair_exposure_pre = fcs_{j*} x s_{j*,pre}, in % of buyer's total cost. ",
+                          "Cell + seller_NACE4d x year FE."),
+       x = NULL, y = "Coef on pair_exposure_pre x year (detrended)") +
+  theme_minimal(base_size = 11)
+ggsave(file.path(OUTPUT_FIG,
+                  "phase5_test_h_upgrades_event_study_detrended_pe.pdf"),
+       p_es_pe, width = 9, height = 4.5)
+
+# Quartile split by pair_exposure_pre (cell-level, not cell-year)
+cell_pe <- unique(samp_pe[, .(buyer, seller_nace4d, pair_exposure_pre)])
+qs <- quantile(cell_pe$pair_exposure_pre, c(0.25, 0.5, 0.75), na.rm = TRUE)
+cat(sprintf("\npair_exposure_pre quartile thresholds: Q1=%.2e, median=%.2e, Q3=%.2e\n",
+            qs[1], qs[2], qs[3]))
+
+samp_pe[, pe_quartile := fcase(
+  pair_exposure_pre <  qs[1], "Q1_lowest",
+  pair_exposure_pre <  qs[2], "Q2",
+  pair_exposure_pre <  qs[3], "Q3",
+  pair_exposure_pre >= qs[3], "Q4_highest",
+  default = NA_character_
+)]
+
+run_subset_pe <- function(d, label, detrend = TRUE) {
+  if (nrow(d) < 50L || uniqueN(d$year) < 2L ||
+      uniqueN(d[pair_exposure_pre > 0]$pair_exposure_pre) < 2L) {
+    return(data.table(subset = label, detrend = detrend,
+                      n_cells = uniqueN(d[, .(buyer, seller_nace4d)]),
+                      n_obs = nrow(d), estimate = NA_real_, se = NA_real_,
+                      tval = NA_real_, pval = NA_real_))
+  }
+  fml <- if (detrend) share_top ~ pe_post + pe_yearc | cell + sn4d_year
+         else        share_top ~ pe_post             | cell + sn4d_year
+  m <- tryCatch(feols(fml, data = d, cluster = ~ buyer),
+                error = function(e) NULL)
+  if (is.null(m)) {
+    return(data.table(subset = label, detrend = detrend,
+                      n_cells = uniqueN(d[, .(buyer, seller_nace4d)]),
+                      n_obs = nrow(d), estimate = NA_real_, se = NA_real_,
+                      tval = NA_real_, pval = NA_real_))
+  }
+  ct <- as.data.table(summary(m)$coeftable, keep.rownames = "term")
+  setnames(ct, c("term", "estimate", "se", "tval", "pval"))
+  ct <- ct[term == "pe_post"]
+  data.table(subset = label, detrend = detrend,
+             n_cells = uniqueN(d[, .(buyer, seller_nace4d)]),
+             n_obs = nobs(m),
+             estimate = ct$estimate, se = ct$se,
+             tval = ct$tval, pval = ct$pval)
+}
+
+split_results <- rbindlist(list(
+  run_subset_pe(samp_pe,                                  "all_pair_exposure", detrend = FALSE),
+  run_subset_pe(samp_pe,                                  "all_pair_exposure", detrend = TRUE),
+  run_subset_pe(samp_pe[pe_quartile == "Q1_lowest"],      "Q1_lowest",         detrend = TRUE),
+  run_subset_pe(samp_pe[pe_quartile == "Q2"],             "Q2",                detrend = TRUE),
+  run_subset_pe(samp_pe[pe_quartile == "Q3"],             "Q3",                detrend = TRUE),
+  run_subset_pe(samp_pe[pe_quartile == "Q4_highest"],     "Q4_highest",        detrend = TRUE),
+  run_subset_pe(samp_pe[pe_quartile %in% c("Q3", "Q4_highest")],
+                                                          "Q3_Q4_top_half",    detrend = TRUE),
+  run_subset_pe(samp_pe[pe_quartile %in% c("Q1_lowest", "Q2")],
+                                                          "Q1_Q2_bottom_half", detrend = TRUE)
+), use.names = TRUE, fill = TRUE)
+
+cat("\n=== Test H quartile split by pair_exposure_pre (with detrending) ===\n")
+print(split_results)
+fwrite(split_results,
+       file.path(OUTPUT_TAB, "phase5_test_h_upgrades_pair_exposure_split.csv"))
+
+# =============================================================================
+# UPGRADE #5: CEMENT-SPECIFIC CLEAN TEST
+# =============================================================================
+cat("\n\n=== UPGRADE #5: CEMENT (NACE 23) -- detrended + winsorized ===\n")
+
+samp_cem <- samp_pe[buyer_nace2d == "23"]
+cat(sprintf("Cement-buyer cells with j* AND pair_exposure_pre: %d cells, %d cell-years\n",
+            uniqueN(samp_cem[, .(buyer, seller_nace4d)]), nrow(samp_cem)))
+
+if (nrow(samp_cem) >= 50L &&
+    uniqueN(samp_cem[pair_exposure_pre > 0]$pair_exposure_pre) >= 2L) {
+
+  # Winsorize regressor at p99 of cement distribution
+  pe_p99 <- quantile(samp_cem$pair_exposure_pre, 0.99, na.rm = TRUE)
+  samp_cem[, pair_exposure_pre_w := pmin(pair_exposure_pre, pe_p99)]
+  samp_cem[, pe_w_post  := pair_exposure_pre_w * post]
+  samp_cem[, pe_w_yearc := pair_exposure_pre_w * year_c]
+  cat(sprintf("Cement pair_exposure_pre winsorization at p99 = %.4e\n", pe_p99))
+
+  # And also winsorize fcs at its cement p99 for the seller-side specs
+  fcs_p99_cem <- quantile(samp_cem$fcs_j_star, 0.99, na.rm = TRUE)
+  samp_cem[, fcs_j_star_w := pmin(fcs_j_star, fcs_p99_cem)]
+  samp_cem[, fcs_w_post  := fcs_j_star_w * post]
+  samp_cem[, fcs_w_yearc := fcs_j_star_w * year_c]
+  cat(sprintf("Cement fcs_j_star winsorization at p99 = %.4e\n", fcs_p99_cem))
+
+  m_cem_fcs   <- feols(share_top ~ fcs_w_post + fcs_w_yearc | cell + sn4d_year,
+                       data = samp_cem, cluster = ~ buyer)
+  m_cem_pe    <- feols(share_top ~ pe_w_post  + pe_w_yearc  | cell + sn4d_year,
+                       data = samp_cem, cluster = ~ buyer)
+  cat("\n--- cement: detrended + winsorized; regressor = fcs_{j*} ---\n")
+  print(summary(m_cem_fcs))
+  cat("\n--- cement: detrended + winsorized; regressor = pair_exposure_pre ---\n")
+  print(summary(m_cem_pe))
+
+  cem_out <- rbindlist(list(
+    extract_one(m_cem_fcs, "fcs_w_post",  "cement_fcs_detrended_winsorized",
+                uniqueN(samp_cem[, .(buyer, seller_nace4d)])),
+    extract_one(m_cem_fcs, "fcs_w_yearc", "cement_fcs_TREND",
+                uniqueN(samp_cem[, .(buyer, seller_nace4d)])),
+    extract_one(m_cem_pe,  "pe_w_post",   "cement_pe_detrended_winsorized",
+                uniqueN(samp_cem[, .(buyer, seller_nace4d)])),
+    extract_one(m_cem_pe,  "pe_w_yearc",  "cement_pe_TREND",
+                uniqueN(samp_cem[, .(buyer, seller_nace4d)]))
+  ), use.names = TRUE)
+  fwrite(cem_out, file.path(OUTPUT_TAB, "phase5_test_h_upgrades_cement.csv"))
+
+  # Cement event study with the pair_exposure_pre regressor (winsorized)
+  samp_cem[, year_f := factor(year)]
+  samp_cem[, year_f := relevel(year_f, ref = as.character(ref_year))]
+  m_es_cem <- feols(
+    share_top ~ i(year_f, pair_exposure_pre_w, ref = as.character(ref_year))
+                + pe_w_yearc
+                | cell + sn4d_year,
+    data = samp_cem, cluster = ~ buyer)
+  cat("\n--- cement detrended event study (pair_exposure_pre winsorized) ---\n")
+  print(summary(m_es_cem))
+
+  es_cem <- as.data.table(summary(m_es_cem)$coeftable, keep.rownames = "term")
+  setnames(es_cem, c("term", "estimate", "se", "tval", "pval"))
+  es_cem <- es_cem[grepl("year_f::", term)]
+  es_cem[, year := suppressWarnings(as.integer(gsub(".*::([0-9]+):.*", "\\1", term)))]
+  es_cem <- es_cem[!is.na(year)]
+  es_cem[, ci_lo := estimate - 1.96 * se]
+  es_cem[, ci_hi := estimate + 1.96 * se]
+  es_cem <- rbind(es_cem[, .(year, estimate, se, ci_lo, ci_hi)],
+                  data.table(year = ref_year, estimate = 0, se = 0,
+                             ci_lo = 0, ci_hi = 0), fill = TRUE)
+  setorder(es_cem, year)
+  fwrite(es_cem,
+         file.path(OUTPUT_TAB, "phase5_test_h_upgrades_cement_event_study.csv"))
+
+  p_es_cem <- ggplot(es_cem, aes(x = year, y = estimate)) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
+    geom_vline(xintercept = ref_year + 0.5, linetype = "dotted", colour = "grey50") +
+    geom_pointrange(aes(ymin = ci_lo, ymax = ci_hi),
+                    size = 0.3, colour = "darkgreen") +
+    labs(title = "Test H CEMENT event study, detrended + winsorized",
+         subtitle = paste0("Buyer NACE 23 only; pair_exposure_pre winsorized at p99. ",
+                            "Cell + seller_NACE4d x year FE."),
+         x = NULL, y = "Coef on pair_exposure_pre x year") +
+    theme_minimal(base_size = 11)
+  ggsave(file.path(OUTPUT_FIG,
+                    "phase5_test_h_upgrades_cement_event_study.pdf"),
+         p_es_cem, width = 9, height = 4.5)
+
+} else {
+  cat("Cement subsample too small or degenerate; skipping cement regressions.\n")
+}
+
+cat("\nUpgrades 1, 4, 5 complete. Files:\n")
+cat(sprintf("  %s\n", file.path(OUTPUT_TAB, "phase5_test_h_upgrades_main_up1.csv")))
+cat(sprintf("  %s\n", file.path(OUTPUT_TAB, "phase5_test_h_upgrades_main_up4.csv")))
+cat(sprintf("  %s\n", file.path(OUTPUT_TAB, "phase5_test_h_upgrades_pair_exposure_split.csv")))
+cat(sprintf("  %s\n", file.path(OUTPUT_TAB, "phase5_test_h_upgrades_cement.csv")))
+cat(sprintf("  %s\n", file.path(OUTPUT_TAB, "phase5_test_h_upgrades_event_study_detrended_fcs.csv")))
+cat(sprintf("  %s\n", file.path(OUTPUT_TAB, "phase5_test_h_upgrades_event_study_detrended_pe.csv")))
+cat(sprintf("  %s\n", file.path(OUTPUT_TAB, "phase5_test_h_upgrades_cement_event_study.csv")))
+cat(sprintf("  %s\n", file.path(OUTPUT_FIG, "phase5_test_h_upgrades_event_study_detrended_fcs.pdf")))
+cat(sprintf("  %s\n", file.path(OUTPUT_FIG, "phase5_test_h_upgrades_event_study_detrended_pe.pdf")))
+cat(sprintf("  %s\n", file.path(OUTPUT_FIG, "phase5_test_h_upgrades_cement_event_study.pdf")))
