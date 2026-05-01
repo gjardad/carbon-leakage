@@ -114,16 +114,89 @@ The cleaner sectors are also unhelpful for the magnitude story:
 ### 5. fcs distribution is heavy-skewed
 The regressor `firm_cost_share_regressor` has p50 ≈ 3.3×10⁻⁵ and p99 ≈ 0.056. Most cells contribute near-zero to the identification of β. The pooled β can hide offsetting effects across the fcs distribution that would only be visible with a more flexible specification (e.g., fcs quantile dummies × Post).
 
-## Anchoring "shock too small" against the carbon-leakage literature
+## Anchoring "shock too small" — precise comparison with Peter & Ruane
 
-The "shock too small" verdict needs an anchor — what's a big enough shock? Two reference points from papers that *do* find substitution responses:
+The "shock too small" verdict needs a precise anchor: what counts as a big enough shock to expect detectable substitution? We construct an apples-to-apples comparison with **Peter & Ruane (2024)**, who use Indian tariff liberalization to identify σ across imported intermediate-input varieties. The comparison is at the buyer-supplier-pair level: % change in the *buyer's total input cost* implied by one supplier's price change under full pass-through.
 
-- **Peter & Ruane (2024, India tariff cuts).** Indian MFN tariffs on intermediate inputs fell by 15-20 percentage points on individual HS products. For an importer where the input is 5% of the bill, that's a 0.75-1.0 percentage point change in *total* input cost — at least 2-4× larger than the population p90 pair-shock-total in our data (1.16% in Phase IV; cement 8.80%). They identify σ ≈ 4-5 from these cuts.
-- **Arkolakis, Huneeus & Miyauchi (2025, Chile-US/China FTAs).** Bilateral tariffs fell from ~6-7% to near-zero on most HS lines — a ~6.5pp tariff cut on individual inputs. They observe firms expanding the number of foreign suppliers (extensive margin) and shifting expenditure toward newly-cheaper foreign sources (intensive margin). A 6.5pp tariff cut on a 5%-of-bill input is again ~0.3pp of total cost — comparable to our Phase IV cement signal but 30-50× larger than our population pair-shock-total.
+The object is the same in both contexts:
+```
+Δ(buyer's total cost)/cost  =  s × Δp_supplier
+```
+where `s` = supplier's share of the buyer's total input bill and `Δp_supplier` = supplier's price change under full pass-through.
 
-For a typical Belgian buyer, EU ETS at 2018-2020 prices (€25-30/tCO₂) translates to a 0.06-0.1pp change in total input cost per ETS supplier of typical emissions intensity. **One to two orders of magnitude smaller than the smallest shocks where the literature has identified substitution.** This is the anchor that makes "too small" quantitative rather than asserted.
+### Belgian ETS: empirical pair-shock distribution (Phase IV, ≈ 2015 → 2022)
 
-A back-of-the-envelope extrapolation: at ~€100/tCO₂ (4× the 2005-2020 average), the typical buyer's pair-shock-total would still be ~0.3-0.4pp — comparable to AHM's per-input shock magnitude and approaching P&R's. Whether that's enough for substitution depends on the ratio of pair-shock-total to buyer-side input-cost noise (σ_share). At cement-buyer σ_share ≈ 13% and a hypothetical Phase IV signal scaled 4× to 35%, signal-to-noise rises from 0.68σ to ~2.7σ — clearly above detection threshold. For non-cement sectors with σ_share ≈ 15% and current p90 < 0.5%, even 4× scaling lifts signal-to-noise only to ~0.13σ. **The "$X would be different" claim is plausible for cement and basically nowhere else.**
+EUA prices: 2015 ≈ €7.6, 2017 ≈ €5.8 (post-collapse, pre-MSR — *prices fell over 2015-17, so this window is not a useful shock*), 2022 ≈ €80.2. The Phase IV pair-shock-total numbers in [SHOCK_MAGNITUDE.md](SHOCK_MAGNITUDE.md) Moment 4(c) are computed at 2021-22 EUA levels. Since the 2015 baseline EUA was ≈ 1/10 of 2022, those Phase IV levels approximate the **2015 → 2022 increment under full pass-through.**
+
+```
+pair_shock_total = (shortage × EUA / total_cost) × (corr_sales / inputs_VAT_total)
+                 = f × s
+```
+
+| Quantile | Population (treated active pairs) | Cement-buyer pairs (NACE 23) |
+|---|---|---|
+| p50 | 0.0016% | 0.13% |
+| p90 | **1.16%** | **8.80%** |
+| p95 (interpolated) | ~5–7% | ~30–50% |
+| p99 | **39.1%** | **67.2%** |
+
+Note p95 is not directly tabulated — values are log-linear interpolations between p90 and p99 under a Pareto-tail approximation.
+
+### Peter & Ruane analogue (with explicit assumptions)
+
+I do not have P&R's microdata, so the equivalent magnitudes are reconstructed from what is publicly known about their setting. Every assumption is flagged.
+
+**What I take as given about P&R:**
+- Indian MFN tariffs on intermediate inputs, 2001–2007 sample window.
+- Pre-cut tariff levels: ~30–40% on the affected HS-6 products (well-documented; India's average MFN tariff on manufactures was ~32% in 2001).
+- Post-cut tariff levels: ~10–15% by 2007.
+- Per-HS-6-product tariff cut: Δt ≈ −15 to −20 percentage points; some products see −30pp.
+
+**Step 1 — Tariff cut → supplier price change.** For an importer, delivered price = world price × (1 + t). When `t` falls from `t₀` to `t₁`:
+```
+Δ(delivered price)/delivered price  =  Δt / (1 + t₀)
+```
+
+| Tariff path | Δt | Implied Δp_supplier (full pass-through) |
+|---|---|---|
+| 30% → 15% | −15pp | **−11.5%** |
+| 35% → 15% | −20pp | **−14.8%** |
+| 40% → 10% | −30pp | **−21.4%** |
+
+So per-supplier price change is **−12% to −21%**.
+
+**Step 2 — Multiply by importer's spending share `s` on the affected supplier.** Here is where I have to assume: P&R does not publish the buyer-side distribution of `s` (importer's spending share on a single tariff-cut HS-6 product). Plausible benchmarks from the trade microdata literature, drawn from typical importer-product concentration in Indian, Chinese, and Belgian customs panels:
+
+| Quantile (assumed) | Δp = −15% (typical mid-tariff cut) | Δp = −20% (large cut) |
+|---|---|---|
+| p90 (s = 0.10) | **−1.5%** | **−2.0%** |
+| p95 (s = 0.20) | **−3.0%** | **−4.0%** |
+| p99 (s = 0.40) | **−6.0%** | **−8.0%** |
+
+**Caveat to flag in the paper.** These `s` values are assumptions, not P&R numbers. A more careful version would require pulling the importer-product spending-share distribution from the Indian customs panel or from a comparable trade microdata source. The values here are plausible but not pinned down.
+
+### Apples-to-apples comparison
+
+| Quantile | Belgian ETS (full PT) | P&R (full PT, assumed s) | Magnitude relation |
+|---|---|---|---|
+| p90 | +1.16% | −1.5 to −2.0% | **comparable** |
+| p95 | ~5–7% | −3.0 to −4.0% | Belgian larger |
+| p99 | +39% | −6 to −8% | **Belgian 5–6× larger** |
+| p90 cement | +8.8% | −1.5 to −2.0% | Belgian 4–6× larger |
+| p99 cement | +67% | −6 to −8% | Belgian 8–10× larger |
+
+**At the right tail, the Belgian Phase IV shocks are AS LARGE OR LARGER than the per-HS-product shocks Peter & Ruane operated with.** The simple "shock too small" framing fails at the right tail. Where the two designs differ is the **distribution mass below p90**:
+
+- P&R: every Indian importer of a tariff-cut HS-6 product gets a uniform ~12–21% price decline on that product. Shocks are broad-based across millions of importer-product cells.
+- Belgian: the typical buyer-supplier pair has near-zero ETS exposure (population p50 of pair-shock-total ≈ 0.002%). Only ~9% of buyers have any ETS supplier. Cement is the only sector where the *typical* pair-shock is meaningful.
+
+### What this means for the paper
+
+The clean defensible claim is **not** "the shock is too small at the population." It is the more uncomfortable observation:
+
+> "At the right tail, Belgian Phase IV shocks are comparable to or larger than the per-HS-6-product shocks Peter & Ruane (2024) used to identify σ on Indian tariff cuts. We tested for substitution at exactly that right tail — Test H Q4 of pair_exposure_pre (β = +29, p = 0.16, n.s.) and the cement subsample under the buyer-side pair-exposure regressor (β = −213, p = 0.41, n.s.) — and find no statistically significant evidence of substitution at the magnitudes where the literature has identified σ. The shock is small at the typical pair, but not at the right tail; the null at the right tail is informative, not magnitude-driven. The remaining open questions are whether (i) substitution operates at a different margin than the within-NACE-4d-supplier level we test, or (ii) Belgian B2B has unusually sticky relational frictions even at the right-tail magnitudes."
+
+A back-of-envelope extrapolation: at ~€200/tCO₂ (≈ 2.5× the 2022 average), the Belgian population p90 would scale from 1.16% to ~3%, comparable to P&R's p95. At that price, the right-tail magnitudes already match where σ is identifiable in P&R; whether substitution would actually appear depends on whether the Belgian null at the existing right tail is power-bound or behaviorally bound. Our current data cannot distinguish.
 
 ## Upgrades implemented (April 2026)
 
