@@ -263,42 +263,62 @@ up1_out <- rbindlist(list(
 ), use.names = TRUE)
 fwrite(up1_out, file.path(OUTPUT_TAB, "phase5_test_h_upgrades_main_up1.csv"))
 
-# Detrended event study: i(year_f, fcs) interactions plus fcs * year_c control
+# Event study: i(year_f, fcs) interactions WITHOUT fcs_yearc to avoid the
+# collinearity that inflates SEs symmetrically around ref_year. The linear
+# pre-trend is removed POST-HOC by fitting a line through the 2005-2014
+# coefficients (with ref_year coefficient = 0 by construction) and
+# subtracting it from every year. The detrended coefficients are reported
+# alongside the raw coefficients so readers can see both.
 samp_ab[, year_f := factor(year)]
 ref_year <- 2014L
 samp_ab[, year_f := relevel(year_f, ref = as.character(ref_year))]
-m_es_detrended <- feols(
-  share_top ~ i(year_f, fcs_j_star, ref = as.character(ref_year))
-              + fcs_yearc
-              | cell + sn4d_year,
+m_es_raw <- feols(
+  share_top ~ i(year_f, fcs_j_star, ref = as.character(ref_year)) |
+              cell + sn4d_year,
   data = samp_ab, cluster = ~ buyer)
-cat("\n--- detrended event study (with fcs_yearc control) ---\n")
-print(summary(m_es_detrended))
+cat("\n--- raw event study (no trend control) ---\n")
+print(summary(m_es_raw))
 
-es_dt <- as.data.table(summary(m_es_detrended)$coeftable, keep.rownames = "term")
-setnames(es_dt, c("term", "estimate", "se", "tval", "pval"))
-es_dt <- es_dt[grepl("year_f::", term)]
-es_dt[, year := suppressWarnings(as.integer(gsub(".*::([0-9]+):.*", "\\1", term)))]
-es_dt <- es_dt[!is.na(year)]
-es_dt[, ci_lo := estimate - 1.96 * se]
-es_dt[, ci_hi := estimate + 1.96 * se]
-es_dt <- rbind(es_dt[, .(year, estimate, se, ci_lo, ci_hi)],
-               data.table(year = ref_year, estimate = 0, se = 0,
-                          ci_lo = 0, ci_hi = 0),
-               fill = TRUE)
-setorder(es_dt, year)
+detrend_eventstudy <- function(model, ref_yr, pre_lo = YEAR_LO,
+                               pre_hi = ref_yr) {
+  ct <- as.data.table(summary(model)$coeftable, keep.rownames = "term")
+  setnames(ct, c("term", "estimate", "se", "tval", "pval"))
+  ct <- ct[grepl("year_f::", term)]
+  ct[, year := suppressWarnings(as.integer(gsub(".*::([0-9]+):.*", "\\1", term)))]
+  ct <- ct[!is.na(year)]
+  out <- rbind(ct[, .(year, estimate, se)],
+               data.table(year = ref_yr, estimate = 0, se = 0), fill = TRUE)
+  setorder(out, year)
+  # Fit linear trend through pre-period coefficients (anchored at ref_yr = 0)
+  pre <- out[year >= pre_lo & year <= pre_hi]
+  slope <- if (nrow(pre) >= 2L)
+    coef(lm(estimate ~ I(year - ref_yr) + 0, data = pre))[["I(year - ref_yr)"]]
+  else 0
+  out[, trend_pred := slope * (year - ref_yr)]
+  out[, estimate_detrended := estimate - trend_pred]
+  out[, ci_lo := estimate - 1.96 * se]
+  out[, ci_hi := estimate + 1.96 * se]
+  out[, ci_lo_detrended := estimate_detrended - 1.96 * se]
+  out[, ci_hi_detrended := estimate_detrended + 1.96 * se]
+  attr(out, "slope") <- slope
+  out
+}
+
+es_dt <- detrend_eventstudy(m_es_raw, ref_year)
+cat(sprintf("Pre-trend slope (fcs event study): %.4f per year\n",
+            attr(es_dt, "slope")))
 fwrite(es_dt, file.path(OUTPUT_TAB,
                          "phase5_test_h_upgrades_event_study_detrended_fcs.csv"))
 
-p_es <- ggplot(es_dt, aes(x = year, y = estimate)) +
+p_es <- ggplot(es_dt, aes(x = year, y = estimate_detrended)) +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
   geom_vline(xintercept = ref_year + 0.5, linetype = "dotted", colour = "grey50") +
-  geom_pointrange(aes(ymin = ci_lo, ymax = ci_hi),
+  geom_pointrange(aes(ymin = ci_lo_detrended, ymax = ci_hi_detrended),
                   size = 0.3, colour = "navy") +
   labs(title = "Test H detrended event study (regressor = fcs_{j*})",
-       subtitle = paste0("Coef on fcs_{j*} x year_f, with fcs_{j*} x year_c linear trend control. ",
-                          "Cell + seller_NACE4d x year FE; cluster on buyer."),
-       x = NULL, y = "Coef on fcs_{j*} x year (detrended)") +
+       subtitle = paste0("Year-by-year coefs minus linear trend fitted on 2005-2014 (anchored at ", ref_year, "=0). ",
+                          "Cell + seller_NACE4d x year FE."),
+       x = NULL, y = "Detrended coef on fcs_{j*} x year") +
   theme_minimal(base_size = 11)
 ggsave(file.path(OUTPUT_FIG,
                   "phase5_test_h_upgrades_event_study_detrended_fcs.pdf"),
@@ -326,39 +346,31 @@ up4_out <- rbindlist(list(
 ), use.names = TRUE)
 fwrite(up4_out, file.path(OUTPUT_TAB, "phase5_test_h_upgrades_main_up4.csv"))
 
-# Detrended event study with pair_exposure
+# Pair-exposure event study: same fix -- raw + post-hoc detrending
 samp_pe[, year_f := factor(year)]
 samp_pe[, year_f := relevel(year_f, ref = as.character(ref_year))]
 m_es_pe <- feols(
-  share_top ~ i(year_f, pair_exposure_pre, ref = as.character(ref_year))
-              + pe_yearc
-              | cell + sn4d_year,
+  share_top ~ i(year_f, pair_exposure_pre, ref = as.character(ref_year)) |
+              cell + sn4d_year,
   data = samp_pe, cluster = ~ buyer)
-cat("\n--- pair-exposure detrended event study ---\n"); print(summary(m_es_pe))
+cat("\n--- pair-exposure event study (raw, post-hoc detrended) ---\n")
+print(summary(m_es_pe))
 
-es_pe <- as.data.table(summary(m_es_pe)$coeftable, keep.rownames = "term")
-setnames(es_pe, c("term", "estimate", "se", "tval", "pval"))
-es_pe <- es_pe[grepl("year_f::", term)]
-es_pe[, year := suppressWarnings(as.integer(gsub(".*::([0-9]+):.*", "\\1", term)))]
-es_pe <- es_pe[!is.na(year)]
-es_pe[, ci_lo := estimate - 1.96 * se]
-es_pe[, ci_hi := estimate + 1.96 * se]
-es_pe <- rbind(es_pe[, .(year, estimate, se, ci_lo, ci_hi)],
-               data.table(year = ref_year, estimate = 0, se = 0,
-                          ci_lo = 0, ci_hi = 0), fill = TRUE)
-setorder(es_pe, year)
+es_pe <- detrend_eventstudy(m_es_pe, ref_year)
+cat(sprintf("Pre-trend slope (pair_exposure event study): %.4f per year\n",
+            attr(es_pe, "slope")))
 fwrite(es_pe, file.path(OUTPUT_TAB,
                          "phase5_test_h_upgrades_event_study_detrended_pe.csv"))
 
-p_es_pe <- ggplot(es_pe, aes(x = year, y = estimate)) +
+p_es_pe <- ggplot(es_pe, aes(x = year, y = estimate_detrended)) +
   geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
   geom_vline(xintercept = ref_year + 0.5, linetype = "dotted", colour = "grey50") +
-  geom_pointrange(aes(ymin = ci_lo, ymax = ci_hi),
+  geom_pointrange(aes(ymin = ci_lo_detrended, ymax = ci_hi_detrended),
                   size = 0.3, colour = "darkred") +
   labs(title = "Test H detrended event study (regressor = pair_exposure_pre)",
-       subtitle = paste0("pair_exposure_pre = fcs_{j*} x s_{j*,pre}, in % of buyer's total cost. ",
+       subtitle = paste0("Year-by-year minus linear pre-trend (2005-2014 fit, anchored at ", ref_year, "=0). ",
                           "Cell + seller_NACE4d x year FE."),
-       x = NULL, y = "Coef on pair_exposure_pre x year (detrended)") +
+       x = NULL, y = "Detrended coef on pair_exposure_pre x year") +
   theme_minimal(base_size = 11)
 ggsave(file.path(OUTPUT_FIG,
                   "phase5_test_h_upgrades_event_study_detrended_pe.pdf"),
@@ -471,40 +483,31 @@ if (nrow(samp_cem) >= 50L &&
   ), use.names = TRUE)
   fwrite(cem_out, file.path(OUTPUT_TAB, "phase5_test_h_upgrades_cement.csv"))
 
-  # Cement event study with the pair_exposure_pre regressor (winsorized)
+  # Cement event study: raw i() regression, post-hoc detrending
   samp_cem[, year_f := factor(year)]
   samp_cem[, year_f := relevel(year_f, ref = as.character(ref_year))]
   m_es_cem <- feols(
-    share_top ~ i(year_f, pair_exposure_pre_w, ref = as.character(ref_year))
-                + pe_w_yearc
-                | cell + sn4d_year,
+    share_top ~ i(year_f, pair_exposure_pre_w, ref = as.character(ref_year)) |
+                cell + sn4d_year,
     data = samp_cem, cluster = ~ buyer)
-  cat("\n--- cement detrended event study (pair_exposure_pre winsorized) ---\n")
+  cat("\n--- cement event study (raw, post-hoc detrended) ---\n")
   print(summary(m_es_cem))
 
-  es_cem <- as.data.table(summary(m_es_cem)$coeftable, keep.rownames = "term")
-  setnames(es_cem, c("term", "estimate", "se", "tval", "pval"))
-  es_cem <- es_cem[grepl("year_f::", term)]
-  es_cem[, year := suppressWarnings(as.integer(gsub(".*::([0-9]+):.*", "\\1", term)))]
-  es_cem <- es_cem[!is.na(year)]
-  es_cem[, ci_lo := estimate - 1.96 * se]
-  es_cem[, ci_hi := estimate + 1.96 * se]
-  es_cem <- rbind(es_cem[, .(year, estimate, se, ci_lo, ci_hi)],
-                  data.table(year = ref_year, estimate = 0, se = 0,
-                             ci_lo = 0, ci_hi = 0), fill = TRUE)
-  setorder(es_cem, year)
+  es_cem <- detrend_eventstudy(m_es_cem, ref_year)
+  cat(sprintf("Pre-trend slope (cement event study): %.4f per year\n",
+              attr(es_cem, "slope")))
   fwrite(es_cem,
          file.path(OUTPUT_TAB, "phase5_test_h_upgrades_cement_event_study.csv"))
 
-  p_es_cem <- ggplot(es_cem, aes(x = year, y = estimate)) +
+  p_es_cem <- ggplot(es_cem, aes(x = year, y = estimate_detrended)) +
     geom_hline(yintercept = 0, linetype = "dashed", colour = "grey40") +
     geom_vline(xintercept = ref_year + 0.5, linetype = "dotted", colour = "grey50") +
-    geom_pointrange(aes(ymin = ci_lo, ymax = ci_hi),
+    geom_pointrange(aes(ymin = ci_lo_detrended, ymax = ci_hi_detrended),
                     size = 0.3, colour = "darkgreen") +
     labs(title = "Test H CEMENT event study, detrended + winsorized",
-         subtitle = paste0("Buyer NACE 23 only; pair_exposure_pre winsorized at p99. ",
-                            "Cell + seller_NACE4d x year FE."),
-         x = NULL, y = "Coef on pair_exposure_pre x year") +
+         subtitle = paste0("Buyer NACE 23 only; pair_exposure_pre winsorized at p99; ",
+                            "year-by-year minus pre-2014 linear fit."),
+         x = NULL, y = "Detrended coef on pair_exposure_pre x year") +
     theme_minimal(base_size = 11)
   ggsave(file.path(OUTPUT_FIG,
                     "phase5_test_h_upgrades_cement_event_study.pdf"),
