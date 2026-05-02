@@ -20,6 +20,10 @@ There is **no 2005–2008 / Phase II flavor**. We need a third flavor `cost_shar
 
 The customs panel `customs_import_panel_regulated.RData` has the right granularity (importer × CN8 × source country × year) but is restricted to non-ETS source countries only — the CMdG identifying sample. For the buyer-supplier analysis (§5.2.2 onward) we need both EU and non-ETS rows.
 
+### (2b) Customs panel: deliberately truncated to 2019
+
+The processed customs panel ends in 2019 because it was built to match CMdG's 2000--2019 window. **This is not a data-availability constraint** — earlier turns in this conversation incorrectly attributed the truncation to a 2020 administrative discontinuity, which does not exist. Per `IMPORT_LEAKAGE.md`: "Sample period stops at 2019 to match CMdG. ... Extending the sample is a future to-do." The raw NBB customs data extends through 2022+ and a 2000--2022 rebuild is straightforward (no NBB reconciliation request needed).
+
 ### (3) Customs panel: quantity is MISSING
 
 The processed customs panel does not retain a quantity column (only `value` in EUR). Unit-values cannot be computed from the existing panel. The raw NBB customs data does record quantity (per `IMPORT_LEAKAGE.md`); it was dropped during panel construction.
@@ -39,15 +43,16 @@ With the same fallback to the earliest available 3-year window for firms missing
 
 **Verification:** the resulting flavor should yield a non-empty distribution; expect right-tail at ~0.5%–1% (Phase II EUA ranged €0.7–€22, much smaller than Phase IV).
 
-### P2. Rebuild customs panel preserving quantity and both blocs
+### P2. Rebuild customs panel preserving quantity, both blocs, and extending to 2022
 
 Modify `analysis/phase2_build_customs_panel.R` (or create `phase6_build_customs_two_bloc_panel.R`) to:
 - Preserve quantity (kg) from the raw data alongside value (EUR).
 - Drop the non-ETS-country filter (keep both EU and non-EU rows).
+- **Extend the sample window to 2022** (the headline CMdG-replication panel stops at 2019 to match CMdG, but the raw NBB data is available through 2022; the buyer-supplier analyses in B1--B4 should run on the full 2000--2022 window to align with the within-country B2B sample and capture the Phase IV price spike).
 
 Save into a new file `customs_import_panel_two_bloc.RData` so it does not collide with the existing CMdG-replication panel.
 
-**Diagnostic to run on the rebuilt panel:** the original §3 of `phase5_diagnostic_for_unrun_sections.R` — fraction of (HS6 × country × year) cells with both value > 0 and quantity > 0, for the regulated and unregulated subsets separately.
+**Diagnostic to run on the rebuilt panel:** the original §3 of `phase5_diagnostic_for_unrun_sections.R` — fraction of (HS6 × country × year) cells with both value > 0 and quantity > 0, for the regulated and unregulated subsets separately. Also verify the year range extends through 2022 and that 2020--2022 row counts are consistent with prior years.
 
 ---
 
@@ -121,9 +126,9 @@ share_top_{f,p,t} = β · pair_exposure^{EU}_{f,p} × 1[t ≥ 2015]
 
 ### B2 (§5.2.3) — HTE on customs analysis
 
-**Spec.** (a) Horizon-h LP, h ∈ {0, …, 4} years post-2015 (customs panel ends 2019, so longer horizons not feasible without panel extension). (b) Quartile splits of pair_exposure^{EU}_{f,p}.
+**Spec.** (a) Horizon-h LP, h ∈ {0, …, 7} years post-2015 on the **2000–2022** rebuilt customs panel from P2. (b) Quartile splits of pair_exposure^{EU}_{f,p}.
 
-**Note.** A Phase-II-cutoff customs version (analog of A3+A4) would have horizons up to h=11; flag as a worthwhile extension but not on the critical path.
+**Note.** A Phase-II-cutoff customs version (2008 cutoff with horizons up to h=14 on the 2008→2022 window) would be a direct analog of A3+A4 on the international margin and is now feasible with the rebuilt panel. Worth running as a follow-up parallel to A3+A4.
 
 **Effort.** ~1.5 days on top of B1.
 
@@ -174,8 +179,9 @@ Days 5-9: B3 + B4 [non-EU price response + σ, ~5 days, parallel to B1/B2]
 
 ## Open questions for the co-author
 
-1. **PRODCOM**: B3/B4 use customs unit-values. PRODCOM has firm-level domestic unit-values that could complement the customs analysis on the within-country side (do regulated Belgian producers raise their prices in response to ETS, at the unit-value level rather than the PPI level?). This is closer to `martin2014`'s firm-level pass-through specification. Worth flagging if the co-author has PRODCOM access.
-2. **Phase IV customs extension**: the customs panel ends in 2019 due to administrative discontinuity. Restoring 2020+ would (a) extend B2's horizon range, (b) align the customs and B2B sample windows, (c) capture the post-MSR Phase IV price spike. Worth checking with NBB whether the post-2019 series can be retroactively reconciled.
+1. **PRODCOM**: B3/B4 use customs unit-values. PRODCOM has firm-level domestic unit-values that could complement the customs analysis on the within-country side (do regulated Belgian producers raise their prices in response to ETS, at the unit-value level rather than the PPI level?). This is closer to `martin2014`'s firm-level pass-through specification. Deferred per user direction; revisit later.
+
+(A previously listed open question about extending the customs panel past 2019 is removed: the 2019 truncation in the existing processed panel is a deliberate match to CMdG's window, not an administrative discontinuity. Extending to 2022 is folded into prerequisite P2 above.)
 
 ---
 
