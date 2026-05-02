@@ -48,8 +48,8 @@ dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
 # 1. Inputs
 # ---------------------------------------------------------------------------
 ext_path <- file.path(PROC_DATA, "customs_import_panel_extended.RData")
-cps_path <- file.path(PROC_DATA, "cpshock_annual.RData")
-ci_path  <- file.path(REPO_DIR, "data", "concordances", "hs6_carbon_intensity.csv")
+cps_path <- file.path(OUT_DATA, "cpshock_annual.RData")    # repo data/processed/, not NBB
+ci_path  <- file.path(OUT_DATA, "hs6_carbon_intensity.csv") # built by phase6_build_hs6_carbon_intensity.R
 
 missing_ok <- TRUE
 for (p in c(ext_path, cps_path, ci_path)) {

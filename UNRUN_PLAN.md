@@ -177,6 +177,50 @@ Days 5-9: B3 + B4 [non-EU price response + σ, ~5 days, parallel to B1/B2]
 
 **Single-stream wall time: ~13.5–15 days.**
 
+## Group C: Additional import-margin analyses (added 2026-05-01)
+
+### C1 (§5.2.6) — Imports vs.\ domestic substitution
+
+**Spec.** At the (Belgian buyer × upstream NACE 4-digit × year) level, regress
+import share on (carbon-cost regressor × Post). Numerator from customs panel
+aggregated to NACE 4d via CN8 concordance; denominator base from B2B panel.
+
+**Sample.** Cells with positive pre-shock spending in BOTH channels (substitution feasibility).
+
+**FE.** buyer × NACE 4d (cell mean), buyer × year (buyer-year scale).
+
+**Clustering.** Two-way: buyer + NACE 4d.
+
+**Effort.** ~2 days (script written, tested locally; needs RMD run on full panels).
+
+### C2 (§5.2.7) — Parallel-trends investigation for B1
+
+**Motivation.** B1 finds EU-share rises post-2015 — wrong-signed for substitution toward non-EU. Test whether this is a pre-existing trend.
+
+**Specs.**
+1. Pre-trend regression: regress share_eu on pair_exposure_EU × year_centered over 2000-2014 only.
+2. Full event study with leads back to 2000.
+3. Raw-trajectory plot: mean share_eu by year × quartile of pair_exposure_EU.
+
+**Effort.** ~1 day (script written; tested locally — pre-trend β = +0.073, p < 10^-50, suggesting the EU-share result is largely confounding, not causal).
+
+### C3 (§5.2.8) — Within-EU substitution toward less emission-intensive sources
+
+**Prerequisites.** Build emission intensity at the (NACE 2d × EU country × year) level from Eurostat ENV_AC_AINAH_R2 (air emissions) / NAMA_10_A64 (GVA). Helper script `phase6_build_eu_emission_intensity.R` written; needs internet to download Eurostat data (~30 minutes).
+
+**Spec.** Importer × HS6 × EU-country × year panel, restricted to regulated products and EU sources:
+```
+share_{f,p,c,t}^{within-EU} = β · low_intensity_{p,c} × Post
+                              + α_{f,p,c} + δ_{c,t} + ε
+```
+where low_intensity_{p,c} is the bottom-tercile dummy of country c's NACE 2d emission intensity for the NACE 2d corresponding to HS6 p.
+
+**FE.** importer × HS6 × source-country (cell mean), source-country × year (country-year shocks).
+
+**Clustering.** Two-way: importer + source country.
+
+**Effort.** ~2-3 days (Eurostat data build + analysis; both scripts written, not yet tested).
+
 ## Open questions for the co-author
 
 1. **PRODCOM**: B3/B4 use customs unit-values. PRODCOM has firm-level domestic unit-values that could complement the customs analysis on the within-country side (do regulated Belgian producers raise their prices in response to ETS, at the unit-value level rather than the PPI level?). This is closer to `martin2014`'s firm-level pass-through specification. Deferred per user direction; revisit later.
