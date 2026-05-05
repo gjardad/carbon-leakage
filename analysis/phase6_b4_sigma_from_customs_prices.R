@@ -67,7 +67,15 @@ if (!missing_ok) {
 }
 
 load(ext_path); panel <- as.data.table(panel)
-load(cps_path)  # expects object `cpshock_annual` with cols year, cpshock
+load(cps_path)
+# cpshock_annual is built by phase3_build_cpshock.R as a tibble with columns
+# year, cpshock_surprise, cpshock_shock, n_months, n_surprise_nonzero, pre_ets.
+# We use cpshock_surprise (the high-frequency event-window surprise series,
+# per phase3_build_cpshock.R: "we use Surprise as the primary annual series").
+# Convert to data.table for downstream `.()` syntax and rename to `cpshock`
+# for clarity in the IV interaction below.
+cpshock_annual <- as.data.table(cpshock_annual)
+cpshock_annual[, cpshock := cpshock_surprise]
 ci <- fread(ci_path)
 
 # ---------------------------------------------------------------------------
