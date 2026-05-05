@@ -68,10 +68,10 @@ The numbering below uses the actual `\label{}` keys from the .tex files.
 
 | Subsection | Label | Status | Script | Notes |
 |---|---|---|---|---|
-| Headline within-NACE-4d | `sec:domestic_within` | 🟡 | `phase5_test_h_most_exposed_ets_supplier.R` + upgrades | Done but should re-run with linear-trend control (analog of B1 fix). Test H's pre-trend was previously tested and was insignificant — but worth rechecking after the B1 finding. |
+| Headline within-NACE-4d | `sec:domestic_within` | ✅ | `phase5_test_h_most_exposed_ets_supplier.R` + `phase6_test_h_corrected.R` (RMD-RUN 2026-05-04) | Trend-corrected sibling confirms robustness: β_naive = +1.34 (n.s.), β_trend-corrected = +0.20 (n.s.), trend coef +0.22/yr (p=0.31, n.s.). Headline σ ≈ 1 unaffected by trend control. |
 | HTE by time horizon (A1) | `sec:domestic_within_horizon` | 🟠 | `phase6_a1_test_h_horizon_lp.R` | Ready, not run on RMD |
 | HTE by shock magnitude | `sec:domestic_within_hte` | ✅ | (Q4 splits inside `phase5_test_h_most_exposed_ets_supplier.R`) | Already in paper as Table |
-| Headline across-category | `sec:domestic_across` | ✅ | `phase5_test_i_cross_nace_substitution.R` | |
+| Headline across-category | `sec:domestic_across` | ✅ | `phase5_test_i_cross_nace_substitution.R` (paper headline) + `phase6_test_i_corrected.R` (RMD-RUN, has known panel-construction discrepancy with paper's β = -0.003 — likely unbalanced-vs-balanced panel; trend coefficient itself is small and insignificant either way, so the trend-correction conclusion is robust) | |
 | HTE on across-category (A2) | `sec:domestic_across_hte` | 🟠 | `phase6_a2_test_i_horizon_hte.R` | Ready, not run on RMD |
 | Phase II event-study (A3) | `sec:domestic_phase2` | 🟠 | `phase6_a3_a4_phase2_eventstudy.R` | Ready; P1 dependency done. |
 | Short-run vs long-run Phase II (A4) | `sec:domestic_phase2_horizon` | 🟠 | `phase6_a3_a4_phase2_eventstudy.R` | Same script as A3 |
