@@ -142,8 +142,8 @@ m_naive <- tryCatch(
         data = panel, cluster = ~ buyer, notes = FALSE),
   error = function(e) NULL)
 if (!is.null(m_naive)) {
-  ct <- as.data.table(summary(m_naive)$coeftable, keep.rownames = "term")
-  setnames(ct, c("term", "estimate", "se", "tval", "pval"))
+  ct <- as.data.table(coeftable(m_naive), keep.rownames = "term")
+  setnames(ct, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"), c("estimate", "se", "tval", "pval"))
   ct[, spec := "I.3 naive (no trend control)"]
   specs[["naive"]] <- ct
 }
@@ -154,8 +154,8 @@ m_trend <- tryCatch(
         data = panel, cluster = ~ buyer, notes = FALSE),
   error = function(e) NULL)
 if (!is.null(m_trend)) {
-  ct <- as.data.table(summary(m_trend)$coeftable, keep.rownames = "term")
-  setnames(ct, c("term", "estimate", "se", "tval", "pval"))
+  ct <- as.data.table(coeftable(m_trend), keep.rownames = "term")
+  setnames(ct, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"), c("estimate", "se", "tval", "pval"))
   ct[, spec := "I.3 trend-corrected"]
   specs[["trend"]] <- ct
 }

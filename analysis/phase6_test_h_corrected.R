@@ -158,8 +158,9 @@ m_naive <- tryCatch(
         data = samp_ab, cluster = ~ buyer, notes = FALSE),
   error = function(e) NULL)
 if (!is.null(m_naive)) {
-  ct <- as.data.table(summary(m_naive)$coeftable, keep.rownames = "term")
-  setnames(ct, c("term", "estimate", "se", "tval", "pval"))
+  ct <- as.data.table(coeftable(m_naive), keep.rownames = "term")
+  setnames(ct, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
+           c("estimate", "se", "tval", "pval"))
   ct[, spec := "naive (no trend control)"]
   specs[["naive"]] <- ct
 }
@@ -171,8 +172,8 @@ m_trend <- tryCatch(
         data = samp_ab, cluster = ~ buyer, notes = FALSE),
   error = function(e) NULL)
 if (!is.null(m_trend)) {
-  ct <- as.data.table(summary(m_trend)$coeftable, keep.rownames = "term")
-  setnames(ct, c("term", "estimate", "se", "tval", "pval"))
+  ct <- as.data.table(coeftable(m_trend), keep.rownames = "term")
+  setnames(ct, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"), c("estimate", "se", "tval", "pval"))
   ct[, spec := "trend-corrected"]
   specs[["trend"]] <- ct
 }
@@ -184,8 +185,8 @@ m_short <- tryCatch(
         data = sub, cluster = ~ buyer, notes = FALSE),
   error = function(e) NULL)
 if (!is.null(m_short)) {
-  ct <- as.data.table(summary(m_short)$coeftable, keep.rownames = "term")
-  setnames(ct, c("term", "estimate", "se", "tval", "pval"))
+  ct <- as.data.table(coeftable(m_short), keep.rownames = "term")
+  setnames(ct, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"), c("estimate", "se", "tval", "pval"))
   ct[, spec := "shorter pre-period (2010+)"]
   specs[["short"]] <- ct
 }
@@ -197,8 +198,8 @@ m_short_trend <- tryCatch(
         data = sub, cluster = ~ buyer, notes = FALSE),
   error = function(e) NULL)
 if (!is.null(m_short_trend)) {
-  ct <- as.data.table(summary(m_short_trend)$coeftable, keep.rownames = "term")
-  setnames(ct, c("term", "estimate", "se", "tval", "pval"))
+  ct <- as.data.table(coeftable(m_short_trend), keep.rownames = "term")
+  setnames(ct, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"), c("estimate", "se", "tval", "pval"))
   ct[, spec := "shorter + trend"]
   specs[["short_trend"]] <- ct
 }
@@ -216,11 +217,11 @@ H_LO_eff <- max(H_LO, min(samp_ab$year) - ANCHOR)
 samp_ab[, year_f := factor(year, levels = (ANCHOR + H_LO_eff):(ANCHOR + H_HI_eff))]
 
 extract_es_table <- function(m) {
-  ct <- as.data.table(summary(m)$coeftable, keep.rownames = "term")
+  ct <- as.data.table(coeftable(m), keep.rownames = "term")
+  setnames(ct, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
+           c("est", "se", "tval", "pval"))
   ct[, year := suppressWarnings(as.integer(sub("^year_f::([0-9]+):.*$", "\\1", term)))]
   ct[, h := year - ANCHOR]
-  setnames(ct, c("term", "estimate", "se", "tval", "pval", "year", "h"),
-           c("term", "est", "se", "tval", "pval", "year", "h"))
   ct[!is.na(h), .(h, est, se, tval, pval)]
 }
 
