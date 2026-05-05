@@ -78,12 +78,22 @@ cat("\n###############################################################\n")
 cat("# (2) Customs panel: does importer x HS6 pair_exposure exist?\n")
 cat("###############################################################\n\n")
 
-# Look for the customs panel file.
+# Look for the customs panel file. Prefer the EXTENDED panel (built by P2 =
+# phase2_build_customs_panel.R after the 2026-05 edits: 2000-2022 window
+# with quantity preserved) over the older CMdG-replication panel (2000-2019,
+# no quantity).
 customs_paths <- c(
-  file.path(PROC_DATA, "customs_import_panel_regulated.RData"),
-  file.path(PROC_DATA, "mock_customs_import_panel_regulated.RData")
+  file.path(PROC_DATA, "customs_import_panel_extended.RData"),       # P2 output
+  file.path(PROC_DATA, "customs_import_panel_regulated.RData"),      # CMdG panel (no quantity)
+  file.path(PROC_DATA, "mock_customs_import_panel_regulated.RData")  # local-1 mock
 )
 customs_path <- customs_paths[file.exists(customs_paths)][1]
+cat(sprintf("Available customs panels in PROC_DATA:\n"))
+for (p in customs_paths) {
+  cat(sprintf("  %s%s\n", basename(p),
+              if (file.exists(p)) "  [FOUND]" else "  [absent]"))
+}
+cat(sprintf("Using: %s\n\n", customs_path))
 
 if (is.na(customs_path) || length(customs_path) == 0L) {
   cat("NOT FOUND: no customs panel locally. Check RMD.\n")
