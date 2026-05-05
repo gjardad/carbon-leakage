@@ -76,7 +76,14 @@ load(cps_path)
 # for clarity in the IV interaction below.
 cpshock_annual <- as.data.table(cpshock_annual)
 cpshock_annual[, cpshock := cpshock_surprise]
-ci <- fread(ci_path)
+# Force hs6 to character on read — fread auto-detects HS6 codes like
+# "281000" as integer, which then collides with the customs panel's
+# character hs6 in the merge below. The customs panel inherits character
+# cn8 from phase2_build_customs_panel.R's `sprintf("%08d", as.integer(cn8))`
+# pad, and we derive hs6 = substr(cn8, 1, 6), so the panel side is character.
+ci <- fread(ci_path, colClasses = c(hs6 = "character"))
+# Pad to 6 characters (preserve any leading zeros for codes < 100000).
+ci[, hs6 := sprintf("%06d", as.integer(hs6))]
 
 # ---------------------------------------------------------------------------
 # 2. Build (importer × HS6 × bloc × year) panel with prices and shares
