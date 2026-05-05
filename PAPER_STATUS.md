@@ -82,7 +82,7 @@ The numbering below uses the actual `\label{}` keys from the .tex files.
 
 | Subsection | Label | Status | Script | Notes |
 |---|---|---|---|---|
-| **CMdG replication** | `sec:international_cmdg` | 🟡 | `phase2_cmdj_table1.R` (original) + `phase2_cmdj_table1_robustness.R` + `phase2_cmdj_figure3.R` | **NEEDS REVISIT.** Original spec uses Phase-φ binaries with no continuous trend. Pushed `phase6_cmdj_table1_corrected.R` (just committed) — RMD to run. May change §5.2.1 headline. |
+| **CMdG replication** | `sec:international_cmdg` | ✅ | `phase2_cmdj_table1.R` (original, in paper) + `phase6_cmdj_table1_corrected.R` (trend-corrected, RMD-RUN 2026-05-04) | Trend-corrected version run on RMD. Trend slope is small but real (+0.000269/year ** Panel A col 5). Phase-φ coefficients become **more negative** by ~2.5× (Phase 3 share: −0.0024 → −0.0062 ***). Same sign as original, sharper magnitude. Paper §5.2.1 headline to be updated to use trend-corrected numbers; original kept as robustness reference. |
 | Buyer-supplier (B1) | `sec:international_buyer_supplier` | ✅ | `phase6_b1_corrected.R` | Trend-corrected β = -0.560 on RMD. Event-study figure regenerated 2026-05-04, both naive and de-trended figures clean. |
 | HTE on B1 (B2) | `sec:international_hte` | 🟡 PARTIALLY | `phase6_b1_b2_customs_buyer_supplier.R` | Horizon evidence already produced via the B1 event study (long-run β = -0.89 at h=7). The **separate quartile-split HTE** still needs RMD execution. |
 | Non-EU price response (B3) | `sec:international_price_response` | 🟠 | `phase6_b3_nonEU_price_response.R` | UNBLOCKED now that P2 is done (extended panel preserves quantity). |
@@ -137,15 +137,15 @@ The numbering below uses the actual `\label{}` keys from the .tex files.
 
 ## Recommended RMD next runs (in order)
 
-1. **`phase6_cmdj_table1_corrected.R`** — confirms or moves §5.2.1 headline. ~10 min.
-2. **`phase6_a1_test_h_horizon_lp.R`** — within-country horizon IRF, tests whether Test H is also trend-active or stays Cobb-Douglas across all horizons. ~5 min.
+1. ~~`phase6_cmdj_table1_corrected.R`~~ ✅ **DONE** (RMD-RUN 2026-05-04). §5.2.1 headline reinforced.
+2. **`phase6_a1_test_h_horizon_lp.R`** — within-country horizon IRF (§5.1.2). Tests whether Test H is trend-active or stays Cobb-Douglas across horizons. ~5 min.
 3. **`phase6_b3_nonEU_price_response.R`** — non-EU exporter pricing, fills §5.2.4. ~5 min.
 4. **`phase6_b4_sigma_from_customs_prices.R`** — structural σ from customs prices, fills §5.2.5. ~10 min.
 5. **`phase6_a2_test_i_horizon_hte.R`** — across-category horizon, fills §5.1.4. ~30 min (large sample).
 6. **`phase6_a3_a4_phase2_eventstudy.R`** — Phase II event-study, fills §5.1.6 and §5.1.7. ~10 min.
 7. **`phase6_c1_imports_vs_domestic.R`** — imports vs domestic substitution, fills §5.2.6. ~5 min.
 
-After (1)–(7), the only outstanding empirical work is C3 (Eurostat input fix on local-1).
+After (2)–(7), the only outstanding empirical work is C3 (Eurostat input fix on local-1).
 
 ---
 
