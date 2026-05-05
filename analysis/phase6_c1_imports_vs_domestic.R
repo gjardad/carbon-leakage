@@ -40,7 +40,7 @@ ANCHOR  <- 2014L
 H_LO <- -9L; H_HI <- +7L
 NSHARE_LO <- 2010L; NSHARE_HI <- 2014L
 
-OUT_TAB <- file.path(REPO_DIR, "output_local", "tables")
+OUT_TAB <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "tables")
 dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------------------------

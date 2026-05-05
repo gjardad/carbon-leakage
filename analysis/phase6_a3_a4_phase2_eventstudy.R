@@ -35,8 +35,8 @@ YEAR_LO <- 2003L; YEAR_HI <- 2019L
 ANCHOR  <- 2007L                 # year before the 2008 cutoff
 H_LO <- -4L; H_HI <- +11L
 
-OUT_TAB <- file.path(REPO_DIR, "output_local", "tables")
-OUT_FIG <- file.path(REPO_DIR, "output_local", "figures")
+OUT_TAB <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "tables")
+OUT_FIG <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "figures")
 dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_FIG, recursive = TRUE, showWarnings = FALSE)
 

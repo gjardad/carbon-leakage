@@ -31,7 +31,7 @@ suppressPackageStartupMessages({
   library(data.table); library(fixest)
 })
 
-OUT_TAB <- file.path(REPO_DIR, "output_local", "tables")
+OUT_TAB <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "tables")
 dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
 
 ext_path <- file.path(PROC_DATA, "customs_import_panel_extended.RData")

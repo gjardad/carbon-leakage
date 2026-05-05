@@ -36,8 +36,8 @@ ANCHOR  <- 2014L                # year before cutoff
 H_LO <- -9L                     # earliest lead (= year 2005)
 H_HI <- +7L                     # latest lag (= year 2021; 2022 is NA-prone)
 
-OUT_TAB <- file.path(REPO_DIR, "output_local", "tables")
-OUT_FIG <- file.path(REPO_DIR, "output_local", "figures")
+OUT_TAB <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "tables")
+OUT_FIG <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "figures")
 dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_FIG, recursive = TRUE, showWarnings = FALSE)
 
