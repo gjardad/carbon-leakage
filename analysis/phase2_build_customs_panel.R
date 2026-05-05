@@ -1,7 +1,14 @@
 # phase2_build_customs_panel.R
 #
 # Builds the regulated-intensive customs import panel for Phase 2 CMdG
-# replication. R port of the original Stata draft (see git history).
+# replication AND for the extended buyer-supplier analyses in B1-B4.
+# R port of the original Stata draft (see git history).
+#
+# This build is the *extended* version: 2000-2022 window with quantity (kg)
+# preserved. The output is customs_import_panel_extended.RData. The original
+# CMdG-replication panel (customs_import_panel_regulated.RData, 2000-2019,
+# no quantity) is left intact in PROC_DATA — it remains the canonical input
+# for the headline CMdG replication in §5.2.1 of the paper.
 #
 # Per CMdG Section 3 + Supplemental Appendix p. 44:
 #   1. Load raw customs imports (NBB .dta on RMD).
@@ -37,8 +44,11 @@
 #   * data/concordances/* and data/io/* (synced from repo)
 #
 # Output:
-#   * ${PROC_DATA}/customs_import_panel_regulated.RData
+#   * ${PROC_DATA}/customs_import_panel_extended.RData
 #     (also saved as .dta for compatibility if downstream Stata users want it)
+#     Schema: vat, cn8, partner_iso2, year, value, quantity,
+#             nace4d, buyer_nace2d, is_regulated_product,
+#             is_non_ets_country, is_ets_firm
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
@@ -49,9 +59,11 @@ if (!requireNamespace("haven", quietly = TRUE)) install.packages("haven", repos 
 library(data.table)
 library(haven)
 
-# Sample window matches CMdG.
+# Sample window. The CMdG replication uses 2000-2019; the extended build
+# below reaches 2022 to cover the EU ETS Phase IV price spike. The CN8
+# bridge stops at 2018 and is forward-extended below for years 2019-2022.
 FIRSTYEAR <- 2000L
-LASTYEAR  <- 2019L
+LASTYEAR  <- 2022L
 
 # ---------------------------------------------------------------------------
 # 1. Load raw customs imports and rename columns to canonical names
@@ -61,10 +73,14 @@ cat("Loading:", customs_path, "\n")
 d <- as.data.table(read_dta(customs_path))
 cat("Raw customs rows:", nrow(d), "\n")
 
-# Canonical column names used throughout this pipeline.
+# Canonical column names used throughout this pipeline. cn_weight (kg) is
+# preserved as `quantity` for unit-value computation in B3/B4. cn_units is
+# an alternative quantity unit (e.g. number of items) and is kept under its
+# raw name in case downstream wants to fall back to it for HS6 codes where
+# kg is not the natural unit.
 setnames(d,
-         c("vat_ano", "cncode", "country", "cn_value"),
-         c("vat",     "cn8",    "partner_iso2", "value"))
+         c("vat_ano", "cncode", "country", "cn_value", "cn_weight"),
+         c("vat",     "cn8",    "partner_iso2", "value", "quantity"))
 
 # Filter to imports only (flow = "I").
 d <- d[flow == "I"]
@@ -119,6 +135,21 @@ bridge <- fread(file.path(REPO_DIR, "data", "concordances", "cn8_to_nace4d.csv")
                 colClasses = list(character = c("cn8", "nace4d")))
 bridge[, nace4d := sprintf("%04d", as.integer(nace4d))]
 bridge <- unique(bridge[!is.na(nace4d), .(year, cn8, upstream_nace2d = substr(nace4d, 1, 2))])
+
+# Forward-extend the bridge through LASTYEAR. The bridge file stops at 2018;
+# CN8 codes are mostly stable year-on-year (Eurostat publishes annual CN
+# revisions but most CN8 codes persist), and the regulated-product
+# classification at NACE 2-digit aggregation is even more stable across
+# minor CN8 reclassifications. We use the 2018 mapping for 2019-LASTYEAR.
+bridge_max_year <- max(bridge$year)
+if (bridge_max_year < LASTYEAR) {
+  cat(sprintf("Forward-extending CN8 bridge from %d through %d using %d mapping.\n",
+              bridge_max_year, LASTYEAR, bridge_max_year))
+  template <- bridge[year == bridge_max_year]
+  for (y in (bridge_max_year + 1L):LASTYEAR) {
+    bridge <- rbind(bridge, copy(template)[, year := y])
+  }
+}
 d <- merge(d, bridge, by = c("year", "cn8"), all.x = TRUE)
 
 # ---------------------------------------------------------------------------
@@ -197,6 +228,9 @@ bal <- merge(skel, d,
              by = c("vat", "cn8", "partner_iso2", "year"),
              all.x = TRUE)
 bal[is.na(value), value := 0]
+# Zero-fill rows correspond to "no transaction occurred this year" so
+# quantity = 0 is the correct fill (and matches value = 0).
+if ("quantity" %in% names(bal)) bal[is.na(quantity), quantity := 0]
 
 # Propagate triplet-level attributes (cn8-level: is_regulated_product,
 # upstream_nace2d, hs6 already dropped; firm-level: nace4d, buyer_nace2d).
@@ -229,12 +263,20 @@ cat("After balancing + zero-fill:", nrow(bal), "rows\n")
 # 12. Save
 # ---------------------------------------------------------------------------
 setorder(bal, vat, cn8, partner_iso2, year)
-panel <- bal[, .(vat, cn8, partner_iso2, year, value,
-                 nace4d, buyer_nace2d,
-                 is_regulated_product, is_non_ets_country, is_ets_firm)]
+keep_cols <- c("vat", "cn8", "partner_iso2", "year", "value")
+if ("quantity" %in% names(bal)) keep_cols <- c(keep_cols, "quantity")
+keep_cols <- c(keep_cols, "nace4d", "buyer_nace2d",
+               "is_regulated_product", "is_non_ets_country", "is_ets_firm")
+panel <- bal[, ..keep_cols]
 
-out_rdata <- file.path(PROC_DATA, "customs_import_panel_regulated.RData")
-out_dta   <- file.path(PROC_DATA, "customs_import_panel_regulated.dta")
+# Save to a new filename that does not collide with the existing
+# customs_import_panel_regulated.RData (the CMdG-replication panel,
+# 2000-2019, no quantity). The "_extended" panel is the 2000-LASTYEAR
+# build with the quantity column preserved; downstream B1/B2/B3/B4
+# scripts look for this filename first and fall back to the regulated
+# panel if absent.
+out_rdata <- file.path(PROC_DATA, "customs_import_panel_extended.RData")
+out_dta   <- file.path(PROC_DATA, "customs_import_panel_extended.dta")
 save(panel, file = out_rdata)
 write_dta(panel, out_dta)
 
