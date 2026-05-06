@@ -37,7 +37,8 @@ source(file.path(REPO_DIR, "paths.R"))
 
 suppressPackageStartupMessages({
   library(data.table); library(fixest); library(ggplot2)
-  library(polars); library(DIDmultiplegtDYN)
+  if (requireNamespace("polars", quietly = TRUE)) suppressWarnings(library(polars))
+  library(DIDmultiplegtDYN)
 })
 source(file.path(REPO_DIR, "analysis/phase6_panel_builders.R"))
 

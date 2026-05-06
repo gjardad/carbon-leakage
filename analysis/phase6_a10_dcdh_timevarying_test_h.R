@@ -36,10 +36,9 @@ while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DI
 source(file.path(REPO_DIR, "paths.R"))
 
 suppressPackageStartupMessages({
-  library(data.table)
-  library(fixest)
-  library(ggplot2)
-  library(polars)
+  library(data.table); library(fixest); library(ggplot2)
+  # polars is required by DIDmultiplegtDYN 2.x but not by 1.0.15 (R 4.4 path).
+  if (requireNamespace("polars", quietly = TRUE)) suppressWarnings(library(polars))
   library(DIDmultiplegtDYN)
 })
 

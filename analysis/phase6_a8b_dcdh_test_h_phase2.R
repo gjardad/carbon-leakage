@@ -13,7 +13,8 @@ source(file.path(REPO_DIR, "paths.R"))
 
 suppressPackageStartupMessages({
   library(data.table); library(fixest); library(ggplot2)
-  library(polars); library(DIDmultiplegtDYN)
+  if (requireNamespace("polars", quietly = TRUE)) suppressWarnings(library(polars))
+  library(DIDmultiplegtDYN)
 })
 
 YEAR_LO <- 2003L; YEAR_HI <- 2019L
