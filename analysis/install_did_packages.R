@@ -52,12 +52,46 @@ install_gh_with_fallback <- function(repo, pkg = sub("^.*/", "", repo)) {
               pkg, as.character(packageVersion(pkg))))
 }
 
+install_polars_multi_mirror <- function() {
+  if (requireNamespace("polars", quietly = TRUE)) {
+    cat(sprintf("[ok] polars already installed (version %s)\n",
+                as.character(packageVersion("polars"))))
+    return(invisible(TRUE))
+  }
+  # Try multiple mirrors. RMD's firewall blocks r-universe.dev but typically
+  # allows community.r-multiverse.org and CRAN.
+  mirrors <- c(
+    "https://community.r-multiverse.org",
+    "https://rpolars.r-universe.dev",
+    "https://cloud.r-project.org"
+  )
+  old <- options(download.file.method = "wininet")
+  on.exit(options(old), add = TRUE)
+  for (m in mirrors) {
+    cat(sprintf("[..] trying polars from %s ...\n", m))
+    ok <- tryCatch({
+      install.packages("polars", repos = m)
+      requireNamespace("polars", quietly = TRUE)
+    }, error = function(e) {cat("    ", conditionMessage(e), "\n"); FALSE},
+       warning = function(w) FALSE)
+    if (ok) {
+      cat(sprintf("[ok] polars installed (version %s) from %s\n",
+                  as.character(packageVersion("polars")), m))
+      return(invisible(TRUE))
+    }
+  }
+  stop("Failed to install polars from any mirror.\n",
+       "Manual fallback: copy polars install from local-1's library at\n",
+       "  C:/Users/jota_/AppData/Local/R/win-library/4.5/polars/\n",
+       "via cloud → RMD; place under your RMD R library path; restart R.")
+}
+
 # 1. CRAN packages.
 cran_pkgs <- c("DIDmultiplegtDYN", "DRDID", "mvtnorm", "remotes")
 for (p in cran_pkgs) install_with_fallback(p)
 
-# 2. polars (r-universe).
-install_with_fallback("polars", repos = "https://rpolars.r-universe.dev")
+# 2. polars (multiple mirror fallback).
+install_polars_multi_mirror()
 
 # 3. GitHub-only packages.
 install_gh_with_fallback("asheshrambachan/HonestDiD")
