@@ -1,0 +1,3 @@
+spec,estimate,se,units
+OLS static (pair_exposure × post),-6.16793312538561,205.185741929467,share / unit pair_exposure
+dCdH static cumulative h=0..4,,,share

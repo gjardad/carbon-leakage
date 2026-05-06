@@ -66,6 +66,22 @@ The numbering below uses the actual `\label{}` keys from the .tex files.
 
 ## §5.1 Across domestic suppliers — partially done
 
+### Modern-DiD robustness program (R1–R7, plan ref `imperative-whistling-acorn.md`)
+
+| Item | Status | Script(s) | Notes |
+|---|---|---|---|
+| **R1** spec-classification preamble + RSBP framing in §5.1 paragraphs | ✅ | `paper/leakage_within_across/sections/leakage_domestic.tex` | Two-layer reading of RSBP Table 1 Q1 (literal Q1=YES with sufficient-statistic identifying assumption; substantive Q1=NO with continuously-time-varying EUA bite). 10 new bibliography entries in `paper/thesis/sections/refs.bib`. Prose has `\notrun{}` placeholders for breakdown M̄ / pretrends-power / dCdH numbers. |
+| **R2** Test I event-study with simultaneous bands | 🟡 LOCAL-DOWNSAMPLE | `phase6_a5_test_i_eventstudy_simbands.R` | On local-1 downsampled B2B (~1% of RMD): sup-t crit values: continuous = **2.82**, binary = **2.33** (vs pointwise 1.96), so simultaneous bands are 1.43× / 1.19× wider. RMD will give the final figure. |
+| **R3** pre-trend power (Roth 2022) | 🟡 LOCAL-DOWNSAMPLE | `phase6_a6_pretrend_power.R` | On local-1 downsample: Test H pre-trend test has 100% power vs σ=4 alternative; slope at 50% / 80% power = 2.79 / 4.62 per year. Test I has 94% power vs σ_cat ≤ 0.5; slope at 50% / 80% = 0.005 / 0.007. **Power numbers will tighten on RMD; directionally pre-trend tests are *not* vacuous, but final paper numbers need RMD.** |
+| **R4** Rambachan-Roth (2023) breakdown M̄ | 🟡 LOCAL-DOWNSAMPLE | `phase6_a7_honestdid.R` | Δ^{RM} + Δ^{SD} sensitivity for both Test H and Test I at h=0, on the downsampled network. On local-1: Test H Δ^{RM}=0 CI = [-3.6, 10.5] (too wide to test σ=4); Test I Δ^{RM}=0 CI = [-0.022, 0.057]; Test I Δ^{SD}=0 CI = [-0.012, -0.003] excludes zero on negative side — *suggestive* but on 1% of the data. Need RMD for paper numbers. |
+| **R5** dCdH static-intensity Fuzzy DiD (Test H Phase IV + Phase II) | 🟠 RMD-REQ | `phase6_a8_dcdh_test_h.R`, `phase6_a8b_dcdh_test_h_phase2.R` | Local-1 has only 79 / 104 type-a cells; dCdH internal regression collapses. Code is ready; rerun on RMD's full 14k-cell sample. |
+| **R6** Sant'Anna-Zhao (2020) DRDID for Test I | 🟡 LOCAL-DOWNSAMPLE — *suggestive only* | `phase6_a9_drdid_test_i.R` | On local-1 downsampled network (~1% of RMD): DRDID-imp ATT = −0.0073 (s.e. 0.0027, p = 0.007), conditioning on (buyer_reg_exposure, NACE-2d, log inputs). Compare to OLS trend-corrected β = −0.003 (s.e. 0.009, p = 0.76). The DRDID estimate is 2.4× larger in absolute magnitude and significant on local-1; **whether this survives RMD is the question**. Do NOT rewrite §5.1.4 until RMD confirms. Plan-spec'd headline rule will fire at RMD-run time, not now. |
+| **R7a** dCdH-2022 intertemporal (time-varying intensity), Test H Phase IV | 🟠 RMD-REQ | `phase6_a10_dcdh_timevarying_test_h.R` (+ `phase6_a10_build_timevarying_intensity.R` builder) | Time-varying intensity_{j*,t} = (allowance_shortage × eua_price)/revenue_pre. Local-1: too few balanced type-a cells. RMD required. |
+| **R7b** dCdH-2022, Test I Phase IV | ⚪ STRUCTURAL-NO | `phase6_a10b_dcdh_timevarying_test_i.R` | **Negative finding documented in script:** cat_intensity_{n,t} is constant across cells with same NACE-4d at given year, so within-(group,time) variation needed for dCdH is zero after FE demeaning. Both cell-level and NACE-4d-aggregated versions fail "After removing NAs, not a single explanatory variable is different from 0." Test I's substantive R7 cross-check reduces to the static `nace_exposure × post` interaction already in §5.1.4. |
+| **R7c** dCdH-2022, Test H Phase II | 🟠 RMD-REQ | `phase6_a10c_dcdh_timevarying_phase2.R` | Same as R7a but with Phase II cost share + 2003-2019 window. |
+
+### Existing §5.1 specifications
+
 | Subsection | Label | Status | Script | Notes |
 |---|---|---|---|---|
 | Headline within-NACE-4d | `sec:domestic_within` | ✅ | `phase5_test_h_most_exposed_ets_supplier.R` + `phase6_test_h_corrected.R` (RMD-RUN 2026-05-04) | Trend-corrected sibling confirms robustness: β_naive = +1.34 (n.s.), β_trend-corrected = +0.20 (n.s.), trend coef +0.22/yr (p=0.31, n.s.). Headline σ ≈ 1 unaffected by trend control. |
