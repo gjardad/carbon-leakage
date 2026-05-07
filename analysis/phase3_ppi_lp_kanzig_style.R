@@ -145,7 +145,7 @@ p <- ggplot(lp, aes(x = h, y = coef)) +
                      expand = c(0.005, 0.005)) +
   scale_y_continuous(limits = c(y_lo, y_hi),
                      expand = c(0, 0)) +
-  labs(x = "Horizon (months)",
+  labs(x = "Months",
        y = expression(gamma[h])) +
   theme_minimal(base_size = 13) +
   theme(panel.grid = element_blank(),
