@@ -2,14 +2,182 @@
 
 Open analyses that are deferred until headline results land. Add dated entries when new follow-ups appear; strike through and date items when they're closed out.
 
-Four active workstreams:
+Five active workstreams:
 
+0. **New exposure measure (high priority, added 2026-05-07)** — rebuild the firm-level treatment intensity as `emissions_pre × (1 − expected_allocation_share_post)` with both pieces predetermined / exogenous to MSR. See §0 below.
 1. **Reallocation mechanism** — H1 (within-sector reallocation) vs H2 (inelastic-demand shield). Plan: [REALLOCATION_MECHANISM_PLAN.md](REALLOCATION_MECHANISM_PLAN.md).
 2. **PRODCOM pass-through** — Stata port of firm × PC8 × month pipeline for co-author. Plan: [PRODCOM_PLAN.md](PRODCOM_PLAN.md).
 3. **Threat hypothesis** — do firms invest in cleaner tech in response to carbon-price news, not only realized prices? Plan: [TREAT_HYPOTHESIS_PLAN.md](TREAT_HYPOTHESIS_PLAN.md).
 4. **Greenflation** — firm-level test of CPShock pass-through into realized prices, extending Hensel et al. / Känzig-Konradt. Lit review: [greenflation.md](greenflation.md).
 
-A fifth section at the bottom holds shock-size / abatement-timing diagnostics from the earlier Phase 3 scope that aren't tied to any single workstream.
+A sixth section at the bottom holds shock-size / abatement-timing diagnostics from the earlier Phase 3 scope that aren't tied to any single workstream.
+
+---
+
+## 0. New exposure measure (added 2026-05-07)
+
+### Motivation
+
+Current `firm_cost_share_j` (defined in [phase5_attach_firm_cost_share.R](analysis/phase5_attach_firm_cost_share.R) and [paper/leakage_within_across/sections/data.tex](paper/leakage_within_across/sections/data.tex)):
+
+```
+firm_cost_share_j = avg(shortage × EUA, 2013–2016) / avg(total_cost, 2010–2012)
+```
+
+has three problems we surfaced in conversation 2026-05-07:
+
+1. **Numerator extends to 2016**, past the MSR decision (Oct 2015), so the regressor is not strictly predetermined.
+2. **EUA inside the regressor adds no cross-sectional content** (EUA is firm-invariant in the construction window) and only adds within-window timing noise.
+3. **Asymmetric numerator/denominator windows** (2013–16 vs 2010–12) are motivated by anticipation concerns that DiD's parallel-trends assumption is supposed to rule out anyway — internally inconsistent.
+
+The replacement separates **firm-structural exposure** (predetermined, pre-2016) from **institutional shortfall** (sector × year, exogenous to firm response, built from public EU rules):
+
+```
+treatment_intensity_j = (avg(emissions, 2013–2015) / avg(total_cost, 2013–2015))
+                        × (1 − expected_allocation_share_post_j)
+```
+
+where `expected_allocation_share_post_j` is the average post-2015 ratio of expected free allowances to expected emissions, with allowances projected from realized 2013 firm allocation × sector-year institutional ratios (Phase III + Phase IV rules), and emissions held at the 2013–15 average. The criterion is **exogeneity to firm response to MSR**, which permits using post-MSR institutional rules (Phase IV decisions of 2018–19) as long as they are EU-level policy choices not caused by individual firm behaviour.
+
+Detailed conceptual derivation is in the conversation transcript of 2026-05-07.
+
+### Step 1 — Download and digitize EU institutional rule book
+
+Goal: produce four CSV tables under `data/processed/eu_ets_rules/` covering 2013–2030.
+
+#### 1.1 Carbon-leakage list at NACE 4-digit
+
+- [ ] Download Commission Decision 2010/2/EU (Phase III leakage list 2013–14). EUR-Lex CELEX 32010D0002. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32010D0002
+- [ ] Download Commission Decision 2014/746/EU (Phase III leakage list 2015–19). EUR-Lex CELEX 32014D0746. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32014D0746
+- [ ] Download Commission Delegated Decision (EU) 2019/708 (Phase IV leakage list 2021–30). EUR-Lex CELEX 32019D0708. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32019D0708
+- [ ] Digitize each Annex into a tidy CSV with columns `(nace4d, on_list_2013_14, on_list_2015_19, on_list_2021_30)`. Each list is ~150–200 NACE 4-digit codes. Hand-typing or `tabula`/`pdfplumber`. Save as `data/processed/eu_ets_rules/leakage_list_by_nace4d.csv`.
+- [ ] **Verification:** spot-check Belgian ETS sectors (NACE 19 petroleum, 20 chemicals, 23 cement/glass, 24 basic metals) against the existing hand-coded `allocation_rule` table at [phase0_sector_phase_dataset.R:63](analysis/phase0_sector_phase_dataset.R) — they should agree on whether each NACE 2-digit's dominant sub-sectors are on each list.
+
+#### 1.2 Cross-sectoral correction factor (CSCF), Phase III only
+
+- [ ] Copy CSCF values 2013–2020 from Annex II of Commission Decision 2013/448/EU. EUR-Lex CELEX 32013D0448. Save as `data/processed/eu_ets_rules/cscf_phase3.csv` with columns `(year, cscf)`. ~8 rows. Reference values (verify against Annex II): 2013 ≈ 0.9427, 2014 ≈ 0.9263, 2015 ≈ 0.9100, 2016 ≈ 0.8936, 2017 ≈ 0.8772, 2018 ≈ 0.8609, 2019 ≈ 0.8445, 2020 ≈ 0.8281.
+
+#### 1.3 Phase-out factor for non-leakage sectors
+
+- [ ] Build `data/processed/eu_ets_rules/phaseout_factor.csv` with columns `(year, phaseout_non_leakage, phaseout_leakage)` from the formula in Article 10a(11) of Directive 2003/87/EC (Phase III) and Article 10b (Phase IV). No download — mechanical:
+  - Phase III non-leakage: 0.80 in 2013, declining linearly to 0.30 by 2020.
+  - Phase III leakage: 1.00 throughout 2013–2020.
+  - Phase IV non-leakage 2021–25: 0.30. 2026–30: declining linearly from 0.30 to 0.00.
+  - Phase IV leakage 2021–25: 1.00. 2026–30: 1.00 (subject to revision).
+
+#### 1.4 Phase IV linear reduction factor (LRF) and benchmark updates
+
+- [ ] Encode Phase IV LRF = 2.2%/year from 2021 (Article 9 of Directive (EU) 2018/410). Save as `data/processed/eu_ets_rules/lrf_phase4.csv` with columns `(year, cap_factor_relative_to_2020)`.
+- [ ] Optional (skip on first cut): download Phase IV benchmark updates from Commission Implementing Regulation (EU) 2021/447 (CELEX 32021R0447). Provides updated benchmark values for 2021–25; subsequent regulations cover 2026–30. https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32021R0447. Digitize Annex into `data/processed/eu_ets_rules/phase4_benchmarks.csv` with columns `(sector_benchmark_id, value_phase3, value_phase4_2021_25)`. **Skip if first iteration uses realized 2013 allocation as the baseline (recommended) — benchmarks are then implicit.**
+
+### Step 2 — Build the projected sector-year allocation factor table
+
+- [ ] New script `analysis/build_eu_ets_allocation_factor.R`. Inputs: the four CSVs from Step 1. Output: `data/processed/eu_ets_allocation_factor_by_nace4d_year.RData` with one row per `(nace4d, year)` for `year ∈ 2013..2022` and column `allocation_factor`:
+
+```
+allocation_factor(nace4d, year) = leakage_factor(nace4d, year) × cscf_or_lrf(year) × phaseout(year)
+```
+
+  where `leakage_factor` is 1 if on-list and `phaseout_non_leakage` ratio if not, `cscf_or_lrf(year)` applies CSCF for 2013–2020 and the relative LRF for 2021–22, and `phaseout(year)` applies the Article 10a(11) / 10b schedule. The exact functional form needs care at the 2020/2021 boundary — verify with one Belgian leakage-listed firm (e.g. a NACE 24 basic-metals installation) against realized EUTL allowance trajectory. Sign-off rule: predicted-vs-realized correlation > 0.9 within Phase III for that firm.
+
+### Step 3 — Build the new firm-year exposure regressor
+
+- [ ] New script `analysis/build_firm_exposure_v2.R`. Replaces (does not modify) [phase5_attach_firm_cost_share.R](analysis/phase5_attach_firm_cost_share.R). Inputs:
+  - `firm_year_belgian_euets.RData` (RMD): emissions and free allowances per VAT-year.
+  - `data/processed/eu_ets_allocation_factor_by_nace4d_year.RData` from Step 2.
+  - Annual Accounts firm-year total cost.
+  - Per-VAT NACE 4-digit code.
+- [ ] Per VAT j, compute:
+  - `emission_intensity_j = mean(emissions_{j,t} / total_cost_{j,t}, t ∈ 2013..2015)`. Drop firms with missing emissions or zero total cost in any of 2013–2015.
+  - `baseline_allowance_j = mean(free_allowance_{j,t}, t ∈ 2013..2015)` — predetermined firm-level allocation anchor.
+  - `expected_allowance_j(t)` for `t ∈ 2016..2022`: scale `baseline_allowance_j` by `allocation_factor(nace4d_j, t) / mean(allocation_factor(nace4d_j, 2013..2015))`.
+  - `expected_emissions_j(t) = mean(emissions_{j,t}, t ∈ 2013..2015)` held constant.
+  - `expected_allocation_share_j_post = mean(expected_allowance_j(t) / expected_emissions_j, t ∈ 2016..2022)`.
+  - `treatment_intensity_v2_j = emission_intensity_j × max(0, 1 − expected_allocation_share_j_post)`.
+- [ ] Save `firm_exposure_v2.RData` with `(vat, nace4d, emission_intensity, baseline_allowance, expected_allocation_share_post, treatment_intensity_v2)`.
+- [ ] **Diagnostic:** report cross-sectional correlation between `treatment_intensity_v2_j` and the legacy `firm_cost_share_j`. Expect high (> 0.7) but not perfect — if very high (> 0.95) the redesign may not change much; if low (< 0.4) something is off.
+- [ ] **Sanity check:** sort firms by `treatment_intensity_v2_j` and inspect the top decile by NACE 4-digit. Should be dominated by basic metals, cement, refining, chemicals, paper.
+- [ ] **Phase II analog:** `treatment_intensity_v2_phase2_j = mean(emissions, 2005..2007) / mean(total_cost, 2005..2007) × (1 − expected_allocation_share_phase2_post)` where the post-period is 2008–2012 and the institutional schedule uses Phase II free allocation rules (mostly grandfathered → 100% free, so `expected_allocation_share_phase2_post ≈ 1` for many firms; the regressor then collapses to physical emission intensity). Worth building as a robustness sibling for §5.1.6.
+
+### Step 4 — Re-run the headline DiD specifications with the new regressor
+
+The legacy `firm_cost_share_j` is consumed in 37 R scripts under `analysis/`. Most are diagnostics or robustness siblings; the following is the minimal re-run set for the paper headlines.
+
+#### Headline regressions
+
+- [ ] **§5.1.1 Test H within-NACE-4d** — re-run with `treatment_intensity_v2`. Script: [phase5_test_h_most_exposed_ets_supplier.R](analysis/phase5_test_h_most_exposed_ets_supplier.R) and trend-corrected sibling [phase6_test_h_corrected.R](analysis/phase6_test_h_corrected.R). Compare β headline and σ̂ mapping to the old version. RMD-only.
+- [ ] **§5.1.4 Test I across-category** — recompute `nace_exposure_n` from new `treatment_intensity_v2_j` per [phase3_build_exposure_panel.R](analysis/phase3_build_exposure_panel.R). Re-run [phase5_test_i_cross_nace_substitution.R](analysis/phase5_test_i_cross_nace_substitution.R) and [phase6_test_i_corrected.R](analysis/phase6_test_i_corrected.R). RMD-only.
+- [ ] **§5.2.2 B1 buyer-supplier** — recompute `pair_exposure_EU_{f,p}` per [phase6_b1_corrected.R](analysis/phase6_b1_corrected.R) using new firm-level exposure. RMD-only.
+
+#### Horizon LPs
+
+- [ ] **§5.1.2** [phase6_a1_test_h_horizon_lp.R](analysis/phase6_a1_test_h_horizon_lp.R) re-run.
+- [ ] **§5.1.4 HTE** [phase6_a2_test_i_horizon_hte.R](analysis/phase6_a2_test_i_horizon_hte.R) re-run.
+- [ ] **§5.2.3 B2** [phase6_b1_b2_customs_buyer_supplier.R](analysis/phase6_b1_b2_customs_buyer_supplier.R) re-run.
+
+#### Phase II event-study
+
+- [ ] **§5.1.6/7** [phase6_a3_a4_phase2_eventstudy.R](analysis/phase6_a3_a4_phase2_eventstudy.R) re-run with `treatment_intensity_v2_phase2`.
+
+#### Pre-trend / sensitivity follow-ons
+
+- [ ] [phase6_a6_pretrend_power.R](analysis/phase6_a6_pretrend_power.R) — re-run with new regressor; the Roth (2022) power analysis depends on regressor scale.
+- [ ] [phase6_a7_honestdid.R](analysis/phase6_a7_honestdid.R) — Rambachan-Roth breakdown values rescale with the regressor.
+- [ ] [phase6_a8_dcdh_test_h.R](analysis/phase6_a8_dcdh_test_h.R) and [phase6_a8b_dcdh_test_h_phase2.R](analysis/phase6_a8b_dcdh_test_h_phase2.R) — dCdH static intensity with the v2 regressor.
+- [ ] [phase6_a9_drdid_test_i.R](analysis/phase6_a9_drdid_test_i.R) — DRDID with the v2 regressor.
+
+#### Defer for now
+
+- [ ] **Time-varying intensity (R7a/b/c):** [phase6_a10_build_timevarying_intensity.R](analysis/phase6_a10_build_timevarying_intensity.R), [phase6_a10_dcdh_timevarying_test_h.R](analysis/phase6_a10_dcdh_timevarying_test_h.R), [phase6_a10b_dcdh_timevarying_test_i.R](analysis/phase6_a10b_dcdh_timevarying_test_i.R), [phase6_a10c_dcdh_timevarying_phase2.R](analysis/phase6_a10c_dcdh_timevarying_phase2.R). The v2 regressor is already a partial reconciliation with these specs (it captures sector × year institutional variation), so the dCdH-2022 cross-checks become less load-bearing.
+
+### Step 5 — Update paper
+
+- [ ] Rewrite the "Treatment intensity" subsection of [paper/leakage_within_across/sections/data.tex](paper/leakage_within_across/sections/data.tex) (currently §2 Setting and Data, equation 2.1) with:
+  - The new exposure formula and its decomposition into firm-structural × institutional components.
+  - A short paragraph explaining the predetermination criterion (exogeneity to firm response, not info-set membership).
+  - One sentence flagging that the legacy `firm_cost_share` formulation is reported as a robustness sibling.
+- [ ] Replace headline coefficients in [leakage_domestic.tex](paper/leakage_within_across/sections/leakage_domestic.tex) §5.1.1, §5.1.2, §5.1.4, §5.1.6/7 with the v2 results.
+- [ ] Replace headline coefficients in [leakage_international.tex](paper/leakage_within_across/sections/leakage_international.tex) §5.2.2, §5.2.3 with the v2 results.
+- [ ] Re-derive σ̂ mapping in §5.1.1 — the constant `100 ρ E[s_{j*}(1−s_{E_n})]` rescales because the regressor is now in tCO₂/€ instead of €/€. Specifically: if the new regressor is `R_j = (em/cost) × (1 − alloc_share)` and the old regressor was approximately `R_old_j ≈ R_j × EUA_pre`, then β_v2 / β_old ≈ 1 / EUA_pre. The σ̂ formula needs the post-period EUA path explicitly rather than baked into the regressor.
+- [ ] Update [PAPER_STATUS.md](PAPER_STATUS.md) to flag every §5 row as RMD-RERUN-PENDING-V2 until the v2 numbers land.
+
+### Step 6 — Robustness reports
+
+- [ ] **Robustness column in main tables:** keep the legacy `firm_cost_share` regressor as a side-by-side robustness column. Two columns per headline: v2 (predetermined emission intensity × institutional shortfall) and v1 (legacy `firm_cost_share`). Pre-register the headline as v2; report v1 alongside.
+- [ ] **Sensitivity to the institutional-rule projection:** run v2 under three institutional-rule variants:
+  1. *Realized*: use realized post-2015 free allowances directly (not exogenous on the user's criterion — partial endogeneity via Phase IV HAL — but a useful upper bound).
+  2. *Phase III + linear extrapolation*: stop institutional rules at 2020 and linearly extrapolate to 2022.
+  3. *Full institutional projection (headline)*: Phase III rules through 2020, Phase IV rules from 2021.
+  Report the three side-by-side. If v2-headline and v2-realized agree to within sampling noise, the institutional-rule construction is doing what it should.
+- [ ] **Truncated post-period:** report v2 with post-period = 2016–2020 only (Phase III window). Cleanest information-set defense; loses the Phase IV price spike but rules out any Phase IV endogeneity concern.
+
+### Estimated effort
+
+| Step | Owner | Venue | Time |
+|---|---|---|---|
+| 1.1–1.4: download + digitize 4 EU rule files | local-1 (web) | local-1 | 1–2 hours |
+| 2: build sector-year allocation factor table | local-1 | local-1 | 0.5 day |
+| 3: build firm-year v2 exposure | RMD | RMD | 0.5 day |
+| 4: re-run ~10 headline + horizon scripts | RMD | RMD | 1 day total runtime, sequential |
+| 5: paper rewrite of §2 + §5 numbers | local-1 | local-1 | 0.5 day |
+| 6: robustness siblings | RMD | RMD | 0.5 day |
+
+**Total: ~3–4 days of work, ~80% of which is on RMD.** Step 1's downloads can be done on local-2 (web access) and copied to RMD via the standard cloud bridge.
+
+### Verification gates
+
+- [ ] After Step 2: predicted-vs-realized 2013–2020 free-allowance correlation > 0.9 for at least 3 representative Belgian leakage-listed firms.
+- [ ] After Step 3: cross-sectional correlation of `treatment_intensity_v2_j` with legacy `firm_cost_share_j` > 0.7. Top decile dominated by NACE 19/20/23/24.
+- [ ] After Step 4: v2 Test H σ̂ within ±50% of legacy σ̂ ≈ 1; if very different, suspect a unit error in the new regressor or the σ̂ mapping.
+- [ ] After Step 6: v2-headline and v2-realized institutional projections agree to within sampling noise on the Test H coefficient.
+
+### Open issues to resolve along the way
+
+- [ ] **Phase IV HAL endogeneity.** Phase IV initial allocation uses 2014–2018 activity. Using realized post-2015 allocation in the regressor partially imports firm response to MSR. Headline construction (Step 3) sidesteps this by using *predetermined* 2013–15 allocation as the baseline and projecting forward with sector-year ratios only, not realized allocations. Robustness sibling (Step 6.1) uses the realized variant as a comparator.
+- [ ] **NACE 4-digit ↔ leakage-list mapping.** Phase IV leakage list (Decision 2019/708) mixes NACE 4-digit and "subsector" classifications; some sectors are listed at finer-than-4-digit granularity. For our coarser classification we either (a) treat the whole NACE 4-digit as on the list if any subsector is, or (b) drop ambiguous NACE 4-digits. Decide before Step 1.1.
+- [ ] **Belgian aluminium / ferro-alloys reclassifications post-2020.** [memory/project_nace24_eutl_break_post2020.md](memory/project_nace24_eutl_break_post2020.md) flags 3 NACE 24 VATs whose post-2020 EUTL coverage breaks. The v2 regressor must continue to exclude these VATs from 2021+ — code in [phase6_a10_build_timevarying_intensity.R](analysis/phase6_a10_build_timevarying_intensity.R) already handles this; copy that filter into `build_firm_exposure_v2.R`.
+
+---
 
 ---
 
