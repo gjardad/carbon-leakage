@@ -197,15 +197,21 @@ This bears on the §4 paper claim ($\sigma$ mapping from sector pass-through) an
 
 ### Daily EUA price 2005–2009 acquisition
 
-The current §3 EUA price figure ([phase3_eua_price_timeseries_figure.R](analysis/phase3_eua_price_timeseries_figure.R)) shows a dotted-line annual fall-back for 2005–2009 because ICAP's public CSV leaves the `Primary Market` price column blank for Phase I and most of Phase II. To replace the fall-back with a true daily series:
+The current §3 EUA price figure ([phase3_eua_price_timeseries_figure.R](analysis/phase3_eua_price_timeseries_figure.R)) shows a dotted-line annual fall-back for 2005–2009 because ICAP's public CSV leaves the `Primary Market` price column blank for Phase I and most of Phase II. We confirmed (2026-05-07) that the Bayer & Aklin (2020) Harvard Dataverse only contains country-year emissions data, not prices. Käenzig (2023, AER) noted his daily EUA series came from **Refinitiv Datastream**, which is not publicly redistributable but is accessible via institutional subscriptions.
 
-- [ ] Download a daily Phase I/II EUA spot-price source. Two free public options:
-  - **Sandbag Carbon Pulse** historical EUA archive (https://sandbag.org.uk; daily back to ~2008).
-  - **Bayer & Aklin (2020)** JEP replication archive (AEA dataverse; explicitly covers Phase I onward because the paper studies Phase I price formation).
-- [ ] Save under `${RAW_DATA}/eua_daily_phase1_2_<source>.csv` (local-1).
-- [ ] Update [phase3_eua_price_timeseries_figure.R](analysis/phase3_eua_price_timeseries_figure.R): replace the annual stepwise fall-back (`early_steps`) with the daily 2005–2009 series; concatenate with ICAP daily 2010+ on the same axis.
-- [ ] Verify the regenerated figure shows: (a) Phase I peak ~€30 in April 2006, (b) crash to ~€10 within days of the May 2006 compliance announcement, (c) drift to near zero through 2007, (d) Phase II reset to ~€22 in 2008, (e) financial-crisis pullback to ~€8 in early 2009.
-- [ ] If neither Sandbag nor Bayer-Aklin provides Phase I (2005–2007) data and only Phase II (2008+) is available, ship the figure with daily 2008+ and an annual fall-back limited to 2005–2007.
+Path of least resistance — ask Bijnens (NBB) to export from Refinitiv:
+
+- [ ] **Ask co-author Bijnens to pull daily EUA from NBB's Datastream / Refinitiv Workspace subscription.** NBB is a heavy Refinitiv user, so this should be a one-Excel-export ask. Specifically request the **ECX EUA front-month continuous futures** series, daily settlement price, EUR/tCO₂, 2005-04-22 to end of sample. Common Datastream codes: `LECEZ` (ECX EUA continuous front month), `EEX EUA SP` (ICE Endex spot), or `ECXEUSP` (legacy ECX spot). Bijnens may know a different convention used by NBB; what matters is that the series is the same one Känzig used (front-month ECX/ICE futures continuous).
+- [ ] Fall-back if Bijnens cannot share: **WRDS Datastream gateway** through Northwestern's WRDS subscription (https://wrds-www.wharton.upenn.edu). Verify with Northwestern Library / Kellogg Research Computing whether your WRDS account has Datastream access enabled; if not, request it. Then run the same query.
+- [ ] Save under `${RAW_DATA}/eua_daily_datastream.csv` (local-1).
+- [ ] Update [phase3_eua_price_timeseries_figure.R](analysis/phase3_eua_price_timeseries_figure.R): replace the annual stepwise fall-back (`early_steps`) with the daily 2005–2009 series and concatenate with ICAP daily 2010+ (or replace ICAP entirely if Datastream covers the full window — likely cleaner).
+- [ ] Verify the regenerated figure reproduces well-known historical milestones: (a) Phase I peak ~€30 in April 2006, (b) crash to ~€10 within days of the May 2006 compliance announcement, (c) drift to near zero through 2007, (d) Phase II reset to ~€22 in 2008, (e) financial-crisis pullback to ~€8 in early 2009.
+
+Free fall-backs if Datastream access is blocked on both Northwestern and NBB:
+
+- [ ] **Sandbag Carbon Pulse** historical archive (https://sandbag.org.uk) — daily back to ~2008; no Phase I.
+- [ ] **Hintermann (2010, JEEM)** "Allowance Price Drivers in the First Phase of the EU ETS" replication archive — Phase I daily because the paper studies Phase I price formation.
+- [ ] **Käenzig (2023, AER) replication archive** at https://www.openicpsr.org/openicpsr/project/183743/ — primary inputs to the VAR. Worth opening to check whether the daily EUA series is included alongside the CPShock surprises.
 
 ---
 
