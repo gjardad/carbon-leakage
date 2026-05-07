@@ -179,6 +179,34 @@ The legacy `firm_cost_share_j` is consumed in 37 R scripts under `analysis/`. Mo
 
 ---
 
+## 0a. Pass-through reconciliation + early EUA price acquisition (added 2026-05-07)
+
+### Reconciliation: PPI panel-LP magnitude discrepancy (FIRST-ORDER)
+
+The new Känzig-style PPI IRF in [analysis/phase3_ppi_lp_kanzig_style.R](analysis/phase3_ppi_lp_kanzig_style.R) gives γ_h values that are **3–4× smaller** than the same spec recorded in [output/tables/phase3_ppi_passthrough_monthly.txt](output/tables/phase3_ppi_passthrough_monthly.txt) (e.g. γ_12 = 1.22 new vs β_12 = 4.08 saved, with proportional SE rescaling). Same N at every horizon, same code path, same RHS variable name, same regression structure. The shape of the IRF is preserved.
+
+Most likely culprit: `exposure_alt_total` in [data/processed/phase3_sector_exposure.RData](data/processed/phase3_sector_exposure.RData) has been re-scaled or re-normalised since the original [output/tables/phase3_ppi_passthrough_monthly.txt](output/tables/phase3_ppi_passthrough_monthly.txt) was written. Both the coefficient and the SE rescale by the same factor, which is exactly what a units change in `intensity_base` would do.
+
+This bears on the §4 paper claim ($\sigma$ mapping from sector pass-through) and must be settled before publication.
+
+- [ ] Compare the current `exposure_alt_total` in `phase3_sector_exposure.RData` with the field as it stood when the saved `phase3_ppi_passthrough_monthly.RData` / `.txt` were last regenerated. Run `git log -- analysis/phase3_build_exposure_panel.R` and `git log -- analysis/phase3_ppi_passthrough_monthly.R` to identify the change.
+- [ ] If `exposure_alt_total` was rescaled (e.g. from cost-share fraction to percentage points, or vice versa), pick the correct scale and document it explicitly in [phase3_build_exposure_panel.R](analysis/phase3_build_exposure_panel.R).
+- [ ] Re-run [phase3_ppi_passthrough_monthly.R](analysis/phase3_ppi_passthrough_monthly.R) and confirm headline coefficients now match the new Känzig-style IRF at horizons {0, 1, 3, 6, 12, 24}.
+- [ ] Update §4 prose in [paper/leakage_within_across/sections/passthrough.tex](paper/leakage_within_across/sections/passthrough.tex) with the verified magnitudes (currently quotes γ_12 = 1.22 from the new run; verify this is the right scale).
+- [ ] Re-derive the implied σ at the post-period EUA path under the verified scale; confirm the §5.1 σ ≈ 1 anchor still holds.
+
+### Daily EUA price 2005–2009 acquisition
+
+The current §3 EUA price figure ([phase3_eua_price_timeseries_figure.R](analysis/phase3_eua_price_timeseries_figure.R)) shows a dotted-line annual fall-back for 2005–2009 because ICAP's public CSV leaves the `Primary Market` price column blank for Phase I and most of Phase II. To replace the fall-back with a true daily series:
+
+- [ ] Download a daily Phase I/II EUA spot-price source. Two free public options:
+  - **Sandbag Carbon Pulse** historical EUA archive (https://sandbag.org.uk; daily back to ~2008).
+  - **Bayer & Aklin (2020)** JEP replication archive (AEA dataverse; explicitly covers Phase I onward because the paper studies Phase I price formation).
+- [ ] Save under `${RAW_DATA}/eua_daily_phase1_2_<source>.csv` (local-1).
+- [ ] Update [phase3_eua_price_timeseries_figure.R](analysis/phase3_eua_price_timeseries_figure.R): replace the annual stepwise fall-back (`early_steps`) with the daily 2005–2009 series; concatenate with ICAP daily 2010+ on the same axis.
+- [ ] Verify the regenerated figure shows: (a) Phase I peak ~€30 in April 2006, (b) crash to ~€10 within days of the May 2006 compliance announcement, (c) drift to near zero through 2007, (d) Phase II reset to ~€22 in 2008, (e) financial-crisis pullback to ~€8 in early 2009.
+- [ ] If neither Sandbag nor Bayer-Aklin provides Phase I (2005–2007) data and only Phase II (2008+) is available, ship the figure with daily 2008+ and an annual fall-back limited to 2005–2007.
+
 ---
 
 ## 1. Reallocation-mechanism workstream (added 2026-04-22)
