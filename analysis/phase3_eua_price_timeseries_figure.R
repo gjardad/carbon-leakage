@@ -55,63 +55,88 @@ icap <- icap_raw %>%
   mutate(price = coalesce(price_pre2019, price_from2019, price_secondary)) %>%
   filter(!is.na(date), !is.na(price))
 
-# Trim to end-2022. ICAP daily Primary-Market series starts 2010-01;
-# Phase I (2005-07) and most of Phase II (2008-09) are not available in this
-# file — we report the visible window starting 2010 in Phase II.
+# Trim to end-2022. ICAP daily Primary-Market series starts 2010-01.
 icap <- icap %>% filter(date <= as.Date("2022-12-31"))
+
+# Phase I/II annual averages for 2005-2009 (ECX/Bluenext historical, as
+# documented in Ellerman et al. 2010 and Martin-Muûls-Wagner 2016; same
+# series used as the Phase I/II fallback in phase3_eua_prices.R). Plotted
+# as a low-frequency step series for visual continuity; clearly distinct
+# from the daily ICAP line that takes over in 2010.
+early_annual <- data.frame(
+  year  = 2005:2009,
+  price = c(22, 18, 0.7, 22, 13)
+)
+# Expand to month-end stepwise so it renders as a piecewise-constant line.
+early_steps <- early_annual %>%
+  mutate(date_start = as.Date(paste0(year, "-01-01")),
+         date_end   = as.Date(paste0(year, "-12-31"))) %>%
+  rowwise() %>%
+  do(data.frame(date = seq(.$date_start, .$date_end, by = "month"),
+                price = .$price)) %>%
+  ungroup()
 
 cat("Daily / weekly EUA price obs:", nrow(icap), "\n")
 cat("Date range:", format(min(icap$date)), "to", format(max(icap$date)), "\n")
 cat("Price range:", round(min(icap$price), 2), "to", round(max(icap$price), 2), "\n")
 
 # ---- Phase boundaries + MSR event ----
-# Visible-data phases start at min(date) of icap, so phase II label is centered
-# on the visible portion (2010-2012), not on the unobserved early window.
-data_start <- min(icap$date)
-phase_visible_starts <- as.Date(c(format(data_start), "2013-01-01", "2021-01-01"))
-phase_visible_ends   <- as.Date(c("2012-12-31", "2020-12-31", "2022-12-31"))
-phase_visible_labels <- c("Phase II", "Phase III", "Phase IV")
+# X-axis spans the full ETS history 2005-2022. Daily ICAP data is only
+# available 2010+, so the line is missing for Phase I (2005-07) and
+# the early part of Phase II (2008-09); Phase labels still sit above
+# their respective windows.
+x_min <- as.Date("2005-01-01")
+x_max <- as.Date("2022-12-31")
+
+phase_visible_starts <- as.Date(c("2005-01-01", "2008-01-01",
+                                  "2013-01-01", "2021-01-01"))
+phase_visible_ends   <- as.Date(c("2007-12-31", "2012-12-31",
+                                  "2020-12-31", "2022-12-31"))
+phase_visible_labels <- c("Phase I", "Phase II", "Phase III", "Phase IV")
 phase_mids <- as.Date((as.numeric(phase_visible_starts) +
                        as.numeric(phase_visible_ends)) / 2,
                       origin = "1970-01-01")
 
-# Boundary lines: Phase II→III and Phase III→IV
-boundary_dates <- as.Date(c("2013-01-01", "2021-01-01"))
+# Boundary lines: Phase I→II, Phase II→III, Phase III→IV
+boundary_dates <- as.Date(c("2008-01-01", "2013-01-01", "2021-01-01"))
 msr_date <- as.Date("2015-10-06")  # Decision (EU) 2015/1814
 
 phase_df <- data.frame(start = phase_visible_starts, end = phase_visible_ends,
                        mid = phase_mids, label = phase_visible_labels)
 
 # ---- Plot ----
-y_max <- ceiling(max(icap$price) / 10) * 10
-y_label_top <- y_max - 2
+# Add headroom so Phase labels sit clearly above the price line.
+y_max_data <- max(icap$price)
+y_max <- ceiling((y_max_data + 25) / 10) * 10   # ~25 EUR headroom
+y_label_top <- y_max - 5
 
 p <- ggplot(icap, aes(x = date, y = price)) +
-  # Vertical phase boundaries (Phase II→III, Phase III→IV)
+  # Vertical phase boundaries (Phase I→II, II→III, III→IV)
   geom_vline(xintercept = boundary_dates,
              colour = "firebrick", linewidth = 0.5) +
   # MSR decision date (dashed, distinct from phase boundaries)
   geom_vline(xintercept = msr_date,
              colour = "darkgreen", linewidth = 0.5, linetype = "dashed") +
-  # Daily series
+  # Phase I/II annual averages 2005-2009 (low-frequency step series)
+  geom_step(data = early_steps, aes(x = date, y = price),
+            colour = "steelblue", linewidth = 0.4, linetype = "dotted") +
+  # Daily series 2010+
   geom_line(colour = "steelblue", linewidth = 0.4) +
   # Phase labels at the top
   geom_text(data = phase_df, aes(x = mid, y = y_label_top, label = label),
             inherit.aes = FALSE, size = 3.6) +
-  # MSR label
-  annotate("text", x = msr_date + 90, y = y_label_top - 4,
-           label = "MSR (Oct 2015)", colour = "darkgreen",
-           hjust = 0, size = 3.2) +
+  # MSR label, simplified, positioned at start of 2017 to avoid clutter
+  # near the dashed line.
+  annotate("text", x = as.Date("2017-01-01"), y = y_label_top - 8,
+           label = "MSR", colour = "darkgreen", hjust = 0, size = 3.4) +
   scale_x_date(date_breaks = "2 years", date_labels = "%Y",
-               expand = c(0.01, 0.01)) +
+               limits = c(x_min, x_max), expand = c(0.01, 0.01)) +
   scale_y_continuous(limits = c(0, y_max),
                      breaks = seq(0, y_max, by = 20),
                      expand = c(0.01, 0.01)) +
   labs(x = NULL, y = expression("EUR / tCO"[2])) +
   theme_minimal(base_size = 11) +
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_line(colour = "grey90"),
-        panel.grid.major.y = element_line(colour = "grey90"),
+  theme(panel.grid = element_blank(),
         axis.line = element_line(colour = "black"))
 
 print(p)
