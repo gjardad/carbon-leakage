@@ -122,10 +122,8 @@ run_lp <- function(h) {
 cat("\nRunning LP at horizons 0..", H_MAX, "...\n", sep = "")
 lp <- do.call(rbind, lapply(horizons, run_lp))
 lp <- lp %>%
-  mutate(lo68 = coef - 1.000 * se,
-         hi68 = coef + 1.000 * se,
-         lo90 = coef - 1.645 * se,
-         hi90 = coef + 1.645 * se)
+  mutate(lo95 = coef - 1.96 * se,
+         hi95 = coef + 1.96 * se)
 
 cat("\n=== IRF coefficients (γ_h on CPShock × intensity) ===\n")
 print(lp, digits = 3)
@@ -134,22 +132,27 @@ write.csv(lp, file.path(OUTPUT_TAB, "phase3_ppi_lp_kanzig_style.csv"),
           row.names = FALSE)
 
 ###############################################################################
-# 5. Plot Känzig-style IRF
+# 5. Plot Känzig-style IRF (95% CI only, no grid, y-axis floored at 0)
 ###############################################################################
+y_lo <- 0
+y_hi <- ceiling(max(lp$hi95) * 10) / 10
+
 p <- ggplot(lp, aes(x = h, y = coef)) +
-  geom_hline(yintercept = 0, colour = "black", linewidth = 0.3) +
-  geom_ribbon(aes(ymin = lo90, ymax = hi90), fill = "steelblue", alpha = 0.20) +
-  geom_ribbon(aes(ymin = lo68, ymax = hi68), fill = "steelblue", alpha = 0.40) +
+  geom_ribbon(aes(ymin = pmax(lo95, y_lo), ymax = hi95),
+              fill = "steelblue", alpha = 0.30) +
   geom_line(colour = "black", linewidth = 0.7) +
   scale_x_continuous(breaks = seq(0, H_MAX, by = 6),
-                     expand = c(0.01, 0.01)) +
+                     expand = c(0.005, 0.005)) +
+  scale_y_continuous(limits = c(y_lo, y_hi),
+                     expand = c(0, 0)) +
   labs(x = "Horizon (months)",
        y = expression(gamma[h])) +
-  theme_minimal(base_size = 11) +
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major = element_line(colour = "grey92", linewidth = 0.3),
+  theme_minimal(base_size = 13) +
+  theme(panel.grid = element_blank(),
         axis.line = element_line(colour = "black"),
-        plot.title = element_text(face = "bold", size = 12))
+        axis.ticks = element_line(colour = "black"),
+        axis.text = element_text(size = 13, colour = "black"),
+        axis.title = element_text(size = 14))
 
 print(p)
 
