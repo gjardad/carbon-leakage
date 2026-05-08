@@ -144,6 +144,20 @@ cat(sprintf("NACE 4d sectors with omega_sh > 0: %d  (max %.4f)\n",
             sum(omega_sh_15_16$omega_sh > 0, na.rm = TRUE),
             max(omega_sh_15_16$omega_sh, na.rm = TRUE)))
 
+# Cross-sectional SD of each X_s across the unique NACE 4d sectors that
+# enter the regression panel. Sectors without ω (no EUTL data) carry zero,
+# so they contribute to the cross-sectional dispersion just as the
+# regression sees them.
+xsec <- ppi %>% distinct(nace4d, .keep_all = TRUE) %>%
+  select(nace4d, treated_d, omega_em, omega_sh)
+sd_treated <- sd(xsec$treated_d)
+sd_omega_em <- sd(xsec$omega_em)
+sd_omega_sh <- sd(xsec$omega_sh)
+cat(sprintf("\nCross-sectional SDs (across %d NACE 4d in panel):\n", nrow(xsec)))
+cat(sprintf("  SD(Treated) = %.4f\n", sd_treated))
+cat(sprintf("  SD(ω^em)    = %.6e\n", sd_omega_em))
+cat(sprintf("  SD(ω^sh)    = %.6e\n", sd_omega_sh))
+
 # ---- 4. Run the three DiD specs on each window ----
 run_specs <- function(panel, win_label) {
   cat(sprintf("\n========== %s (n_obs = %d, n_sectors = %d) ==========\n",
@@ -159,13 +173,13 @@ run_specs <- function(panel, win_label) {
   out <- bind_rows(
     data.frame(spec = "(A) Treated × Post",
                coef = coef(m_A)[1], se = se(m_A)[1],
-               n   = m_A$nobs),
+               sd_X = sd_treated,  n = m_A$nobs),
     data.frame(spec = "(B) omega_emissions × Post",
                coef = coef(m_B)[1], se = se(m_B)[1],
-               n   = m_B$nobs),
+               sd_X = sd_omega_em, n = m_B$nobs),
     data.frame(spec = "(C) omega_shortage  × Post",
                coef = coef(m_C)[1], se = se(m_C)[1],
-               n   = m_C$nobs)
+               sd_X = sd_omega_sh, n = m_C$nobs)
   )
   out$window <- win_label
   out$t_stat <- out$coef / out$se
@@ -173,10 +187,22 @@ run_specs <- function(panel, win_label) {
   out$hi90   <- out$coef + 1.645 * out$se
   out$lo95   <- out$coef - 1.96  * out$se
   out$hi95   <- out$coef + 1.96  * out$se
-  cat("\nResults:\n")
+  # Standardized: β × SD(X), with the same t-stat (SE × SD).
+  out$std_coef <- out$coef * out$sd_X
+  out$std_se   <- out$se   * out$sd_X
+  out$std_lo90 <- out$lo90 * out$sd_X
+  out$std_hi90 <- out$hi90 * out$sd_X
+  out$std_lo95 <- out$lo95 * out$sd_X
+  out$std_hi95 <- out$hi95 * out$sd_X
+  cat("\nResults (raw):\n")
   print(out %>% mutate(across(c(coef, se, t_stat, lo90, hi90, lo95, hi95),
                               ~ round(.x, 4))) %>%
         select(spec, coef, se, t_stat, lo90, hi90, n))
+  cat("\nResults (β × SD(X), with the same t-stat):\n")
+  print(out %>% mutate(across(c(std_coef, std_se, std_lo90, std_hi90,
+                                std_lo95, std_hi95, sd_X),
+                              ~ signif(.x, 4))) %>%
+        select(spec, sd_X, std_coef, std_se, t_stat, std_lo90, std_hi90, n))
   out
 }
 
@@ -188,7 +214,9 @@ res_19 <- run_specs(panel_19, "2010m1-2019m12 (pre-COVID, pre-energy-crisis)")
 
 # ---- 5. Save and summarise ----
 all_res <- bind_rows(res_22, res_19) %>%
-  select(window, spec, coef, se, t_stat, lo90, hi90, lo95, hi95, n)
+  select(window, spec, sd_X,
+         coef, se, t_stat, lo90, hi90, lo95, hi95,
+         std_coef, std_se, std_lo90, std_hi90, std_lo95, std_hi95, n)
 
 write.csv(all_res, file.path(OUTPUT_TAB, "phase4_ppi_did_2017.csv"),
           row.names = FALSE)
