@@ -316,8 +316,12 @@ cat(sprintf("\nR_bar (mean R_h over h=12..24): %.4f  (s.e. %.4f)\n",
 gamma_path <- gamma_path %>%
   mutate(beta      = gamma / R_bar,
          beta_se   = sqrt((se / R_bar)^2 + (gamma * R_bar_se / R_bar^2)^2),
-         beta_lo95 = beta - 1.96 * beta_se,
-         beta_hi95 = beta + 1.96 * beta_se)
+         beta_lo68 = beta - 1.000 * beta_se,
+         beta_hi68 = beta + 1.000 * beta_se,
+         beta_lo90 = beta - 1.645 * beta_se,
+         beta_hi90 = beta + 1.645 * beta_se,
+         beta_lo95 = beta - 1.96  * beta_se,
+         beta_hi95 = beta + 1.96  * beta_se)
 
 cat("\n=== Pass-through β_h = γ_h / R_bar ===\n")
 print(gamma_path %>%
@@ -336,16 +340,18 @@ write.csv(gamma_path,
 # window raises sector PPI by β_h percent (and by β_h × ω for a sector with
 # exposure ω). β_h = 1 corresponds to full Shephard's-lemma pass-through.
 ###############################################################################
-y_lo <- min(gamma_path$beta_lo95, na.rm = TRUE)
-y_hi <- max(gamma_path$beta_hi95, na.rm = TRUE)
+y_lo <- min(gamma_path$beta_lo90, na.rm = TRUE)
+y_hi <- max(gamma_path$beta_hi90, na.rm = TRUE)
 y_range <- y_hi - y_lo
 y_lo_plot <- y_lo - 0.05 * y_range
 y_hi_plot <- y_hi + 0.05 * y_range
 
 p <- ggplot(gamma_path, aes(x = h, y = beta)) +
   geom_hline(yintercept = 0, colour = "grey60", linewidth = 0.3) +
-  geom_ribbon(aes(ymin = beta_lo95, ymax = beta_hi95),
-              fill = "steelblue", alpha = 0.30) +
+  geom_ribbon(aes(ymin = beta_lo90, ymax = beta_hi90),
+              fill = "steelblue", alpha = 0.18) +
+  geom_ribbon(aes(ymin = beta_lo68, ymax = beta_hi68),
+              fill = "steelblue", alpha = 0.40) +
   geom_line(colour = "black", linewidth = 0.7) +
   scale_x_continuous(breaks = seq(0, H_MAX, by = 6),
                      expand = c(0.005, 0.005)) +
