@@ -1,26 +1,34 @@
 ###############################################################################
-# phase4_within_nace4d_reallocation_RMD.R
+# phase4_reallocation_RMD.R
 #
 # PURPOSE
-#   One-shot orchestrator: source every script needed to produce the seven
-#   selected within-NACE4d reallocation plots on RMD against the full
-#   (non-downsampled) NBB data.
+#   One-shot orchestrator: source every script needed to produce the ten
+#   selected within- and across-NACE4d reallocation plots on RMD against
+#   the full (non-downsampled) NBB data.
 #
 # SELECTED OUTPUT PLOTS (in OUTPUT_FIG)
-#   1. phase4_within_nace4d_reallocation_topQ_buyertotal.pdf
-#         Top-quartile cells (top-omega + bottom-omega supplier).
-#   2. phase4_within_nace4d_reallocation_allcells_buyertotal.pdf
-#         All multi-supplier cells (top-omega + bottom-omega supplier).
-#   3. phase4_within_nace4d_reallocation_placebo_anyNACE4d.pdf
-#         R_jt placebo: treated vs no-EUTL placebo, all NACE4d.
-#   4. phase4_within_nace4d_reallocation_placebo_etsNACE4d.pdf
-#         R_jt placebo: treated vs no-EUTL placebo, ETS-treated NACE4d only.
-#   5. phase4_within_nace4d_reallocation_pooled_combined_raw.pdf
-#         Headline raw within-NACE4d expenditure share on top-omega supplier.
-#   6. phase4_supplier_count_share_multi_by_year.pdf
-#         Share of buyer-NACE4d cells with >=2 suppliers, by year.
-#   7. phase4_supplier_count_hist_by_interval.pdf
-#         Distribution of #suppliers per buyer x ETS-NACE4d cell, by interval.
+#   Within-NACE4d reallocation
+#     1. phase4_within_nace4d_reallocation_topQ_buyertotal.pdf
+#           Top-quartile cells (top-omega + bottom-omega supplier).
+#     2. phase4_within_nace4d_reallocation_allcells_buyertotal.pdf
+#           All multi-supplier cells (top-omega + bottom-omega supplier).
+#     3. phase4_within_nace4d_reallocation_placebo_anyNACE4d.pdf
+#           R_jt placebo: treated vs no-EUTL placebo, all NACE4d.
+#     4. phase4_within_nace4d_reallocation_placebo_etsNACE4d.pdf
+#           R_jt placebo: treated vs no-EUTL placebo, ETS-treated NACE4d only.
+#     5. phase4_within_nace4d_reallocation_pooled_combined_raw.pdf
+#           Headline raw within-NACE4d expenditure share on top-omega supplier.
+#     6. phase4_supplier_count_share_multi_by_year.pdf
+#           Share of buyer-NACE4d cells with >=2 suppliers, by year.
+#     7. phase4_supplier_count_hist_by_interval.pdf
+#           Distribution of #suppliers per buyer x ETS-NACE4d cell, by interval.
+#   Across-NACE4d margin
+#     8. phase4_across_nace4d_intensive_margin.pdf
+#           Buyer-level expenditure share on ETS-treated NACE4d, by year.
+#     9. phase4_across_nace4d_extensive_margin.pdf
+#           Share of B2B-active buyers buying from any ETS-treated NACE4d.
+#    10. phase4_within_nace4d_extensive_margin.pdf
+#           Among buyers in ETS-treated NACE4d, share buying from an ETS firm.
 #
 # DEPENDENCY GRAPH
 #   raw EUTL panel + ICAP price files
@@ -32,15 +40,18 @@
 #       -> phase4_within_nace4d_reallocation_topQ.R      [plots 1, 2; reads panel CSV]
 #       -> phase4_within_nace4d_reallocation_placebo.R   [plots 3, 4]
 #       -> phase4_supplier_count_distribution.R          [plots 6, 7]
+#       -> phase4_across_nace4d_intensive_margin.R       [plot 8]
+#       -> phase4_across_nace4d_extensive_margin.R       [plot 9]
+#       -> phase4_within_nace4d_extensive_margin.R       [plot 10]
 #
 # USAGE
 #   On RMD (or any machine where paths.R resolves correctly), from the repo
 #   root:
-#     Rscript analysis/phase4_within_nace4d_reallocation_RMD.R
+#     Rscript analysis/phase4_reallocation_RMD.R
 #   The script will:
 #     - build phase3_eua_prices.RData and phase3_firm_exposure.RData if absent;
-#     - run the four phase4 scripts in dependency order;
-#     - print a summary with the resolved paths of the seven selected plots.
+#     - run the seven phase4 scripts in dependency order;
+#     - print a summary with the resolved paths of the ten selected plots.
 #
 # NOTES
 #   - Each child script is sourced into an isolated environment so its
@@ -101,9 +112,9 @@ if (!file.exists(fe_path)) {
 }
 
 # ----------------------------------------------------------------------------
-# Step 2: Main analysis scripts (in dependency order)
+# Step 2: Within-NACE4d analysis scripts (in dependency order)
 # ----------------------------------------------------------------------------
-# Plots 5 and the panel CSV used downstream by topQ
+# Plot 5 + the panel CSV used downstream by topQ
 run_script("analysis/phase4_within_nace4d_reallocation_plots.R")
 
 # Plots 1 & 2 (depends on panel CSV from the previous step)
@@ -116,16 +127,33 @@ run_script("analysis/phase4_within_nace4d_reallocation_placebo.R")
 run_script("analysis/phase4_supplier_count_distribution.R")
 
 # ----------------------------------------------------------------------------
-# Step 3: Summary
+# Step 3: Across-NACE4d margin scripts (independent, can run in any order)
+# ----------------------------------------------------------------------------
+# Plot 8
+run_script("analysis/phase4_across_nace4d_intensive_margin.R")
+
+# Plot 9
+run_script("analysis/phase4_across_nace4d_extensive_margin.R")
+
+# Plot 10
+run_script("analysis/phase4_within_nace4d_extensive_margin.R")
+
+# ----------------------------------------------------------------------------
+# Step 4: Summary
 # ----------------------------------------------------------------------------
 selected_plots <- c(
+  # Within-NACE4d reallocation
   "phase4_within_nace4d_reallocation_topQ_buyertotal.pdf",
   "phase4_within_nace4d_reallocation_allcells_buyertotal.pdf",
   "phase4_within_nace4d_reallocation_placebo_anyNACE4d.pdf",
   "phase4_within_nace4d_reallocation_placebo_etsNACE4d.pdf",
   "phase4_within_nace4d_reallocation_pooled_combined_raw.pdf",
   "phase4_supplier_count_share_multi_by_year.pdf",
-  "phase4_supplier_count_hist_by_interval.pdf"
+  "phase4_supplier_count_hist_by_interval.pdf",
+  # Across-NACE4d margins
+  "phase4_across_nace4d_intensive_margin.pdf",
+  "phase4_across_nace4d_extensive_margin.pdf",
+  "phase4_within_nace4d_extensive_margin.pdf"
 )
 
 cat("\n", strrep("=", 72), "\n",
