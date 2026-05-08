@@ -10,8 +10,11 @@
 #   that aggregation.
 #
 #   Strategy:
-#     2005-01 to 2009-12: Eurostat NACE 2-digit domestic monthly PPI (BE,
-#                         from sts_inppd_m).
+#     2000-01 to 2009-12: Eurostat NACE 2-digit domestic monthly PPI (BE,
+#                         from sts_inppd_m). For most regulated NACE 2d the
+#                         underlying I10 series goes back to 1981; we extend
+#                         the panel to 2000-01 to provide pre-ETS observations
+#                         needed for CMdG-style event-study replication.
 #     2010-01 to 2024-12: Statbel NACE 4-digit domestic monthly PPI
 #                         (chain-linked to Eurostat at 2010-01).
 #
@@ -44,8 +47,9 @@ REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
 while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
 source(file.path(REPO_DIR, "paths.R"))
 
-base_year  <- 2005
-link_date  <- as.Date("2010-01-01")  # month where Eurostat 2d meets Statbel 4d
+base_year   <- 2005                          # 2005 annual avg = 100
+lower_bound <- as.Date("2000-01-01")         # earliest date in panel (was 2005-01)
+link_date   <- as.Date("2010-01-01")         # month where Eurostat 2d meets Statbel 4d
 
 ###############################################################################
 # STEP 1: Parse Statbel NACE 4-digit MONTHLY PPI
@@ -241,7 +245,7 @@ base_vals <- ppi_eurostat_mly %>%
 ppi_eurostat_mly <- ppi_eurostat_mly %>%
   left_join(base_vals, by = "nace2d") %>%
   mutate(ppi_2005 = ppi_2010base / base_val * 100) %>%
-  filter(!is.na(ppi_2005), year(date) >= base_year) %>%
+  filter(!is.na(ppi_2005), date >= lower_bound) %>%
   select(nace2d, date, ppi_2005)
 
 cat(sprintf("\nEurostat chained monthly 2005-base: %d obs, %d NACE 2d sectors, %s to %s\n",
@@ -292,10 +296,10 @@ cat(sprintf("\nStatbel chained monthly: %d obs, %d NACE 4d sectors\n",
 
 nace4d_to_2d <- ppi_statbel_mly %>% distinct(nace4d, nace2d)
 
-# Calendar grid of 2005-01 through 2009-12
+# Calendar grid of `lower_bound` through 2009-12 (extended pre-Statbel period)
 pre2010_grid <- expand.grid(
   nace4d = nace4d_to_2d$nace4d,
-  date   = seq(as.Date("2005-01-01"), as.Date("2009-12-01"), by = "month"),
+  date   = seq(lower_bound, as.Date("2009-12-01"), by = "month"),
   stringsAsFactors = FALSE
 ) %>%
   as_tibble() %>%
@@ -320,7 +324,7 @@ deflator_monthly <- bind_rows(pre2010_grid, ppi_statbel_chained) %>%
   arrange(nace4d, date)
 
 deflator_2d_only_monthly <- ppi_eurostat_mly %>%
-  filter(year(date) >= base_year) %>%
+  filter(date >= lower_bound) %>%
   mutate(year = year(date), month = month(date),
          ppi = ppi_2005, ppi_source = "eurostat_2d") %>%
   select(nace2d, date, year, month, ppi, ppi_source)

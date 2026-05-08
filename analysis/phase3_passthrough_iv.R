@@ -232,65 +232,126 @@ cat("\n=== γ_h (panel-LP, ω = ω_gross × CPShock_Shock) ===\n")
 print(gamma_path %>% select(h, gamma, se, t_stat, n), digits = 3)
 
 ###############################################################################
-# 7. Aggregate impact response R_0: response of Δlog EUA to a unit CPShock
+# 7. Aggregate EUA impulse response R_h: cumulative log-EUA response to a
+#    unit CPShock at horizon h. Used to convert γ_h (response per CPShock unit)
+#    into β_h = γ_h / R_h, the pass-through elasticity (% PPI per 1% EUA).
+#
+# Run a separate aggregate LP at each horizon:
+#   log(EUA_{m+h}) - log(EUA_{m-1}) = R_h · CPShock_m + lags + ε_{m,h}
+# with the same lag-augmentation as the panel-LP (here 6 lags of log_eua).
 ###############################################################################
 ts <- panel_m %>%
   distinct(date, log_eua, cps) %>%
-  arrange(date) %>%
-  mutate(d_log_eua = log_eua - dplyr::lag(log_eua, 1)) %>%
-  filter(!is.na(d_log_eua), !is.na(cps))
+  arrange(date)
 
-m_R0 <- feols(d_log_eua ~ cps, data = ts)
-ct_R0 <- coeftable(m_R0)
-R0_hat <- ct_R0["cps", 1]
-R0_se  <- ct_R0["cps", 2]
+for (j in 1:P_LAGS) {
+  ts[[paste0("log_eua_lag", j)]] <- dplyr::lag(ts$log_eua, j)
+}
+ts$log_eua_lag1 <- dplyr::lag(ts$log_eua, 1)
 
-cat(sprintf("\nAggregate impact response R_0: Δlog EUA = %.4f × CPShock + ε  (s.e. %.4f, t = %.2f, n = %d)\n",
-            R0_hat, R0_se, R0_hat / R0_se, nobs(m_R0)))
+for (h in horizons) {
+  ts[[paste0("log_eua_lead", h)]] <-
+    sapply(seq_len(nrow(ts)),
+           function(i) if ((i + h) <= nrow(ts)) ts$log_eua[i + h] else NA_real_)
+}
 
-# Implied elasticity β_h = γ_h / R_0 (delta-method SE ignoring R_0 variance)
+eua_lag_terms <- paste(paste0("log_eua_lag", 1:P_LAGS), collapse = " + ")
+
+run_R_lp <- function(h) {
+  lhs_col <- paste0("log_eua_lead", h)
+  dat <- ts %>%
+    transmute(
+      y_eua = .data[[lhs_col]] - log_eua_lag1,
+      cps,
+      log_eua_lag1, log_eua_lag2, log_eua_lag3,
+      log_eua_lag4, log_eua_lag5, log_eua_lag6
+    ) %>%
+    filter(!is.na(y_eua), !is.na(log_eua_lag6))
+
+  frm <- as.formula(sprintf("y_eua ~ cps + %s", eua_lag_terms))
+  m <- feols(frm, data = dat, vcov = "hetero")
+  ct <- coeftable(m)
+  data.frame(
+    h    = h,
+    R    = ct["cps", 1],
+    R_se = ct["cps", 2],
+    n_R  = m$nobs
+  )
+}
+
+cat(sprintf("\nRunning aggregate EUA-IRF at horizons 0..%d ...\n", H_MAX))
+R_path <- do.call(rbind, lapply(horizons, run_R_lp))
+cat("\n=== R_h (aggregate cumulative log-EUA response to CPShock) ===\n")
+print(R_path, digits = 3)
+
+###############################################################################
+# 8. Pass-through elasticity β_h = γ_h / R_bar
+#
+# Using horizon-specific R_h directly produces wildly unstable β_h because
+# the aggregate first stage Δlog EUA on CPShock is noisy at the monthly
+# frequency (CPShock explains <1% of monthly EUA variation; same power
+# problem Käenzig flags in App. C.5 for LP-IV). At horizons where R_h is
+# near zero or negative, β_h = γ_h / R_h blows up.
+#
+# Defensible alternative: use a STABLE LONG-RUN reference R_bar, defined as
+# the mean of R_h over a mid-horizon window where the EUA IRF is well-
+# identified. This preserves the horizon-h variation in γ_h (the sectoral
+# pass-through gradient) while giving a stable denominator for elasticity
+# interpretation.
+#
+# We use R_bar = mean of R_h over h ∈ [12, 24] months — the window where
+# Käenzig's own SVAR has the EUA IRF at its peak and most precisely
+# identified. β_h is then "fraction of a per-1% EUA change at the typical
+# multi-quarter horizon that passes through to sector PPI."
+###############################################################################
+gamma_path <- gamma_path %>% left_join(R_path, by = "h")
+
+R_bar    <- mean(gamma_path$R[gamma_path$h %in% 12:24], na.rm = TRUE)
+R_bar_se <- sqrt(mean(gamma_path$R_se[gamma_path$h %in% 12:24]^2,
+                      na.rm = TRUE) / sum(gamma_path$h %in% 12:24))
+
+cat(sprintf("\nR_bar (mean R_h over h=12..24): %.4f  (s.e. %.4f)\n",
+            R_bar, R_bar_se))
+
 gamma_path <- gamma_path %>%
-  mutate(beta      = gamma / R0_hat,
-         beta_se   = abs(se / R0_hat),
+  mutate(beta      = gamma / R_bar,
+         beta_se   = sqrt((se / R_bar)^2 + (gamma * R_bar_se / R_bar^2)^2),
          beta_lo95 = beta - 1.96 * beta_se,
          beta_hi95 = beta + 1.96 * beta_se)
 
-cat("\n=== Implied elasticity β_h = γ_h / R_0 ===\n")
-print(gamma_path %>% select(h, gamma, beta, beta_se, beta_lo95, beta_hi95) %>%
-        head(15), digits = 3)
+cat("\n=== Pass-through β_h = γ_h / R_bar ===\n")
+print(gamma_path %>%
+        select(h, gamma, R, beta, beta_se, beta_lo95, beta_hi95),
+      digits = 3)
 
 write.csv(gamma_path,
           file.path(OUTPUT_TAB, "phase3_passthrough_iv.csv"),
           row.names = FALSE)
 
 ###############################################################################
-# 8. Plot γ_h (panel-LP coefficient on ω × CPShock)
+# 9. Plot β_h (pass-through elasticity)
 #
-# Note: we plot γ_h directly rather than the implied β_h = γ_h / R_0 because
-# the aggregate impact response R_0 is small at the monthly level (CPShock
-# explains <1% of monthly Δlog EUA variation), making β_h numerically unstable.
-# Käenzig (2023) sidesteps this by reporting his IRFs in "+1% HICP energy on
-# impact" units via the SVAR's structural identification, not via a raw
-# monthly first stage. We follow the same convention here: γ_h is the
-# panel-LP coefficient; the caption explains how to read it as a pass-through
-# magnitude.
+# β_h is the cumulative pass-through elasticity at horizon h: for a sector
+# with cost-share exposure ω = 1, a 1% rise in EUA prices over the [m-1, m+h]
+# window raises sector PPI by β_h percent (and by β_h × ω for a sector with
+# exposure ω). β_h = 1 corresponds to full Shephard's-lemma pass-through.
 ###############################################################################
-y_lo <- min(gamma_path$lo95)
-y_hi <- max(gamma_path$hi95)
+y_lo <- min(gamma_path$beta_lo95, na.rm = TRUE)
+y_hi <- max(gamma_path$beta_hi95, na.rm = TRUE)
 y_range <- y_hi - y_lo
 y_lo_plot <- y_lo - 0.05 * y_range
 y_hi_plot <- y_hi + 0.05 * y_range
 
-p <- ggplot(gamma_path, aes(x = h, y = gamma)) +
+p <- ggplot(gamma_path, aes(x = h, y = beta)) +
   geom_hline(yintercept = 0, colour = "grey60", linewidth = 0.3) +
-  geom_ribbon(aes(ymin = lo95, ymax = hi95),
+  geom_ribbon(aes(ymin = beta_lo95, ymax = beta_hi95),
               fill = "steelblue", alpha = 0.30) +
   geom_line(colour = "black", linewidth = 0.7) +
   scale_x_continuous(breaks = seq(0, H_MAX, by = 6),
                      expand = c(0.005, 0.005)) +
   scale_y_continuous(limits = c(y_lo_plot, y_hi_plot),
                      expand = c(0, 0)) +
-  labs(x = "Months", y = expression(gamma[h])) +
+  labs(x = "Months", y = "Pass-through") +
   theme_minimal(base_size = 13) +
   theme(panel.grid = element_blank(),
         axis.line = element_line(colour = "black"),
