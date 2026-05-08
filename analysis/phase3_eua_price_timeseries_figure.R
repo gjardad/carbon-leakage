@@ -86,14 +86,12 @@ y_label_top <- y_max - 5
 
 p <- ggplot(eua, aes(x = date, y = price)) +
   geom_vline(xintercept = boundary_dates,
-             colour = "firebrick", linewidth = 0.5) +
+             colour = "black", linewidth = 0.5) +
   geom_vline(xintercept = msr_date,
-             colour = "darkgreen", linewidth = 0.5, linetype = "dashed") +
-  geom_line(colour = "steelblue", linewidth = 0.4) +
+             colour = "black", linewidth = 0.5, linetype = "dotted") +
+  geom_line(colour = "grey25", linewidth = 0.4) +
   geom_text(data = phase_df, aes(x = mid, y = y_label_top, label = label),
             inherit.aes = FALSE, size = 3.6) +
-  annotate("text", x = as.Date("2017-01-01"), y = y_label_top - 8,
-           label = "MSR", colour = "darkgreen", hjust = 0, size = 3.4) +
   scale_x_date(date_breaks = "2 years", date_labels = "%Y",
                limits = c(x_min, x_max), expand = c(0.01, 0.01)) +
   scale_y_continuous(limits = c(0, y_max),
