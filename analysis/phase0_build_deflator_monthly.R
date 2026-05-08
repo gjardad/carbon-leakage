@@ -48,7 +48,7 @@ while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DI
 source(file.path(REPO_DIR, "paths.R"))
 
 base_year   <- 2005                          # 2005 annual avg = 100
-lower_bound <- as.Date("2000-01-01")         # earliest date in panel (was 2005-01)
+lower_bound <- as.Date("1981-01-01")         # earliest date in panel (Eurostat I10 starts 1981-01 for most NACE 2d manufacturing sectors)
 link_date   <- as.Date("2010-01-01")         # month where Eurostat 2d meets Statbel 4d
 
 ###############################################################################

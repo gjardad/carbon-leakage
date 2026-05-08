@@ -36,7 +36,7 @@ while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DI
 source(file.path(REPO_DIR, "paths.R"))
 
 base_year <- 2005       # rebasing anchor (PPI = 100 at this year)
-sample_start <- 2000    # earliest year retained in the output deflator
+sample_start <- 1981    # earliest year retained (Eurostat I10 starts 1981 for most NACE 2d manufacturing sectors)
 link_year <- 2010       # where Eurostat 2d and Statbel 4d overlap
 
 ###############################################################################
