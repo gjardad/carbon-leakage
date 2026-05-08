@@ -19,8 +19,8 @@
 #   nace4d. The lag-augmentation soaks up LHS persistence without affecting
 #   γ_h identification (Plagborg-Møller-Wolf 2021).
 #
-# ω_{s, t(m)} = trailing 2-yr (year t-1, t-2) mean of (gross_emissions × EUA)
-#               / total_cost at sector s. Predetermined relative to month m,
+# ω_{s, t(m)} = (gross_emissions × EUA) / total_cost at sector s, year t-1
+#               (where t is the calendar year of month m). Predetermined,
 #               updates annually. Coalesced to zero for non-ETS sectors so
 #               they remain in the panel and contribute to FE estimation.
 #

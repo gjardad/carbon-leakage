@@ -5,18 +5,18 @@
 #   Build the rolling-window cost-share exposure measure ω_{s,t} used in the
 #   pass-through IV regression (§4 Strategy 1, replacing intensity_s^base).
 #
-#   For each sector s and year t, ω_{s,t} averages the (carbon cost / total
-#   cost) ratio over the trailing two years (t-1, t-2). This is predetermined
-#   relative to year t and updates annually as technology and emissions evolve,
-#   addressing the staleness of a fixed-window construction (e.g. 2005-07 or
-#   2013-16) when the regression panel spans many years.
+#   For each sector s and year t, ω_{s,t} = (carbon cost / total cost) at
+#   year t-1. This is predetermined relative to year t and updates annually
+#   as technology and emissions evolve, addressing the staleness of a fixed-
+#   window construction (e.g. 2005-07 or 2013-16) when the regression panel
+#   spans many years.
 #
 #   Three flavours are computed in parallel:
 #
-#     ω_gross_{s,t} = trailing 2-yr mean of (gross_emissions × EUA) / total_cost
+#     ω_gross_{s,t} = (gross_emissions × EUA / total_cost) at t-1
 #                     [marginal-pricing-relevant cost share under Shephard's lemma]
 #
-#     ω_short_{s,t} = trailing 2-yr mean of (shortage × EUA) / total_cost
+#     ω_short_{s,t} = (shortage × EUA / total_cost) at t-1
 #                     [realized-cost-pricing alternative; legacy convention]
 #
 #     ω_free_{s,t}  = ω_gross_{s,t} - ω_short_{s,t}
@@ -79,37 +79,26 @@ sx <- sector_exposure %>%
 sx <- sx %>% arrange(nace4d, year)
 
 # ---------------------------------------------------------------------------
-# 3. Compute trailing 2-year-mean omegas
+# 3. Compute 1-year (t-1) omegas
 #
-#    For each (s, t), ω_{s,t} averages over (t-1, t-2). Both years must have
-#    valid data; otherwise ω_{s,t} = NA.
-#
-#    Formula: ω_{s,t} = sum_{τ ∈ {t-1, t-2}} carbon_cost_τ / sum_{τ} total_cost_τ
-#    (sum over numerator and denominator separately, then divide — robust to
-#    missing years and matches the "average cost share over the window" intent)
+#    For each (s, t), ω_{s,t} = carbon_cost_{s, t-1} / total_cost_{s, t-1}
+#    where carbon_cost is gross or short. Predetermined relative to year t.
 # ---------------------------------------------------------------------------
 omega <- sx %>%
   group_by(nace4d) %>%
   mutate(
     cc_gross_lag1 = dplyr::lag(carbon_cost_gross, 1),
-    cc_gross_lag2 = dplyr::lag(carbon_cost_gross, 2),
     cc_short_lag1 = dplyr::lag(carbon_cost_short, 1),
-    cc_short_lag2 = dplyr::lag(carbon_cost_short, 2),
-    cost_lag1     = dplyr::lag(total_cost_denom,  1),
-    cost_lag2     = dplyr::lag(total_cost_denom,  2)
+    cost_lag1     = dplyr::lag(total_cost_denom,  1)
   ) %>%
   ungroup() %>%
   mutate(
-    n_obs_used = (!is.na(cc_gross_lag1) & cost_lag1 > 0) +
-                 (!is.na(cc_gross_lag2) & cost_lag2 > 0),
-    num_gross  = coalesce(cc_gross_lag1, 0) * (cost_lag1 > 0 & !is.na(cost_lag1)) +
-                 coalesce(cc_gross_lag2, 0) * (cost_lag2 > 0 & !is.na(cost_lag2)),
-    num_short  = coalesce(cc_short_lag1, 0) * (cost_lag1 > 0 & !is.na(cost_lag1)) +
-                 coalesce(cc_short_lag2, 0) * (cost_lag2 > 0 & !is.na(cost_lag2)),
-    den        = coalesce(cost_lag1, 0) * (cost_lag1 > 0 & !is.na(cost_lag1)) +
-                 coalesce(cost_lag2, 0) * (cost_lag2 > 0 & !is.na(cost_lag2)),
-    omega_gross = ifelse(den > 0 & n_obs_used >= 1, num_gross / den, NA_real_),
-    omega_short = ifelse(den > 0 & n_obs_used >= 1, num_short / den, NA_real_),
+    n_obs_used  = as.integer(!is.na(cc_gross_lag1) &
+                             !is.na(cost_lag1) & cost_lag1 > 0),
+    omega_gross = ifelse(!is.na(cost_lag1) & cost_lag1 > 0,
+                         cc_gross_lag1 / cost_lag1, NA_real_),
+    omega_short = ifelse(!is.na(cost_lag1) & cost_lag1 > 0,
+                         cc_short_lag1 / cost_lag1, NA_real_),
     omega_free  = omega_gross - omega_short
   )
 

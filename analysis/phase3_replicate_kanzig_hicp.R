@@ -294,14 +294,18 @@ save(kanzig_hicp_replication,
      file = file.path(OUT_DATA, "kanzig_hicp_replication.RData"))
 
 # ---- 6. Plot IRFs ----
+# Plot the structural-Shock-based LP (which Käenzig himself uses for outcomes
+# outside his SVAR per Step 6 of his paper). Shock is sign-normalised so a
+# unit shock raises HICP energy by ~1% on impact, matching his Figure 3
+# directly without further rescaling.
 plt_df <- bind_rows(
-  lp_nrg %>% mutate(series = "HICP energy"),
-  lp_all %>% mutate(series = "HICP headline")
+  lp_nrg_shk %>% mutate(series = "HICP energy"),
+  lp_all_shk %>% mutate(series = "HICP headline")
 )
 
-p <- ggplot(plt_df, aes(x = h, y = 100 * coef_norm, color = series, fill = series)) +
+p <- ggplot(plt_df, aes(x = h, y = 100 * coef, color = series, fill = series)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
-  geom_ribbon(aes(ymin = 100 * lo95_norm, ymax = 100 * hi95_norm),
+  geom_ribbon(aes(ymin = 100 * lo95, ymax = 100 * hi95),
               alpha = 0.2, color = NA) +
   geom_line(linewidth = 0.9) +
   geom_point(size = 1.8) +
@@ -310,8 +314,8 @@ p <- ggplot(plt_df, aes(x = h, y = 100 * coef_norm, color = series, fill = serie
   scale_fill_manual(values  = c("HICP energy" = "#fb6a4a",
                                 "HICP headline" = "#3182bd")) +
   labs(
-    title = "Kaenzig (2025 JMP) HICP IRF — reduced-form LP replication",
-    subtitle = "Monthly IRFs, 1999m7-2019m12 EA, normalized to HICP-energy impact = 1%. Benchmark: Kaenzig JMP Fig 3 headline peak ≈ +0.2%.",
+    title = "Käenzig (2023, JMP) HICP IRF — reduced-form LP replication",
+    subtitle = "Monthly LP, 2005m1-2019m12 EA, regressor = Käenzig VAR-identified Shock. Benchmark: JMP Fig 3.",
     x = "Horizon (months)", y = "% response",
     color = NULL, fill = NULL
   ) +
@@ -321,5 +325,7 @@ p <- ggplot(plt_df, aes(x = h, y = 100 * coef_norm, color = series, fill = serie
 
 ggsave(file.path(OUTPUT_FIG, "kanzig_hicp_replication.pdf"),
        p, width = 8, height = 5)
+ggsave(file.path(OUTPUT_FIG, "kanzig_hicp_replication.png"),
+       p, width = 8, height = 5, dpi = 300)
 cat("Plot saved to:", file.path(OUTPUT_FIG, "kanzig_hicp_replication.pdf"), "\n")
 cat("Done.\n")
