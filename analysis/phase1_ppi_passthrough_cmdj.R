@@ -263,12 +263,49 @@ print(summary(phase_tight))
 # -------------------------------------------------------------------------
 # 4. CMdG-style Figure 1 -- exact visual replica
 # -------------------------------------------------------------------------
+# Headline figure uses the SECTOR-SPECIFIC LINEAR TRENDS spec (es_tight_dt /
+# es_broad_dt computed below in section 5), since the no-trend version has
+# clear pre-ETS dynamics that contaminate the post-2005 coefficients
+# (regulated vs unregulated PPI gap was already trending upward before ETS).
+# The trend-controlled version keeps the spec internally consistent with
+# the eq. (\eqref{eq:passthrough_strategy2}) prose in the paper, which states
+# "with sector-specific linear trends θ_s · t".
+#
+# The no-trend version is computed earlier (es_tight, es_broad) but is no
+# longer the headline figure; it was the previous version of figure
+# phase1_figure1_cmdj_style.png and remains as a baseline-without-trends
+# comparator inside Diagnostic 1 (phase1_diag1_sector_trends.png).
+#
 # CMdG aesthetic: capped error bars (point-range), Phase 1 and Phase 3
 # shaded in light blue, Phase 2 unshaded, "Pre-ETS / Phase 1 / Phase 2 /
 # Phase 3" labels at top, x-axis 2001-2019 to match their sample.
-# Use the tight (CMdG-comparable) treatment definition.
-es_cmdj <- es_tight[year <= 2019L]
-es_cmdj_broad <- es_broad[year <= 2019L]
+
+# Need to compute es_tight_dt / es_broad_dt before the headline plot.
+def[, year_num := as.integer(year)]
+def[, year_f := factor(year, levels = sort(unique(year)))]
+def[, year_f := relevel(year_f, ref = as.character(REF_YEAR))]
+
+run_es_with_trends_inline <- function(treat_col, label) {
+  d <- copy(def)
+  setnames(d, treat_col, "treated")
+  es <- feols(log_ppi ~ i(year_f, treated, ref = as.character(REF_YEAR)) |
+                nace4d_str + year_f + nace4d_str[year_num],
+              cluster = ~ nace4d_str,
+              data = d)
+  co <- as.data.table(summary(es)$coeftable, keep.rownames = "term")
+  setnames(co, c("term", "estimate", "se", "tval", "pval"))
+  co[, year := suppressWarnings(as.integer(gsub(".*::([0-9]+).*", "\\1", term)))]
+  co <- co[!is.na(year)]
+  co[, ci_lo := estimate - 1.96 * se]
+  co[, ci_hi := estimate + 1.96 * se]
+  ref_row <- data.table(year = REF_YEAR, estimate = 0, se = 0, ci_lo = 0, ci_hi = 0)
+  out <- rbind(co[, .(year, estimate, se, ci_lo, ci_hi)], ref_row, fill = TRUE)
+  out[, treat_label := label]
+  setorder(out, year)
+  out
+}
+es_cmdj       <- run_es_with_trends_inline("treated_tight", "Tight + sector trends")[year <= 2019L]
+es_cmdj_broad <- run_es_with_trends_inline("treated_broad", "Broad + sector trends")[year <= 2019L]
 
 cmdj_phase_band <- function(xmin, xmax, fill = "lightblue", alpha = 0.25) {
   annotate("rect", xmin = xmin - 0.5, xmax = xmax + 0.5,
@@ -297,7 +334,7 @@ p_cmdj <- ggplot(es_cmdj, aes(x = year, y = estimate)) +
   scale_y_continuous(limits = c(y_bot, y_top * 1.05)) +
   labs(
     title = "Belgian PPI: regulated vs. unregulated NACE 4d sectors (CMdG Fig. 1 style)",
-    subtitle = sprintf("Beta_tau on (regulated x year=tau), ref = %d; FE: NACE 4d, year; cluster: NACE 4d (CMdG-tight, 7 NACE 2d)", REF_YEAR),
+    subtitle = sprintf("Beta_tau on (regulated x year=tau), ref = %d; FE: NACE 4d + year + NACE 4d-specific linear trends; cluster: NACE 4d (CMdG-tight, 7 NACE 2d)", REF_YEAR),
     x = NULL, y = expression(beta[tau]),
     caption = "Vertical bars = 95% CI. Shaded areas = ETS Phases 1 and 3 (per CMdG Fig 1 convention)."
   ) +
@@ -329,7 +366,7 @@ p_cmdj_broad <- ggplot(es_cmdj_broad, aes(x = year, y = estimate)) +
   scale_y_continuous(limits = c(y_bot_b, y_top_b * 1.05)) +
   labs(
     title = "Belgian PPI: regulated vs. unregulated NACE 4d sectors (CMdG Fig. 1 style)",
-    subtitle = sprintf("Beta_tau, ref = %d; FE: NACE 4d, year; cluster: NACE 4d (broad, 14 NACE 2d)", REF_YEAR),
+    subtitle = sprintf("Beta_tau, ref = %d; FE: NACE 4d + year + NACE 4d-specific linear trends; cluster: NACE 4d (broad, 14 NACE 2d)", REF_YEAR),
     x = NULL, y = expression(beta[tau]),
     caption = "Vertical bars = 95% CI. Shaded areas = ETS Phases 1 and 3 (per CMdG Fig 1 convention)."
   ) +
