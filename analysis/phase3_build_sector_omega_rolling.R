@@ -2,36 +2,41 @@
 # phase3_build_sector_omega_rolling.R
 #
 # PURPOSE:
-#   Build the rolling-window cost-share exposure measure ω_{s,t} used in the
-#   pass-through IV regression (§4 Strategy 1, replacing intensity_s^base).
+#   Build the rolling-window emissions-intensity exposure measure ω_{s,t}
+#   used in the pass-through panel-LP regression. ω is a PHYSICAL emissions
+#   intensity (tCO2 per EUR of cost), NOT a carbon-cost share — the EUA
+#   price factor is intentionally excluded so ω stays well-identified in
+#   periods when EUA collapsed (Phase I overallocation crash 2007, Phase II
+#   crisis trough). The EUA-price channel enters the regression through the
+#   CPShock interaction, not through ω.
 #
-#   For each sector s and year t, ω_{s,t} = (carbon cost / total cost) at
-#   year t-1. This is predetermined relative to year t and updates annually
-#   as technology and emissions evolve, addressing the staleness of a fixed-
-#   window construction (e.g. 2005-07 or 2013-16) when the regression panel
-#   spans many years.
+#   For each sector s and year t, ω_{s,t} = (emissions / total cost) at
+#   year t-1. Predetermined relative to year t and updates annually.
 #
 #   Three flavours are computed in parallel:
 #
-#     ω_gross_{s,t} = (gross_emissions × EUA / total_cost) at t-1
-#                     [marginal-pricing-relevant cost share under Shephard's lemma]
+#     ω_gross_{s,t} = gross_emissions / total_cost   at t-1
+#                     [main: physical exposure to ETS regulation]
 #
-#     ω_short_{s,t} = (shortage × EUA / total_cost) at t-1
-#                     [realized-cost-pricing alternative; legacy convention]
+#     ω_short_{s,t} = shortage / total_cost          at t-1
+#                     [robustness: emissions in excess of free allocation]
 #
 #     ω_free_{s,t}  = ω_gross_{s,t} - ω_short_{s,t}
-#                     [the free-allocation portion of the cost share; used in the
-#                      windfall-profit decomposition test in the appendix]
+#                   = free_allowance / total_cost    at t-1
+#                     [free-allocation share of the emissions intensity]
 #
-#   Main-text headline regression uses ω_gross. Appendix uses ω_gross + ω_free
-#   together as a direct test of windfall-profit pricing.
+#   Units of ω: tCO2 per EUR. To convert to a cost-share at a reference EUA
+#   price P, multiply by P. Headline pass-through coefficient β_h is then
+#   normalised by E[EUA] in-sample so β=1 still corresponds to full
+#   Shephard's-lemma pass-through.
 #
 # INPUT:
 #   ${OUT_DATA}/phase3_sector_exposure.RData     (sector_exposure)
 #       columns used: nace4d, year, total_emissions, total_shortage,
 #                     total_cost_denom
-#   ${OUT_DATA}/phase3_eua_prices.RData          (eua_prices_annual)
-#       columns used: year, eua_price
+#   (Note: EUA price is NO LONGER used here. It was used in the previous
+#   carbon-cost-share construction; under the new physical-intensity
+#   convention it enters only via the CPShock interaction in the regression.)
 #
 # OUTPUT:
 #   ${OUT_DATA}/phase3_sector_omega_rolling.RData (sector_omega_rolling)
@@ -54,51 +59,36 @@ source(file.path(REPO_DIR, "paths.R"))
 # 1. Load inputs
 # ---------------------------------------------------------------------------
 load(file.path(OUT_DATA, "phase3_sector_exposure.RData"))   # sector_exposure
-load(file.path(OUT_DATA, "phase3_eua_prices.RData"))        # eua_prices_annual
 
 cat(sprintf("sector_exposure: %d sector-years, %d distinct NACE 4d, %d-%d\n",
             nrow(sector_exposure), n_distinct(sector_exposure$nace4d),
             min(sector_exposure$year), max(sector_exposure$year)))
-cat(sprintf("eua_prices_annual: %d-%d\n",
-            min(eua_prices_annual$year), max(eua_prices_annual$year)))
 
 # ---------------------------------------------------------------------------
-# 2. Build sector-year carbon-cost components (gross and short)
+# 2. Compute 1-year (t-1) emissions-intensity omegas (no EUA factor)
+#
+#    For each (s, t), ω_{s,t} = emissions_{s, t-1} / total_cost_{s, t-1}.
+#    Predetermined relative to year t. Units: tCO2 per EUR.
 # ---------------------------------------------------------------------------
 sx <- sector_exposure %>%
   select(nace4d, year, total_emissions, total_shortage, total_cost_denom) %>%
-  left_join(eua_prices_annual %>% select(year, eua_price), by = "year") %>%
-  mutate(
-    carbon_cost_gross = total_emissions * eua_price,
-    carbon_cost_short = total_shortage  * eua_price
-  )
+  arrange(nace4d, year)
 
-# Drop rows where the denominator is missing or non-positive (mostly very
-# early years for sectors not yet observed). Keep them as NA-valued for
-# the lag computation; they'll just produce NA omegas downstream.
-sx <- sx %>% arrange(nace4d, year)
-
-# ---------------------------------------------------------------------------
-# 3. Compute 1-year (t-1) omegas
-#
-#    For each (s, t), ω_{s,t} = carbon_cost_{s, t-1} / total_cost_{s, t-1}
-#    where carbon_cost is gross or short. Predetermined relative to year t.
-# ---------------------------------------------------------------------------
 omega <- sx %>%
   group_by(nace4d) %>%
   mutate(
-    cc_gross_lag1 = dplyr::lag(carbon_cost_gross, 1),
-    cc_short_lag1 = dplyr::lag(carbon_cost_short, 1),
-    cost_lag1     = dplyr::lag(total_cost_denom,  1)
+    em_gross_lag1 = dplyr::lag(total_emissions, 1),
+    em_short_lag1 = dplyr::lag(total_shortage,  1),
+    cost_lag1     = dplyr::lag(total_cost_denom, 1)
   ) %>%
   ungroup() %>%
   mutate(
-    n_obs_used  = as.integer(!is.na(cc_gross_lag1) &
+    n_obs_used  = as.integer(!is.na(em_gross_lag1) &
                              !is.na(cost_lag1) & cost_lag1 > 0),
     omega_gross = ifelse(!is.na(cost_lag1) & cost_lag1 > 0,
-                         cc_gross_lag1 / cost_lag1, NA_real_),
+                         em_gross_lag1 / cost_lag1, NA_real_),
     omega_short = ifelse(!is.na(cost_lag1) & cost_lag1 > 0,
-                         cc_short_lag1 / cost_lag1, NA_real_),
+                         em_short_lag1 / cost_lag1, NA_real_),
     omega_free  = omega_gross - omega_short
   )
 
