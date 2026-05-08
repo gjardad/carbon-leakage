@@ -93,6 +93,32 @@ We use `Shock` (not `Surprise`) as the regressor in §4 of the paper. The trade-
 
 A reader of §4 should understand: when we report $\widehat{\gamma}_h$ on $(\omega_s \times \text{CPShock}_m)$, we are reporting **the response of sector PPI to a unit SVAR-recovered structural carbon-policy shock**, not "the response per unit EUA-price news event." The two are related — the SVAR-recovered shock is identified by the event-day surprises — but the Shock series as deployed has more variance (most of which is macro-residual reconstruction) and a smaller direct EUA-price impact than the Surprise-only object would have.
 
+## Why $\gamma_h$ on $(\omega \times \text{Shock})$ is an attenuated estimate of the true Shephard gradient
+
+The cross-sectional ω-gradient — the prediction that high-emission-intensity sectors' PPI rises more than low-intensity sectors' PPI when carbon prices move — is theoretically grounded in **Shephard's lemma applied to an actual EUA-price change**:
+
+$$
+\Delta \log \text{PPI}_s \;=\; \omega_s^{\text{old}} \cdot \Delta \log \text{EUA} \;=\; \omega_s \cdot \text{EUA} \cdot \Delta \log \text{EUA}
+$$
+
+This logic requires the regressor on the right-hand side to track *real EUA-price changes* (or, equivalently, real changes in the marginal opportunity cost of emissions). In months with an actual carbon-policy event, the Shock series captures such a change. In months without an event, the Shock is the SVAR's macro-residual projection — there is no actual EUA-price jump driven by policy, no change in any sector's marginal carbon cost, and **no theoretical reason for high-$\omega$ sectors to respond more than low-$\omega$ sectors**.
+
+So when we estimate $\gamma_h$ on $(\omega_s \times \text{Shock}_m)$, we are averaging two distinct objects:
+
+1. **In policy-event months** (post-2005, ~78/180 months in 2005–2019): the Shock is correlated with actual policy news, so a Shephard ω-gradient is predicted. This component contributes positive signal to $\gamma_h$.
+2. **In non-event months and pre-2005 months** (~168/246 of the full series): the Shock is macro-residual variation projected onto the policy direction. There is no Shephard prediction here — the conditional expectation of $\Delta \log \text{PPI}_s$ given $(\omega_s \times \text{Shock}_m)$ should be zero. This component contributes variance to the regressor without contributing signal, **attenuating** $\widehat{\gamma}_h$ toward zero.
+
+The variance-share of policy news in the Shock is small. Empirically, $\text{cor}(\text{Shock}, \text{Surprise}) = 0.24$ post-2005, so $\text{cor}^2 \approx 0.058$ — roughly **6% of the Shock's monthly variance is policy news; ~94% is macro-residual reconstruction**. Under classical-measurement-error attenuation logic, the ω-cross-sectional regression's coefficient is biased toward zero by approximately this signal-share factor.
+
+This explains every empirical pattern we struggled with in the sectoral panel-LP:
+
+- $\widehat{\gamma}_h > 0$ but smaller than full-Shephard would predict — **attenuation**.
+- Wide confidence intervals at every horizon — the 94% noise component inflates standard errors without contributing identifying signal to the ω-gradient.
+- Phase-III-only ($n = 84$ months) noisier than 2008–2019 ($n = 144$ months) — fewer absolute event months in the smaller sample, lower signal-to-total-variance ratio.
+- The aggregate Shock-PPI IRF (no $\omega$) being more defensible — at the aggregate level, the Shock can be interpreted as a structural shock under the SVAR's identifying assumptions, and the SVAR's joint identification gives a coherent IRF interpretation that does not require any single month to track a real policy event in particular.
+
+**Implication for §4 of the paper**: the sectoral $\widehat{\gamma}_h$ on $(\omega \times \text{Shock})$ should be read as **an attenuated lower bound on the true Shephard cross-sectional gradient**, with the attenuation factor approximately equal to the post-2005 share of Shock variance attributable to actual policy news. The aggregate Shock-PPI IRF — which does not depend on cross-sectional ω-content for identification — is the cleaner exhibit. The "right" cross-sectional regression would use Surprise (which has the correct cross-sectional content under Shephard) rather than Shock; that regression is just too underpowered at the monthly frequency, as Käenzig himself acknowledges in App. C.5.
+
 ## References
 
 - Käenzig, D. R. (2023/2025). "The Unequal Economic Consequences of Carbon Pricing." JMP. Local copy: [articles/kaenzig_jmp.pdf](articles/kaenzig_jmp.pdf). Notes file: [articles/split_kaenzig_jmp/notes.md](articles/split_kaenzig_jmp/notes.md). Methodology Section 2–3, identification in eq. (1)–(4); Appendix C.5 for LP-IV variant.
