@@ -138,6 +138,9 @@ run_script("analysis/phase4_across_nace4d_extensive_margin.R")
 # Plot 10
 run_script("analysis/phase4_within_nace4d_extensive_margin.R")
 
+# DiD + triple-DiD on top-omega vs bottom-omega (no plot; coefs CSV)
+run_script("analysis/phase4_within_nace4d_reallocation_did.R")
+
 # ----------------------------------------------------------------------------
 # Step 4: Summary
 # ----------------------------------------------------------------------------
