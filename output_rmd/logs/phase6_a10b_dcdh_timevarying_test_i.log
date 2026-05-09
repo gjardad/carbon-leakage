@@ -1,0 +1,24 @@
+Warning messages:
+1: package 'data.table' was built under R version 4.4.3 
+2: package 'fixest' was built under R version 4.4.3 
+3: package 'ggplot2' was built under R version 4.4.3 
+4: package 'DIDmultiplegtDYN' was built under R version 4.4.3 
+Test I cell-years: 47063231, cells: 11031944, NACE-4d: 512, years: 2005-2022
+R7 Test I aggregated panel: 9216 rows (512 NACE-4d × 18 years)
+
+Running did_multiplegt_dyn at NACE-4d × year level...
+dCdH error: The 'polars' package is required but not installed.
+Please install it from r-universe with:
+  install.packages('polars', repos = 'https://rpolars.r-universe.dev')
+Then load it with: library(polars) 
+Elapsed: 0.001504183 secs
+
+Summary OLS vs dCdH:
+                                                  spec   estimate         se
+                                                <char>      <num>      <num>
+1:                OLS static binary (regulated × post) 0.01282649 0.01394386
+2: dCdH cumulative h=0..4 (time-varying cat_intensity)         NA         NA
+          units
+         <char>
+1: share / unit
+2:        share

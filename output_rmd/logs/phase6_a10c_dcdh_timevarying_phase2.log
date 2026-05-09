@@ -1,0 +1,24 @@
+Warning messages:
+1: package 'data.table' was built under R version 4.4.3 
+2: package 'fixest' was built under R version 4.4.3 
+3: package 'ggplot2' was built under R version 4.4.3 
+4: package 'DIDmultiplegtDYN' was built under R version 4.4.3 
+Phase II Test H sample (a, balanced): 16406 cell-years across 1490 cells
+Balanced dCdH panel (Phase II): 25333 rows (1490 cells × 17 years)
+
+Running did_multiplegt_dyn on Phase II panel...
+dCdH error: The 'polars' package is required but not installed.
+Please install it from r-universe with:
+  install.packages('polars', repos = 'https://rpolars.r-universe.dev')
+Then load it with: library(polars) 
+Elapsed: 0.00135994 secs
+
+Summary OLS vs dCdH (Phase II):
+                                              spec estimate       se
+                                            <char>    <num>    <num>
+1:      OLS static (β·fcs_j_star × post, Phase II) 293.0219 154.3799
+2: dCdH cumulative h=0..6 (Phase II, time-varying)       NA       NA
+                    units
+                   <char>
+1: share-pp / unit fcs_p2
+2:               share-pp

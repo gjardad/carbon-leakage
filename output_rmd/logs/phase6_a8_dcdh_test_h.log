@@ -1,0 +1,23 @@
+Warning messages:
+1: package 'data.table' was built under R version 4.4.3 
+2: package 'fixest' was built under R version 4.4.3 
+3: package 'ggplot2' was built under R version 4.4.3 
+4: package 'DIDmultiplegtDYN' was built under R version 4.4.3 
+R5 Test H balanced sample: 8853 cell-years across 705 cells
+
+Running dCdH (static fuzzy)...
+dCdH error: The 'polars' package is required but not installed.
+Please install it from r-universe with:
+  install.packages('polars', repos = 'https://rpolars.r-universe.dev')
+Then load it with: library(polars) 
+Elapsed: 0.001847029 secs
+
+R5 summary:
+                                spec  estimate       se
+                              <char>     <num>    <num>
+1: OLS static (pair_exposure × post) -102.7943 41.41175
+2:     dCdH static cumulative h=0..4        NA       NA
+                        units
+                       <char>
+1: share / unit pair_exposure
+2:                      share

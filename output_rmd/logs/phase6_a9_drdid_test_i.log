@@ -1,0 +1,33 @@
+Warning messages:
+1: package 'data.table' was built under R version 4.4.3 
+2: package 'DRDID' was built under R version 4.4.3 
+[R6] Loading B2B + annual accounts (years 2010-2018 only)...
+  b2b rows (years 2010-2018): 53944372 (182.7s)
+  annual_accounts merged (23.7s)
+[R6] Building nace_exposure + nace_regulated_dummy from pre-shock window...
+  pre-shock nace_exp built (512 NACE-4d, 21.2s)
+[R6] Building cell-year panel and 2-period DRDID panel...
+  cell-year panel: 23979139 rows (13.6s)
+  buyer pre-shock vars: 120673 buyers (6.9s)
+DRDID 2-year panel: 2774354 obs across 1387177 cells (need both pre & post)
+Calling drdid(estMethod='trad') on 2774354 obs ...
+DRDID elapsed: 31.09716 secs
+
+DRDID result:
+ Call:
+drdid(yname = "share", tname = "year", idname = "cell_id", dname = "nace_regulated_dummy", 
+    xformla = ~buyer_reg_exposure + buyer_log_inputs, data = panel_2y, 
+    panel = TRUE, estMethod = "trad", boot = FALSE)
+------------------------------------------------------------------
+ Locally efficient DR DID estimator for the ATT:
+ 
+   ATT     Std. Error  t value    Pr(>|t|)  [95% Conf. Interval] 
+  0.0311     0.0104     2.9785     0.0029     0.0106     0.0515  
+------------------------------------------------------------------
+ Estimator based on panel data.
+ Outcome regression est. method: OLS.
+ Propensity score est. method: maximum likelihood.
+ Analytical standard error.
+------------------------------------------------------------------
+ See Sant'Anna and Zhao (2020) for details.
+Written phase6_a9_drdid_test_i.csv

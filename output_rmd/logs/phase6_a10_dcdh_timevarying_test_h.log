@@ -1,0 +1,30 @@
+Warning messages:
+1: package 'data.table' was built under R version 4.4.3 
+2: package 'fixest' was built under R version 4.4.3 
+3: package 'ggplot2' was built under R version 4.4.3 
+4: package 'DIDmultiplegtDYN' was built under R version 4.4.3 
+Test H sample (a+b): 123546 cell-years across 32631 cells
+Test H sample (a only, balanced): 8853 cell-years across 705 cells (range of obs/cell: 1-18)
+Balanced dCdH panel: 12690 rows (705 cells × 18 years)
+Cells with within-cell variation in pair_intensity: 523 / 705
+
+Running did_multiplegt_dyn (this can take a few minutes)...
+did_multiplegt_dyn error: The 'polars' package is required but not installed.
+Please install it from r-universe with:
+  install.packages('polars', repos = 'https://rpolars.r-universe.dev')
+Then load it with: library(polars) 
+Elapsed: 0.001166821 secs
+
+Summary OLS vs dCdH:
+                                              spec  estimate       se
+                                            <char>     <num>    <num>
+1:                OLS static (β·fcs_j_star × post) -293.2783 134.6878
+2: dCdH cumulative h=0..3 (time-varying intensity)        NA       NA
+3: dCdH cumulative h=0..4 (time-varying intensity)        NA       NA
+                 units
+                <char>
+1: share-pp / unit fcs
+2:            share-pp
+3:            share-pp
+
+(Figure skipped — dCdH did not run on this sample.)

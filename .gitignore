@@ -19,14 +19,3 @@ articles/
 node_modules/
 package.json
 package-lock.json
-
-# ---- Phase 4 reallocation: large cell-level intermediate CSVs ----
-# Summary CSVs (year/version/group aggregates) remain tracked. The cell-level
-# intermediates can blow past 100 MB on the full RMD sample and are
-# regenerable from the analysis scripts.
-output_*/tables/phase4_within_nace4d_reallocation_panel.csv
-output_*/tables/phase4_within_nace4d_reallocation_placebo_yearly.csv
-output_*/tables/phase4_within_nace4d_reallocation_placebo_cells.csv
-output_*/tables/phase4_within_nace4d_reallocation_topQ_cell_shocks.csv
-output_*/tables/phase4_supplier_count_by_interval.csv
-output_*/tables/phase4_supplier_count_by_year.csv
