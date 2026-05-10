@@ -138,8 +138,12 @@ run_script("analysis/phase4_across_nace4d_extensive_margin.R")
 # Plot 10
 run_script("analysis/phase4_within_nace4d_extensive_margin.R")
 
-# DiD + triple-DiD on top-omega vs bottom-omega (no plot; coefs CSV)
+# Regular within-treated DiD on top-omega vs bottom-omega (no plot; coefs CSV)
 run_script("analysis/phase4_within_nace4d_reallocation_did.R")
+
+# Heterogeneity cuts: top-Q by NACE4d input share + top-Q by omega gap.
+# Two PDFs and a DiD coefs CSV.
+run_script("analysis/phase4_within_nace4d_reallocation_topQ_heterogeneity.R")
 
 # ----------------------------------------------------------------------------
 # Step 4: Summary
