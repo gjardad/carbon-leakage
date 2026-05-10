@@ -48,7 +48,17 @@ suppressPackageStartupMessages({
   library(data.table)
   library(ggplot2)
   library(fixest)
+  library(xtable)
 })
+
+write_tex_table <- function(dt, file, digits = 4, caption = NULL) {
+  x <- xtable(as.data.frame(dt), digits = digits, caption = caption)
+  print(x, file = file, include.rownames = FALSE, booktabs = TRUE,
+        caption.placement = "top",
+        sanitize.colnames.function = function(s) gsub("_", "\\\\_", s, fixed = TRUE),
+        sanitize.text.function    = function(s) gsub("_", "\\\\_", s, fixed = TRUE))
+  invisible(NULL)
+}
 
 set.seed(20260508)
 
@@ -419,6 +429,10 @@ setnames(did_all,
 fwrite(did_all,
        file.path(OUTPUT_TAB,
                  "phase4_within_nace4d_reallocation_topQ_heterogeneity_did_coefs.csv"))
+write_tex_table(did_all,
+                file.path(OUTPUT_TAB,
+                          "phase4_within_nace4d_reallocation_topQ_heterogeneity_did_coefs.tex"),
+                caption = "DiD on top-omega vs bottom-omega supplier within top-quartile heterogeneity cuts.")
 
 cat("\n\nAll DiD coefficients (top-quartile heterogeneity):\n")
 print(did_all[, .(cut, version, term,

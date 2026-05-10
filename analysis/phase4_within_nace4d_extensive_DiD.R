@@ -38,7 +38,17 @@ suppressPackageStartupMessages({
   library(data.table)
   library(ggplot2)
   library(fixest)
+  library(xtable)
 })
+
+write_tex_table <- function(dt, file, digits = 4, caption = NULL) {
+  x <- xtable(as.data.frame(dt), digits = digits, caption = caption)
+  print(x, file = file, include.rownames = FALSE, booktabs = TRUE,
+        caption.placement = "top",
+        sanitize.colnames.function = function(s) gsub("_", "\\\\_", s, fixed = TRUE),
+        sanitize.text.function    = function(s) gsub("_", "\\\\_", s, fixed = TRUE))
+  invisible(NULL)
+}
 
 set.seed(20260508)
 
@@ -232,6 +242,10 @@ setnames(coefs,
 fwrite(coefs,
        file.path(OUTPUT_TAB,
                  "phase4_within_nace4d_extensive_DiD_coefs.csv"))
+write_tex_table(coefs,
+                file.path(OUTPUT_TAB,
+                          "phase4_within_nace4d_extensive_DiD_coefs.tex"),
+                caption = "Extensive-margin DiD on supplier survival (top-omega vs bottom-omega).")
 
 # ---------------------------------------------------------------------------
 # 7. Plot

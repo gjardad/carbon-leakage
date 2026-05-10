@@ -59,7 +59,17 @@ source(file.path(REPO_DIR, "paths.R"))
 suppressPackageStartupMessages({
   library(data.table)
   library(ggplot2)
+  library(xtable)
 })
+
+write_tex_table <- function(dt, file, digits = 4, caption = NULL) {
+  x <- xtable(as.data.frame(dt), digits = digits, caption = caption)
+  print(x, file = file, include.rownames = FALSE, booktabs = TRUE,
+        caption.placement = "top",
+        sanitize.colnames.function = function(s) gsub("_", "\\\\_", s, fixed = TRUE),
+        sanitize.text.function    = function(s) gsub("_", "\\\\_", s, fixed = TRUE))
+  invisible(NULL)
+}
 
 set.seed(20260508)
 
@@ -238,6 +248,10 @@ pre_post <- rbindlist(pre_post_list, use.names = TRUE)
 fwrite(pre_post,
        file.path(OUTPUT_TAB,
                  "phase4_new_relationships_omega_rank_pre_post.csv"))
+write_tex_table(pre_post,
+                file.path(OUTPUT_TAB,
+                          "phase4_new_relationships_omega_rank_pre_post.tex"),
+                caption = "New-supplier omega rank: pre vs post each event year.")
 
 cat("\nPre vs post (mean rank, +/- 5 years around each event):\n")
 print(pre_post[, .(definition, treat_year,

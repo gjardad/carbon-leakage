@@ -45,7 +45,20 @@ source(file.path(REPO_DIR, "paths.R"))
 suppressPackageStartupMessages({
   library(data.table)
   library(fixest)
+  library(xtable)
 })
+
+# Helper: write a data.table as a clean LaTeX tabular at `file`. Companion to
+# fwrite() -- fwrite saves the underlying numeric CSV, this saves a paper-
+# ready LaTeX table that can be pushed alongside figures.
+write_tex_table <- function(dt, file, digits = 4, caption = NULL) {
+  x <- xtable(as.data.frame(dt), digits = digits, caption = caption)
+  print(x, file = file, include.rownames = FALSE, booktabs = TRUE,
+        caption.placement = "top",
+        sanitize.colnames.function = function(s) gsub("_", "\\\\_", s, fixed = TRUE),
+        sanitize.text.function    = function(s) gsub("_", "\\\\_", s, fixed = TRUE))
+  invisible(NULL)
+}
 
 YEAR_LO <- 2005L
 YEAR_HI <- 2022L
@@ -225,6 +238,10 @@ print(sanity)
 fwrite(sanity,
        file.path(OUTPUT_TAB,
                  "phase4_within_nace4d_reallocation_did_sanity.csv"))
+write_tex_table(sanity,
+                file.path(OUTPUT_TAB,
+                          "phase4_within_nace4d_reallocation_did_sanity.tex"),
+                caption = "Top-omega vs top-share alignment within treated cells.")
 
 # ---------------------------------------------------------------------------
 # 5. Cell-role-year long panel for the regression
@@ -292,6 +309,10 @@ setnames(coefs,
 fwrite(coefs,
        file.path(OUTPUT_TAB,
                  "phase4_within_nace4d_reallocation_did_coefs.csv"))
+write_tex_table(coefs,
+                file.path(OUTPUT_TAB,
+                          "phase4_within_nace4d_reallocation_did_coefs.tex"),
+                caption = "Regular DiD on top-omega vs bottom-omega supplier (treated arm).")
 
 cat("\n\nAll coefficients:\n")
 print(coefs[, .(version, term,
