@@ -281,6 +281,13 @@ Reallocation is null at both the domestic margin (within-NACE4d and across-NACE4
 
 ---
 
+## 1b. Reallocation-margin descriptive analyses still missing (added 2026-05-10)
+
+- [ ] **Across-NACE4d reallocation, intensive + extensive margin.** We have descriptive plots (`phase4_across_nace4d_intensive_margin.pdf`, `phase4_across_nace4d_extensive_margin.pdf`) but no DiD analog of the within-NACE4d work. Build the buyer-level analog: intensive (share of buyer spend on ETS-treated NACE4d) and extensive (`1{buyer buys from any ETS-treated NACE4d}`) around 2008/2013/2017.
+- [ ] **International (cross-border) reallocation, intensive + extensive margin.** Same shape but the alternative supplier is foreign rather than within-Belgium, using the customs panel (HS6 × source-country × buyer × year). Intensive = import share by source country; extensive = `1{buyer imports HS6 from source-country}`. Mirror the 2008/2013/2017 event-style spec.
+
+---
+
 ## 2. PRODCOM pass-through workstream (added 2026-04-21)
 
 Context: [analysis/prodcom_passthrough_stata/](analysis/prodcom_passthrough_stata/) is a Stata port of the data-cleaning pipeline so the co-author (Stata-only, on RMD) can reproduce the analysis end-to-end. First pass landed data-build scripts `00_` through `05_` + `verify_against_R.R`. Regression scripts, sample-selection logic, and local testing still open. Full plan: [PRODCOM_PLAN.md](PRODCOM_PLAN.md).
