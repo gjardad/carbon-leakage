@@ -248,6 +248,39 @@ New script: `analysis/phase4_b2b_supplier_switching.R`. B2B cross-section is lar
 
 ---
 
+## 1a. Explanations for the null reallocation result (added 2026-05-10)
+
+Reallocation is null at both the domestic margin (within-NACE4d and across-NACE4d) and the international margin (extensive and intensive). Five candidate explanations to evaluate. No implementation plan yet — this is the brainstorm phase.
+
+1. **Strategic complementarities in pricing (AIK).** Prices of competing suppliers move together, so the realized within-buyer price gap is smaller than the cost-shock gap. Buyers see less price dispersion than the exposure measure implies. AIK (Amiti–Itskhoki–Konings) document this for Belgian exporters and use it to explain low pass-through of exchange-rate shocks.
+
+2. **Relational capital.** Long-term sourcing contracts and input specificity make sourcing inelastic to price gaps; the relationship itself is valuable, beyond price.
+
+3. **Shock too small.** Switching costs exceed the savings from reallocating, so firms don't bother.
+
+4. **Low price pass-through.** Prices barely move, so there's nothing to reallocate against. Partially ruled out — we see prices increase, and Reguant–Fabra find high pass-through in electricity.
+
+5. **Network-adjusted control-group contamination.** "Non-EUETS" suppliers aren't actually clean — they buy from EUETS suppliers themselves. When emission intensity is network-adjusted (own + upstream via Leontief), the gap between treated and control suppliers compresses, and reallocation should be tested against *that* gap rather than direct ω. Prediction: buyers do reallocate away from suppliers with high network-adjusted intensity, even if not against direct ω.
+
+### Tasks
+
+- [ ] Test (1) strategic complementarities in pricing (AIK-style).
+- [ ] Test (2) relational capital as a moderator of reallocation.
+- [ ] Test (3) shock magnitude / switching-cost threshold.
+- [ ] Test (4) price pass-through magnitude and cross-supplier dispersion.
+- [ ] Test (5) reallocation against network-adjusted emission intensity.
+
+### Diagnostic — implied within-buyer price gap (informs (3) and (4))
+
+- [ ] Plot the cross-sectional distribution of the **policy-induced price gap** between top-ω and bottom-ω suppliers, within (buyer × NACE4d) cells where the NACE4d is ETS-treated and the buyer sources from ≥2 ETS firms in that NACE4d. Under the reduced-form pass-through assumption `d log p_i = α · ω_i · Δp_z`, the within-pair gap is `α · (ω_top − ω_bottom) · Δp_z`. Use the v2 ω (intensity × (1 − allocation share), no EUA baked in). Overlay densities for α ∈ {0.25, 0.5, 0.75, 1.0}. Produce one figure per Δp_z anchoring:
+  - (i) Phase IV jump 2020→2022.
+  - (ii) Phase III mean vs Phase IV peak.
+  - (iii) 2017→2020 jump (MSR adoption to end of Phase III).
+
+  If the distribution is concentrated below a few percent even at α=1, that's direct evidence for explanation (3) — the policy-induced gap buyers actually see is too small to overcome any reasonable switching cost.
+
+---
+
 ## 2. PRODCOM pass-through workstream (added 2026-04-21)
 
 Context: [analysis/prodcom_passthrough_stata/](analysis/prodcom_passthrough_stata/) is a Stata port of the data-cleaning pipeline so the co-author (Stata-only, on RMD) can reproduce the analysis end-to-end. First pass landed data-build scripts `00_` through `05_` + `verify_against_R.R`. Regression scripts, sample-selection logic, and local testing still open. Full plan: [PRODCOM_PLAN.md](PRODCOM_PLAN.md).
