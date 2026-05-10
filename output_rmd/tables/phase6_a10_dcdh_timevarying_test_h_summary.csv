@@ -1,4 +1,0 @@
-spec,estimate,se,units
-OLS static (β·fcs_j_star × post),-293.278293534626,134.687775475788,share-pp / unit fcs
-dCdH cumulative h=0..3 (time-varying intensity),,,share-pp
-dCdH cumulative h=0..4 (time-varying intensity),,,share-pp

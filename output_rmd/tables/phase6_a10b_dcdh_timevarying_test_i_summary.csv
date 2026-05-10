@@ -1,3 +1,0 @@
-spec,estimate,se,units
-OLS static binary (regulated × post),0.0128264901915813,0.0139438620882121,share / unit
-dCdH cumulative h=0..4 (time-varying cat_intensity),,,share

@@ -145,6 +145,12 @@ run_script("analysis/phase4_within_nace4d_reallocation_did.R")
 # Two PDFs and a DiD coefs CSV.
 run_script("analysis/phase4_within_nace4d_reallocation_topQ_heterogeneity.R")
 
+# Extensive-margin DiD: did the top-omega supplier get dropped more often?
+run_script("analysis/phase4_within_nace4d_extensive_DiD.R")
+
+# Omega rank of new supplier relationships, two omega definitions.
+run_script("analysis/phase4_new_relationships_omega_rank.R")
+
 # ----------------------------------------------------------------------------
 # Step 4: Summary
 # ----------------------------------------------------------------------------

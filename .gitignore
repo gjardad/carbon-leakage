@@ -19,3 +19,11 @@ articles/
 node_modules/
 package.json
 package-lock.json
+
+# ---- Output CSVs: regenerable; not pushed ----
+# All CSVs under output_*/tables/ (and the legacy output/tables/) are
+# regenerable from the analysis scripts and can blow past push limits at
+# full sample size. Keep PDFs/PNGs tracked.
+# (data/concordances/, data/io/ are NOT covered by this rule.)
+output_*/tables/*.csv
+output/tables/*.csv

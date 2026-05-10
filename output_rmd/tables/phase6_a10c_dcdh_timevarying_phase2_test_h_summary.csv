@@ -1,3 +1,0 @@
-spec,estimate,se,units
-"OLS static (β·fcs_j_star × post, Phase II)",293.021854554266,154.379913924882,share-pp / unit fcs_p2
-"dCdH cumulative h=0..6 (Phase II, time-varying)",,,share-pp
