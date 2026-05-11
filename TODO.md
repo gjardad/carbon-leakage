@@ -2,6 +2,9 @@
 
 Open analyses that are deferred until headline results land. Add dated entries when new follow-ups appear; strike through and date items when they're closed out.
 
+### Quick follow-ups
+- [ ] **(added 2026-05-11)** Look carefully at the across-NACE4d RMD results — eight figures across intensive + extensive batches plus `phase4_across_nace4d_intensive_margin` and `phase4_across_nace4d_extensive_margin`. Specifically: (a) confirm whether the 2015–2016 step in `_by_shortage_share` is a real B2B-reporting threshold change (it survived full-sample, ruling out downsampling), (b) the Q3 high-exposure −3pp 2012→2022 decline in `_intensive_by_buyer_exposure` is the cleanest across-NACE4d leakage signal — formalize with a DiD around 2013, (c) reconcile the local-1 "Q4 high-exposure drift" finding with RMD where it appears milder.
+
 Five active workstreams:
 
 0. **New exposure measure (high priority, added 2026-05-07)** — rebuild the firm-level treatment intensity as `emissions_pre × (1 − expected_allocation_share_post)` with both pieces predetermined / exogenous to MSR. See §0 below.
