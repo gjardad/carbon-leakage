@@ -270,19 +270,31 @@ ggsave(file.path(OUTPUT_FIG,
                  "phase4_new_relationships_intensive_overlap_size.pdf"),
        p_size_yearly, width = 9, height = 5)
 
-# Plot B: pooled histogram of new-relationship share within cell, log axis
-p_size_hist <- ggplot(new_rel_omega,
+# Plot B: pooled histogram of new-relationship share within cell.
+#
+# Note on the binning: a large fraction of observations sit at exactly
+# share = 1 (single-seller cells, where the new supplier IS the buyer's
+# entire NACE4d spend that year). Default geom_histogram() uses
+# closed = "left", which would silently DROP values at exactly 1.0
+# from the visualization. We use closed = "right" with boundary = 0 so
+# the rightmost bin (0.98, 1.00] includes the mass at 1.0. We also use
+# a log10 y-axis so both the spike at 1.0 and the rest of the
+# distribution are legible on one plot.
+p_size_hist <- ggplot(new_rel_omega[!is.na(share_within_cell)],
                       aes(x = share_within_cell, fill = in_imargin)) +
-  geom_histogram(position = "stack", bins = 50, alpha = 0.85) +
-  scale_x_continuous(limits = c(0, 1),
+  geom_histogram(position = "stack", binwidth = 0.02,
+                 boundary = 0, closed = "right", alpha = 0.85) +
+  scale_x_continuous(limits = c(-0.01, 1.01),
+                     breaks = seq(0, 1, 0.2),
                      labels = scales::percent_format(accuracy = 1)) +
+  scale_y_log10(labels = scales::comma_format()) +
   scale_fill_manual(values = c("FALSE" = "#cccccc", "TRUE" = "#1f78b4"),
                     name = "Cell in intensive-margin sample (>=2 omega sellers)",
                     labels = c("No (single seller)", "Yes (>=2 sellers)")) +
   labs(title    = "Pooled distribution of new-relationship share within the buyer-NACE4d cell",
-       subtitle = "All omega-matched new relationships 2006-2022 pooled. Stacked by whether the cell qualifies for the intensive-margin sample.",
+       subtitle = "All omega-matched new relationships 2006-2022 pooled. Stacked by whether the cell qualifies for the intensive-margin sample. Log y-axis.",
        x = "Share of buyer's NACE4d spend going to the new supplier",
-       y = "Count of new relationships") +
+       y = "Count of new relationships (log scale)") +
   base_theme
 
 ggsave(file.path(OUTPUT_FIG,
