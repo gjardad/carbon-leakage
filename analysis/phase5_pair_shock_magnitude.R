@@ -8,7 +8,7 @@
 #               leakage test sample. Same `firm_cost_share_{j,t}` as Moment 1
 #               (same-year, descriptive), restricted to ETS sellers that appear
 #               in the binary B2B panel built in
-#               analysis/phase3_build_b2b_cmdj_panel.R.
+#               analysis/phase3_build_b2b_cdgm_panel.R.
 #
 #   Moment 4 -- Pair-level shock magnitude. Joins firm_cost_share to the
 #               (seller × buyer × year) B2B panel and computes:
@@ -23,7 +23,7 @@
 #
 # INPUT:
 #   data/processed/phase3_firm_exposure.RData       (firm_exposure)
-#   ${PROC_DATA}/b2b_cmdj_panel.RData                (panel; balanced 2005-22)
+#   ${PROC_DATA}/b2b_cdgm_panel.RData                (panel; balanced 2005-22)
 #
 # OUTPUT:
 #   output/tables/phase5_moment2_b2b_seller_distribution.csv
@@ -59,7 +59,7 @@ source(file.path(REPO_DIR, "paths.R"))
 # ---- Load ----
 cat("Loading firm-year exposure panel and B2B panel...\n")
 load(file.path(OUT_DATA, "phase3_firm_exposure.RData"))   # firm_exposure
-load(file.path(PROC_DATA, "b2b_cmdj_panel.RData"))        # panel
+load(file.path(PROC_DATA, "b2b_cdgm_panel.RData"))        # panel
 
 # ---- Drop contaminated VATs from 2021+ (firm_exposure side) ----
 contaminated_vats <- c(

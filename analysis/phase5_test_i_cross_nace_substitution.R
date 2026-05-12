@@ -8,8 +8,8 @@
 # (driven by category n's average ETS exposure), do Belgian buyers reweight
 # their expenditure away from category n toward other categories?
 #
-# This is the buyer-side analog of CMdG's regulated-vs-unregulated PPI event
-# study. CMdG's published spec is at the SECTOR PPI level (output-side
+# This is the buyer-side analog of CdGM's regulated-vs-unregulated PPI event
+# study. CdGM's published spec is at the SECTOR PPI level (output-side
 # pass-through). Test I asks whether buyers' INPUT-MIX shares respond to the
 # same category-level treatment.
 #
@@ -49,7 +49,7 @@
 #
 #   Spec I.3 (binary regulated dummy):
 #       share_{b,n,t} = β · regulated_n × Post_t + α_{b,t} + α_{b,n} + ε
-#       regulated_n = 1{nace_exposure_n > 0} or {2-digit in CMdG-broad list}
+#       regulated_n = 1{nace_exposure_n > 0} or {2-digit in CdGM-broad list}
 #
 #   Spec I.4 (event study):
 #       share_{b,n,t} = Σ_τ γ_τ · 1{t = τ} × nace_exposure_n + α_{b,t} + α_{b,n} + ε

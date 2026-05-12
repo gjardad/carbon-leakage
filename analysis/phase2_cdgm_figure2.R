@@ -1,6 +1,6 @@
-# phase2_cmdj_figure2.R
+# phase2_cdgm_figure2.R
 #
-# Replicates CMdG Figure 2 ("Aggregate import shares and probability of
+# Replicates CdGM Figure 2 ("Aggregate import shares and probability of
 # sourcing from a new supplier market: control vs. treatment groups"),
 # extended with a third line for regulated products from ETS countries.
 #
@@ -19,7 +19,7 @@
 # unregulated products). This is the only choice that makes the three lines
 # directly comparable on the same axis. The two non-ETS lines no longer sum
 # to 1 (they sum to the share of non-ETS imports in total), but their TRENDS
-# are unchanged versus the original CMdG specification.
+# are unchanged versus the original CdGM specification.
 #
 # Inputs:
 #   * RMD: ${PROC_NBB}/customs_import_panel_regulated.dta
@@ -27,8 +27,8 @@
 #     (toggle via USE_MOCK).
 #
 # Outputs:
-#   * output_${MACHINE_TAG}/figures/phase2_cmdj_figure2.png  (replication of CMdG Fig 2 + ETS line)
-#   * output_${MACHINE_TAG}/tables/phase2_cmdj_figure2.csv   (annual aggregates per group)
+#   * output_${MACHINE_TAG}/figures/phase2_cdgm_figure2.png  (replication of CdGM Fig 2 + ETS line)
+#   * output_${MACHINE_TAG}/tables/phase2_cdgm_figure2.csv   (annual aggregates per group)
 #
 # Note on output directory: per paths.R guideline, local-1 runs write to
 # output_local/, RMD runs write to output_rmd/. The legacy output/ folder
@@ -172,7 +172,7 @@ p_a <- ggplot(share_dt, aes(x = year, y = share, color = group)) +
 
 # -------------------------------------------------------------------------
 # Panel (b): aggregate probability of sourcing (extensive margin).
-# Per CMdG p. 12: "probability of sourcing from a given supplier (i.e., the
+# Per CdGM p. 12: "probability of sourcing from a given supplier (i.e., the
 # extensive margin)". For each (year, group): fraction of (firm x cn8 x partner)
 # triplets IN THAT GROUP'S balanced panel that have value > 0. Each group has
 # its own denominator (count of triplets in that group), so no rescaling
@@ -202,7 +202,7 @@ p_b <- ggplot(prob_dt, aes(x = year, y = active, color = group)) +
 # -------------------------------------------------------------------------
 p_combined <- (p_a / p_b) +
   plot_annotation(
-    title = "CMdG Figure 2 replication: Aggregate import shares and probability of sourcing",
+    title = "CdGM Figure 2 replication: Aggregate import shares and probability of sourcing",
     subtitle = sprintf("Belgium customs panel%s, 2000-2019",
                        ifelse(USE_MOCK, " (MOCK DATA)", "")),
     caption = paste("Control: unregulated x non-ETS source country.",
@@ -220,15 +220,15 @@ dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(tab_dir, recursive = TRUE, showWarnings = FALSE)
 
 out_fig <- file.path(fig_dir,
-                     ifelse(USE_MOCK, "phase2_cmdj_figure2_MOCK.png",
-                                       "phase2_cmdj_figure2.png"))
+                     ifelse(USE_MOCK, "phase2_cdgm_figure2_MOCK.png",
+                                       "phase2_cdgm_figure2.png"))
 ggsave(out_fig, p_combined, width = 9, height = 8, dpi = 200)
 cat("\nFigure saved:", out_fig, "\n")
 
 # Save raw aggregates
 out_tab <- file.path(tab_dir,
-                     ifelse(USE_MOCK, "phase2_cmdj_figure2_MOCK.csv",
-                                       "phase2_cmdj_figure2.csv"))
+                     ifelse(USE_MOCK, "phase2_cdgm_figure2_MOCK.csv",
+                                       "phase2_cdgm_figure2.csv"))
 agg <- merge(share_dt[, .(year, group, share)],
              prob_dt[, .(year, group, prob_active = active)],
              by = c("year", "group"))

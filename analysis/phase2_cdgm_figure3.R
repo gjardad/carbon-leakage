@@ -1,6 +1,6 @@
-# phase2_cmdj_figure3.R
+# phase2_cdgm_figure3.R
 #
-# Replicates CMdG Figure 3 ("Evolution of firm-level imports from non-ETS
+# Replicates CdGM Figure 3 ("Evolution of firm-level imports from non-ETS
 # countries: regulated vs. unregulated inputs"). Year-by-year event-study
 # coefficients corresponding to Table 1 col (5) (the preferred specification
 # with firm^product^country + country^year + sector^year FE).
@@ -16,7 +16,7 @@
 # Reference year: 2004 (last pre-ETS year).
 # Cluster SE: two-way firm + country.
 #
-# Inputs / outputs analogous to phase2_cmdj_table1.R.
+# Inputs / outputs analogous to phase2_cdgm_table1.R.
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
@@ -112,7 +112,7 @@ p_prob  <- make_es_plot(es_prob, expression(beta[tau]),
                         "(b) Probability of sourcing, regulated x non-ETS")
 combined <- (p_share / p_prob) +
   plot_annotation(
-    title = "CMdG Figure 3 replication: event-study coefficients",
+    title = "CdGM Figure 3 replication: event-study coefficients",
     subtitle = sprintf("Belgium customs panel%s, 2000-2019; FE: firm^product^country + country^year + sector^year; cluster: firm + country",
                        ifelse(USE_MOCK, " (MOCK DATA)", "")),
     caption = "Vertical bars = 95% CI. Reference year = 2004.")
@@ -123,14 +123,14 @@ dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(tab_dir, recursive = TRUE, showWarnings = FALSE)
 
 out_fig <- file.path(fig_dir,
-                     ifelse(USE_MOCK, "phase2_cmdj_figure3_MOCK.png",
-                                       "phase2_cmdj_figure3.png"))
+                     ifelse(USE_MOCK, "phase2_cdgm_figure3_MOCK.png",
+                                       "phase2_cdgm_figure3.png"))
 ggsave(out_fig, combined, width = 9, height = 8, dpi = 200)
 cat("\nFigure saved:", out_fig, "\n")
 
 # Save coefficients.
 out_tab <- file.path(tab_dir,
-                     ifelse(USE_MOCK, "phase2_cmdj_figure3_MOCK.csv",
-                                       "phase2_cmdj_figure3.csv"))
+                     ifelse(USE_MOCK, "phase2_cdgm_figure3_MOCK.csv",
+                                       "phase2_cdgm_figure3.csv"))
 fwrite(rbind(es_share, es_prob), out_tab)
 cat("Coefficients saved:", out_tab, "\n")

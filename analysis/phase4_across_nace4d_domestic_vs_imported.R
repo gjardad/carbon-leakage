@@ -23,7 +23,7 @@
 #     (B) "Of total spending": share of (domestic + imported) that is
 #         domestic-ets, imported-ets, or non-ETS-mixed. Provides level context.
 #
-#   Aggregation = sum/sum (CMdG-style), matching phase4_intl_intensive_margin.R.
+#   Aggregation = sum/sum (CdGM-style), matching phase4_intl_intensive_margin.R.
 #
 # OUTPUTS
 #   - phase4_across_nace4d_domestic_vs_imported.{png,pdf}      (view A)

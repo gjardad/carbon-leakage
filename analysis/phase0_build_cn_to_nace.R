@@ -23,7 +23,7 @@
 #      nomenclature 1995-2018, not just the GRANTPA universe.
 #   4. Adds a small hand-coded HS27 supplement covering CN codes that GRANTPA
 #      omits (mineral fuels: coal, lignite, peat, petroleum, gas, electricity).
-#      The mapping follows CMDJ Table A.5 cols (1)/(4): ETS activities -> NAF
+#      The mapping follows CDGM Table A.5 cols (1)/(4): ETS activities -> NAF
 #      sectors, with the NAF expanded to the corresponding NACE Rev.2 4d code.
 #   5. Reports diagnostics: how many CN8s have GRANTPA NACE, how many use the
 #      supplement, how many are still unmapped, and how many product_ids have
@@ -140,10 +140,10 @@ cat("\nGRANTPA CN8 -> NACE 4d coverage:\n")
 cat("  CN8 codes mapped via GRANTPA :", uniqueN(gr_cn8_nace$cn8), "\n")
 
 # -------------------------------------------------------------------------
-# 2. HS27 supplement (and a handful of other gaps CMDJ documents).
+# 2. HS27 supplement (and a handful of other gaps CDGM documents).
 # -------------------------------------------------------------------------
 # Hand-coded mapping for HS chapters that GRANTPA misses because they have no
-# PRODCOM counterpart. Source: CMDJ Table A.5 cols (1)/(4) ETS-activity ->
+# PRODCOM counterpart. Source: CDGM Table A.5 cols (1)/(4) ETS-activity ->
 # NAF mapping, and structural NACE Rev.2 codes.
 #
 # Format: hs_prefix (HS chapter or heading), nace4d, description.

@@ -18,11 +18,11 @@ There is **no 2005–2008 / Phase II flavor**. We need a third flavor `cost_shar
 
 ### (2) Customs panel: structure exists, two-bloc version does not
 
-The customs panel `customs_import_panel_regulated.RData` has the right granularity (importer × CN8 × source country × year) but is restricted to non-ETS source countries only — the CMdG identifying sample. For the buyer-supplier analysis (§5.2.2 onward) we need both EU and non-ETS rows.
+The customs panel `customs_import_panel_regulated.RData` has the right granularity (importer × CN8 × source country × year) but is restricted to non-ETS source countries only — the CdGM identifying sample. For the buyer-supplier analysis (§5.2.2 onward) we need both EU and non-ETS rows.
 
 ### (2b) Customs panel: deliberately truncated to 2019
 
-The processed customs panel ends in 2019 because it was built to match CMdG's 2000--2019 window. **This is not a data-availability constraint** — earlier turns in this conversation incorrectly attributed the truncation to a 2020 administrative discontinuity, which does not exist. Per `IMPORT_LEAKAGE.md`: "Sample period stops at 2019 to match CMdG. ... Extending the sample is a future to-do." The raw NBB customs data extends through 2022+ and a 2000--2022 rebuild is straightforward (no NBB reconciliation request needed).
+The processed customs panel ends in 2019 because it was built to match CdGM's 2000--2019 window. **This is not a data-availability constraint** — earlier turns in this conversation incorrectly attributed the truncation to a 2020 administrative discontinuity, which does not exist. Per `IMPORT_LEAKAGE.md`: "Sample period stops at 2019 to match CdGM. ... Extending the sample is a future to-do." The raw NBB customs data extends through 2022+ and a 2000--2022 rebuild is straightforward (no NBB reconciliation request needed).
 
 ### (3) Customs panel: quantity is MISSING
 
@@ -48,9 +48,9 @@ With the same fallback to the earliest available 3-year window for firms missing
 Modify `analysis/phase2_build_customs_panel.R` (or create `phase6_build_customs_two_bloc_panel.R`) to:
 - Preserve quantity (kg) from the raw data alongside value (EUR).
 - Drop the non-ETS-country filter (keep both EU and non-EU rows).
-- **Extend the sample window to 2022** (the headline CMdG-replication panel stops at 2019 to match CMdG, but the raw NBB data is available through 2022; the buyer-supplier analyses in B1--B4 should run on the full 2000--2022 window to align with the within-country B2B sample and capture the Phase IV price spike).
+- **Extend the sample window to 2022** (the headline CdGM-replication panel stops at 2019 to match CdGM, but the raw NBB data is available through 2022; the buyer-supplier analyses in B1--B4 should run on the full 2000--2022 window to align with the within-country B2B sample and capture the Phase IV price spike).
 
-Save into a new file `customs_import_panel_two_bloc.RData` so it does not collide with the existing CMdG-replication panel.
+Save into a new file `customs_import_panel_two_bloc.RData` so it does not collide with the existing CdGM-replication panel.
 
 **Diagnostic to run on the rebuilt panel:** the original §3 of `phase5_diagnostic_for_unrun_sections.R` — fraction of (HS6 × country × year) cells with both value > 0 and quantity > 0, for the regulated and unregulated subsets separately. Also verify the year range extends through 2022 and that 2020--2022 row counts are consistent with prior years.
 
@@ -225,7 +225,7 @@ where low_intensity_{p,c} is the bottom-tercile dummy of country c's NACE 2d emi
 
 1. **PRODCOM**: B3/B4 use customs unit-values. PRODCOM has firm-level domestic unit-values that could complement the customs analysis on the within-country side (do regulated Belgian producers raise their prices in response to ETS, at the unit-value level rather than the PPI level?). This is closer to `martin2014`'s firm-level pass-through specification. Deferred per user direction; revisit later.
 
-(A previously listed open question about extending the customs panel past 2019 is removed: the 2019 truncation in the existing processed panel is a deliberate match to CMdG's window, not an administrative discontinuity. Extending to 2022 is folded into prerequisite P2 above.)
+(A previously listed open question about extending the customs panel past 2019 is removed: the 2019 truncation in the existing processed panel is a deliberate match to CdGM's window, not an administrative discontinuity. Extending to 2022 is folded into prerequisite P2 above.)
 
 ---
 

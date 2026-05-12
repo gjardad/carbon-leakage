@@ -52,7 +52,7 @@ Headline question: **does p90 in Phase IV exceed 5%? Does p99 exceed 20%?** That
 Source: [analysis/phase3_build_exposure_panel.R](analysis/phase3_build_exposure_panel.R) outputs and `firm_year_belgian_euets.RData`. New script: `analysis/phase5_shock_distribution_byphase.R`.
 
 #### Moment 2 — Cost-share at the regulated-NACE sellers in the B2B test sample
-Restrict to the 224 ETS sellers with computable `firm_cost_share` who appear as treated sellers in [analysis/phase3_b2b_cmdj_did_continuous.R](analysis/phase3_b2b_cmdj_did_continuous.R). Report time-varying distribution for this subset by phase, cross-tabulated by NACE 2d.
+Restrict to the 224 ETS sellers with computable `firm_cost_share` who appear as treated sellers in [analysis/phase3_b2b_cdgm_did_continuous.R](analysis/phase3_b2b_cdgm_did_continuous.R). Report time-varying distribution for this subset by phase, cross-tabulated by NACE 2d.
 
 Expected per [PASSTHROUGH.md](PASSTHROUGH.md) selection: NACE 19 (refining), 20 (chemicals), 23 (cement), 24 (basic metals) high-cost-share. NACE 21 (pharma), 27 (electrical), 28 (machinery) low-cost-share. If the latter dominates by sales weight, the leakage null is on a near-zero shock.
 
@@ -133,7 +133,7 @@ The downstream paper claim depends on the joint pattern. A coherent stickiness s
 ### Plan B — Required infrastructure (two prep steps)
 
 #### Prep 1 — Pair-age derivation
-The B2B panel built in [analysis/phase3_build_b2b_cmdj_panel.R](analysis/phase3_build_b2b_cmdj_panel.R) lacks a pair-age column. New script `analysis/phase5_build_pair_age.R`:
+The B2B panel built in [analysis/phase3_build_b2b_cdgm_panel.R](analysis/phase3_build_b2b_cdgm_panel.R) lacks a pair-age column. New script `analysis/phase5_build_pair_age.R`:
 - Read raw `B2B_ANO.dta` (RMD) or `b2b_selected_sample` (local-1 testing).
 - Compute `first_year_pair = min(year)` per (seller, buyer).
 - Derive `pair_age = year - first_year_pair` and `is_new_pair_t = (year == first_year_pair)`.
@@ -141,7 +141,7 @@ The B2B panel built in [analysis/phase3_build_b2b_cmdj_panel.R](analysis/phase3_
 - **Caveat for the doc:** B2B starts 2002. Pairs with `first_year_pair = 2002` may be left-censored. Treat as separate "left-censored" stratum.
 
 #### Prep 2 — Build the two `firm_cost_share` flavors
-Each test in Plan B uses a different definition because each test answers a different question. Move both constructions out of [analysis/phase3_b2b_cmdj_did_continuous.R](analysis/phase3_b2b_cmdj_did_continuous.R) into a single utility script `analysis/phase5_attach_firm_cost_share.R` that produces two columns on the seller-year level and joins both into the panel:
+Each test in Plan B uses a different definition because each test answers a different question. Move both constructions out of [analysis/phase3_b2b_cdgm_did_continuous.R](analysis/phase3_b2b_cdgm_did_continuous.R) into a single utility script `analysis/phase5_attach_firm_cost_share.R` that produces two columns on the seller-year level and joins both into the panel:
 
 - **`firm_cost_share_outcome_{j,t}`** — used as outcome in Test A. `firm_cost_share` is on the LHS so Bartik exogeneity is not needed; we just want a clean per-year exposure measure that is interpretable for all years 2003–2022. Definition: `(shortage_{j,t} × EUA_t) / total_cost_{j,t-1}`. Numerator in year t, denominator lagged one year. Works for all years where the seller has a t-1 observation.
 - **`firm_cost_share_regressor_j`** — used as regressor in Test B. Treatment intensity needs to be pre-shock and not endogenous. Single time-invariant value per seller, computed as `mean_{2012-14}(shortage × EUA) / mean_{2012-14}(total_cost)`. Anchored to a window that precedes the 2015 binding-shock date but is late enough that shortage starts to be meaningful (free-allocation share has fallen). **Plan B Test B runs only the post-2015 version** because pre-2012 numerator does not reflect a real cost shock under the generous Phase II free-allocation regime — there is no defensible way to define a comparable pre-period treatment intensity for a 2005-binding shock with our data.
@@ -340,7 +340,7 @@ If the joint pattern is consistent with stickiness, the deferred Tests D and E b
 - `analysis/phase5_test_c_lifecycle.R` — Test C
 - [STICKINESS_VS_CONCENTRATION.md](STICKINESS_VS_CONCENTRATION.md) — consolidated doc
 
-Each script reuses patterns from [analysis/phase3_b2b_cmdj_did_continuous.R](analysis/phase3_b2b_cmdj_did_continuous.R) and [analysis/phase3_b2b_cmdj_eventstudy.R](analysis/phase3_b2b_cmdj_eventstudy.R): `fixest::feols`, two-way clustering on (seller, buyer), col(5)-style FE structure, `data.table` for prep, `ggplot2` + `patchwork` for figures. Same output conventions as Phase 3 (CSV in `output/tables/`, PDF in `output/figures/`).
+Each script reuses patterns from [analysis/phase3_b2b_cdgm_did_continuous.R](analysis/phase3_b2b_cdgm_did_continuous.R) and [analysis/phase3_b2b_cdgm_eventstudy.R](analysis/phase3_b2b_cdgm_eventstudy.R): `fixest::feols`, two-way clustering on (seller, buyer), col(5)-style FE structure, `data.table` for prep, `ggplot2` + `patchwork` for figures. Same output conventions as Phase 3 (CSV in `output/tables/`, PDF in `output/figures/`).
 
 ### Plan B — Verification
 

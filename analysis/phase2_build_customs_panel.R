@@ -1,16 +1,16 @@
 # phase2_build_customs_panel.R
 #
-# Builds the regulated-intensive customs import panel for Phase 2 CMdG
+# Builds the regulated-intensive customs import panel for Phase 2 CdGM
 # replication AND for the extended buyer-supplier analyses in B1-B4.
 # R port of the original Stata draft (see git history).
 #
 # This build is the *extended* version: 2000-2022 window with quantity (kg)
 # preserved. The output is customs_import_panel_extended.RData. The original
-# CMdG-replication panel (customs_import_panel_regulated.RData, 2000-2019,
+# CdGM-replication panel (customs_import_panel_regulated.RData, 2000-2019,
 # no quantity) is left intact in PROC_DATA — it remains the canonical input
-# for the headline CMdG replication in §5.2.1 of the paper.
+# for the headline CdGM replication in §5.2.1 of the paper.
 #
-# Per CMdG Section 3 + Supplemental Appendix p. 44:
+# Per CdGM Section 3 + Supplemental Appendix p. 44:
 #   1. Load raw customs imports (NBB .dta on RMD).
 #   2. Restrict to imports.
 #   3. Drop non-manufacturing buyer firms (NACE 2d not in 10-33).
@@ -59,7 +59,7 @@ if (!requireNamespace("haven", quietly = TRUE)) install.packages("haven", repos 
 library(data.table)
 library(haven)
 
-# Sample window. The CMdG replication uses 2000-2019; the extended build
+# Sample window. The CdGM replication uses 2000-2019; the extended build
 # below reaches 2022 to cover the EU ETS Phase IV price spike. The CN8
 # bridge stops at 2018 and is forward-extended below for years 2019-2022.
 FIRSTYEAR <- 2000L
@@ -270,7 +270,7 @@ keep_cols <- c(keep_cols, "nace4d", "buyer_nace2d",
 panel <- bal[, ..keep_cols]
 
 # Save to a new filename that does not collide with the existing
-# customs_import_panel_regulated.RData (the CMdG-replication panel,
+# customs_import_panel_regulated.RData (the CdGM-replication panel,
 # 2000-2019, no quantity). The "_extended" panel is the 2000-LASTYEAR
 # build with the quantity column preserved; downstream B1/B2/B3/B4
 # scripts look for this filename first and fall back to the regulated

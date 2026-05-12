@@ -1,6 +1,6 @@
-# phase3_build_b2b_cmdj_panel.R
+# phase3_build_b2b_cdgm_panel.R
 #
-# Build the regulated-intensive B2B panel for the Phase 3 CMdG replication
+# Build the regulated-intensive B2B panel for the Phase 3 CdGM replication
 # (the novel Belgian contribution: domestic supplier switching).
 #
 # Conceptual mapping from Phase 2 customs to Phase 3 B2B:
@@ -14,7 +14,7 @@
 #   Phase 3: regulated-NACE × ETS-seller (treatment cell -- domestic ETS sellers
 #            in regulated sectors are the ones whose costs rose).
 #
-# Per CMdG_REPLICATION.md p. 197-225:
+# Per CdGM_REPLICATION.md p. 197-225:
 #   y_{j,b,t} ~ TREAT_j × phase + FE
 #   TREAT_j  = 1(seller_is_ets) × 1(seller_is_regulated_nace)
 # Sign expectation: NEGATIVE (treated sellers should LOSE buyer share / pair
@@ -22,7 +22,7 @@
 #
 # Build steps:
 #   1. Load raw B2B (b2b_selected_sample.RData on local; full on RMD).
-#   2. Restrict years to 2005-2022 (CMdG window 2000-2019 + Phase 4 extension).
+#   2. Restrict years to 2005-2022 (CdGM window 2000-2019 + Phase 4 extension).
 #   3. Attach seller NACE 2d via annual accounts.
 #   4. Attach seller_is_ets (EUTL match).
 #   5. Tag seller_is_regulated_nace using regulated_producing_nace from
@@ -35,7 +35,7 @@
 #      keep them in B2B but their is_ets_firm flag remains TRUE since they ARE
 #      in EUTL throughout).
 #
-# Output: ${PROC_DATA}/b2b_cmdj_panel.RData
+# Output: ${PROC_DATA}/b2b_cdgm_panel.RData
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
@@ -165,7 +165,7 @@ cat("After balance + zero-fill:", nrow(bal), "rows\n")
 # ---------------------------------------------------------------------------
 # 9. Diagnostic + save
 # ---------------------------------------------------------------------------
-cat("\n=== B2B CMdG panel ===\n")
+cat("\n=== B2B CdGM panel ===\n")
 cat("Rows                    :", nrow(bal), "\n")
 cat("Distinct sellers        :", uniqueN(bal$seller), "\n")
 cat("Distinct buyers         :", uniqueN(bal$buyer),  "\n")
@@ -182,6 +182,6 @@ cat("\nBuyer NACE 2d distribution (top 10):\n")
 print(bal[, .N, by = buyer_nace2d][order(-N)][1:10])
 
 panel <- bal
-out_path <- file.path(PROC_DATA, "b2b_cmdj_panel.RData")
+out_path <- file.path(PROC_DATA, "b2b_cdgm_panel.RData")
 save(panel, file = out_path)
 cat("\nSaved", out_path, "\n")

@@ -1,6 +1,6 @@
 # Phase 0 Step 3 -- HS6 to BEC concordance for capital-goods filter.
 #
-# CMdG (supplemental appendix p. 44) drop CN8 codes whose underlying HS6 is
+# CdGM (supplemental appendix p. 44) drop CN8 codes whose underlying HS6 is
 # classified as BEC 41 (Capital goods except transport equipment) or BEC 521
 # (Industrial transport equipment) using the UN HS2002 -> BEC Rev.4 table.
 #
@@ -8,7 +8,7 @@
 #   * NBB_data/raw/Correspondences_and_dictionaries/
 #     JobID-40_Concordance_H3_to_BE.CSV
 #     -- UN HS 2007 (H3) -> BEC Rev.4 correspondence, 5,051 rows.
-#   Note: this is HS 2007, not HS 2002 as in CMdG. The difference between H2
+#   Note: this is HS 2007, not HS 2002 as in CdGM. The difference between H2
 #   and H3 is a few hundred reclassified codes; for BEC capital-goods flagging
 #   the loss in coverage is negligible.
 #

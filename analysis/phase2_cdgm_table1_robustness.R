@@ -1,20 +1,20 @@
-# phase2_cmdj_table1_robustness.R
+# phase2_cdgm_table1_robustness.R
 #
 # Robustness across control-group choices. Same headline question -- "do
 # Belgian firms shift sourcing of regulated products toward non-ETS countries
 # post-2005?" -- under four different identification strategies.
 #
-# Holds the FE structure constant at the CMdG col(5) preferred spec
+# Holds the FE structure constant at the CdGM col(5) preferred spec
 # (firm^product^country + country^year + sector^year), runs each panel
 # (share, prob), reports phase-aggregated coefficients.
 #
 # Specs:
-#   A. CMdG baseline (matches phase2_cmdj_table1.R).
+#   A. CdGM baseline (matches phase2_cdgm_table1.R).
 #      Sample: non-ETS countries only.
 #      Treatment: regulated x phase.
 #      Implicit control: unregulated x non-ETS.
 #
-#   B. Within-regulated alternative (CMdG Figure 4 conceptual analog).
+#   B. Within-regulated alternative (CdGM Figure 4 conceptual analog).
 #      Sample: regulated products only.
 #      Treatment: non-ETS x phase.
 #      Implicit control: regulated x ETS.
@@ -31,8 +31,8 @@
 #      Identifies the additional effect of (regulated x non-ETS x post)
 #      net of trends in regulated alone and non-ETS alone.
 #
-# Inputs / outputs analogous to phase2_cmdj_table1.R.
-# Output: output/tables/phase2_cmdj_table1_robustness.csv
+# Inputs / outputs analogous to phase2_cdgm_table1.R.
+# Output: output/tables/phase2_cdgm_table1_robustness.csv
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
@@ -87,9 +87,9 @@ extract_phase <- function(model, label, panel_lab) {
 results <- list()
 
 # -------------------------------------------------------------------------
-# Spec A -- CMdG baseline (sample = non-ETS only)
+# Spec A -- CdGM baseline (sample = non-ETS only)
 # -------------------------------------------------------------------------
-cat("\n===== Spec A: CMdG baseline (non-ETS sample) =====\n")
+cat("\n===== Spec A: CdGM baseline (non-ETS sample) =====\n")
 dA <- copy(d[is_non_ets_country == 1L])
 dA[, total_value_ft := sum(value), by = .(vat, year)]
 dA[, share := ifelse(total_value_ft > 0, value / total_value_ft, 0)]
@@ -104,8 +104,8 @@ mA_share <- feols(share ~ treat_p1 + treat_p2 + treat_p3 |
 mA_prob <- feols(prob_active ~ treat_p1 + treat_p2 + treat_p3 |
                    firm_prod_country + country_year + sector_year,
                  cluster = ~ vat + partner_iso2, data = dA)
-results[["A_share"]] <- extract_phase(mA_share, "A: vs unreg in non-ETS (CMdG)", "Share")
-results[["A_prob"]]  <- extract_phase(mA_prob,  "A: vs unreg in non-ETS (CMdG)", "Prob")
+results[["A_share"]] <- extract_phase(mA_share, "A: vs unreg in non-ETS (CdGM)", "Share")
+results[["A_prob"]]  <- extract_phase(mA_prob,  "A: vs unreg in non-ETS (CdGM)", "Prob")
 
 # -------------------------------------------------------------------------
 # Spec B -- within-regulated, non-ETS vs ETS (Fig 4 conceptual)
@@ -201,7 +201,7 @@ print(dcast(out[panel == "Prob"],
 tab_dir <- file.path(REPO_DIR, "output", "tables")
 dir.create(tab_dir, recursive = TRUE, showWarnings = FALSE)
 out_path <- file.path(tab_dir,
-                      ifelse(USE_MOCK, "phase2_cmdj_table1_robustness_MOCK.csv",
-                                        "phase2_cmdj_table1_robustness.csv"))
+                      ifelse(USE_MOCK, "phase2_cdgm_table1_robustness_MOCK.csv",
+                                        "phase2_cdgm_table1_robustness.csv"))
 fwrite(out, out_path)
 cat("\nRobustness table saved:", out_path, "\n")

@@ -1,6 +1,6 @@
-# B2B Leakage: CMdG-Style Replication on Belgian Domestic Supplier Switching
+# B2B Leakage: CdGM-Style Replication on Belgian Domestic Supplier Switching
 
-*Phase 3 of [CMdG_REPLICATION.md](CMdG_REPLICATION.md). Asks whether Belgian buyers shifted away from regulated-NACE ETS-Belgian sellers post-2005 — the domestic analog of CMdG's cross-border carbon-leakage hypothesis. The novel piece France can't do because they lack firm-to-firm transaction data.*
+*Phase 3 of [CdGM_REPLICATION.md](CdGM_REPLICATION.md). Asks whether Belgian buyers shifted away from regulated-NACE ETS-Belgian sellers post-2005 — the domestic analog of CdGM's cross-border carbon-leakage hypothesis. The novel piece France can't do because they lack firm-to-firm transaction data.*
 
 **Headline finding:** **No identifiable B2B leakage in Belgium.** A binary diff-in-diff initially suggests treated sellers (ETS × regulated-NACE) GAINED domestic buyer share post-2005 by ~36 percentage points (p < 0.005). But this finding does not survive (a) switching to a continuous-intensity treatment that exploits cross-firm cost-share variation among ETS sellers, or (b) the parallel-trends test using 2002-04 leads. The binary result reflects **market structure** — large regulated-NACE ETS sellers are the dominant Belgian suppliers in their NACE regardless of treatment intensity — not a causal ETS response. Combined with [IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md)'s null cross-border finding, **Belgium shows no leakage at either the international or the domestic dimension** under any cleanly identified specification.
 
@@ -48,10 +48,10 @@ y_{j,b,t} = β_pre · firm_cost_share_j × 1(t ∈ 2002-04)
 
 `firm_cost_share_j = mean_{2013-15}(shortage × EUA) / mean_{2010-12}(total_cost)` per ETS seller; 0 for non-ETS sellers. Sample: active pairs only (no balance/zero-fill). Pre-period 2002-2004 included via raw `B2B_ANO.dta` instead of the `b2b_selected_sample` (which restricts to 2005+).
 
-**Build script:** [analysis/phase3_build_b2b_cmdj_panel.R](analysis/phase3_build_b2b_cmdj_panel.R) (binary).
-**Binary regression script:** [analysis/phase3_b2b_cmdj_did.R](analysis/phase3_b2b_cmdj_did.R).
-**Binary event study:** [analysis/phase3_b2b_cmdj_eventstudy.R](analysis/phase3_b2b_cmdj_eventstudy.R).
-**Continuous regression + event study:** [analysis/phase3_b2b_cmdj_did_continuous.R](analysis/phase3_b2b_cmdj_did_continuous.R).
+**Build script:** [analysis/phase3_build_b2b_cdgm_panel.R](analysis/phase3_build_b2b_cdgm_panel.R) (binary).
+**Binary regression script:** [analysis/phase3_b2b_cdgm_did.R](analysis/phase3_b2b_cdgm_did.R).
+**Binary event study:** [analysis/phase3_b2b_cdgm_eventstudy.R](analysis/phase3_b2b_cdgm_eventstudy.R).
+**Continuous regression + event study:** [analysis/phase3_b2b_cdgm_did_continuous.R](analysis/phase3_b2b_cdgm_did_continuous.R).
 
 ---
 
@@ -99,7 +99,7 @@ ETS firms with `firm_cost_share`: 224 (out of ~280 total Belgian ETS firms).
 
 ## Results — Binary spec (the +0.36 finding)
 
-Output: [output/tables/phase3_b2b_cmdj_table_A.csv](output/tables/phase3_b2b_cmdj_table_A.csv) (share), [output/tables/phase3_b2b_cmdj_table_B.csv](output/tables/phase3_b2b_cmdj_table_B.csv) (probability).
+Output: [output/tables/phase3_b2b_cdgm_table_A.csv](output/tables/phase3_b2b_cdgm_table_A.csv) (share), [output/tables/phase3_b2b_cdgm_table_B.csv](output/tables/phase3_b2b_cdgm_table_B.csv) (probability).
 
 ### Six-FE-column table — Panel A (share)
 
@@ -125,7 +125,7 @@ Output: [output/tables/phase3_b2b_cmdj_table_A.csv](output/tables/phase3_b2b_cmd
 
 ### Control-group robustness (binary, col 5 FE)
 
-Output: [output/tables/phase3_b2b_cmdj_robustness.csv](output/tables/phase3_b2b_cmdj_robustness.csv).
+Output: [output/tables/phase3_b2b_cdgm_robustness.csv](output/tables/phase3_b2b_cdgm_robustness.csv).
 
 | Spec | Sample | Phase 3 share | Phase 3 prob |
 |---|---|---|---|
@@ -138,14 +138,14 @@ Spec B fails (VCOV not pos. def.) — same pattern as Phase 2's Spec B; the with
 
 ### Initial reading
 
-Treated sellers (ETS × regulated-NACE) **gain** within-buyer-NACE share by ~36 percentage points and pair-active probability by ~83 percentage points after 2005. Coefficient signs are the **opposite** of the leakage hypothesis (β < 0 expected). Magnitudes are very large — three times CMdG's France share coefficient — which is the first warning sign.
+Treated sellers (ETS × regulated-NACE) **gain** within-buyer-NACE share by ~36 percentage points and pair-active probability by ~83 percentage points after 2005. Coefficient signs are the **opposite** of the leakage hypothesis (β < 0 expected). Magnitudes are very large — three times CdGM's France share coefficient — which is the first warning sign.
 
 ---
 
 ## Results — Continuous-intensity spec (the null + pre-trend violation)
 
-Output: [output/tables/phase3_b2b_cmdj_continuous_phase.csv](output/tables/phase3_b2b_cmdj_continuous_phase.csv), [output/tables/phase3_b2b_cmdj_continuous_eventstudy.csv](output/tables/phase3_b2b_cmdj_continuous_eventstudy.csv).
-Figure: [output/figures/phase3_b2b_cmdj_continuous_eventstudy.png](output/figures/phase3_b2b_cmdj_continuous_eventstudy.png).
+Output: [output/tables/phase3_b2b_cdgm_continuous_phase.csv](output/tables/phase3_b2b_cdgm_continuous_phase.csv), [output/tables/phase3_b2b_cdgm_continuous_eventstudy.csv](output/tables/phase3_b2b_cdgm_continuous_eventstudy.csv).
+Figure: [output/figures/phase3_b2b_cdgm_continuous_eventstudy.png](output/figures/phase3_b2b_cdgm_continuous_eventstudy.png).
 
 ### Phase-aggregated coefficients
 
@@ -226,7 +226,7 @@ So Belgium shows no leakage in either direction:
 
 The binary +0.36 finding for Phase 3 was real in a descriptive sense (ETS-regulated Belgian sellers ARE more dominant by 2019 than they were in 2005), but the increase coincides with a pre-existing trend and cannot be attributed to ETS treatment.
 
-CMdG France's Section 3 finding (positive cross-border leakage) does NOT generalize to Belgium on either margin.
+CdGM France's Section 3 finding (positive cross-border leakage) does NOT generalize to Belgium on either margin.
 
 ---
 
@@ -246,8 +246,8 @@ CMdG France's Section 3 finding (positive cross-border leakage) does NOT general
 
 1. **Build a 2002+ balanced B2B panel** for the probability/extensive-margin continuous regression. Would require a buyer × seller × year cross-join with substantially more rows than the 2005+ version. Worth doing if Phase 3 ever becomes a load-bearing finding; not needed for the null story.
 2. **Tercile heterogeneity** by `firm_cost_share` (low / mid / high vs control). Would let us see whether dose-response is monotonic. Likely null under the same logic as the linear continuous spec.
-3. **Extensive-margin Cox / hazard model** for pair separation. CMdG don't run one either; their probability margin is a simple LPM.
-4. **Comparison with the existing Angle 4 `phase4_b2b_supplier_switching.R` long-difference design** at horizons 5-7. The Angle 4 spec uses a different baseline year (2015) and different identification (event-study long differences around the MSR decision). That's a separate research question — short-horizon Phase IV reallocation under the post-MSR price spike, not the CMdG Phase 1-3 leakage question. Worth cross-checking when both finalized.
+3. **Extensive-margin Cox / hazard model** for pair separation. CdGM don't run one either; their probability margin is a simple LPM.
+4. **Comparison with the existing Angle 4 `phase4_b2b_supplier_switching.R` long-difference design** at horizons 5-7. The Angle 4 spec uses a different baseline year (2015) and different identification (event-study long differences around the MSR decision). That's a separate research question — short-horizon Phase IV reallocation under the post-MSR price spike, not the CdGM Phase 1-3 leakage question. Worth cross-checking when both finalized.
 
 ---
 
@@ -255,28 +255,28 @@ CMdG France's Section 3 finding (positive cross-border leakage) does NOT general
 
 | Purpose | Script |
 |---|---|
-| Build binary-treatment B2B panel (balanced, 2005-2022) | [analysis/phase3_build_b2b_cmdj_panel.R](analysis/phase3_build_b2b_cmdj_panel.R) |
-| Binary diff-in-diff: 6 FE columns + 4-spec robustness | [analysis/phase3_b2b_cmdj_did.R](analysis/phase3_b2b_cmdj_did.R) |
-| Binary event study (col 5 FE, ref = 2005) | [analysis/phase3_b2b_cmdj_eventstudy.R](analysis/phase3_b2b_cmdj_eventstudy.R) |
-| Continuous-intensity regression + event study (active pairs, 2002-2019, pre-period included) | [analysis/phase3_b2b_cmdj_did_continuous.R](analysis/phase3_b2b_cmdj_did_continuous.R) |
+| Build binary-treatment B2B panel (balanced, 2005-2022) | [analysis/phase3_build_b2b_cdgm_panel.R](analysis/phase3_build_b2b_cdgm_panel.R) |
+| Binary diff-in-diff: 6 FE columns + 4-spec robustness | [analysis/phase3_b2b_cdgm_did.R](analysis/phase3_b2b_cdgm_did.R) |
+| Binary event study (col 5 FE, ref = 2005) | [analysis/phase3_b2b_cdgm_eventstudy.R](analysis/phase3_b2b_cdgm_eventstudy.R) |
+| Continuous-intensity regression + event study (active pairs, 2002-2019, pre-period included) | [analysis/phase3_b2b_cdgm_did_continuous.R](analysis/phase3_b2b_cdgm_did_continuous.R) |
 | One-click runner for the binary pipeline | [analysis/phase3_run_all.R](analysis/phase3_run_all.R) |
 
 ## Outputs
 
 ### Tables
-- [output/tables/phase3_b2b_cmdj_table_A.csv](output/tables/phase3_b2b_cmdj_table_A.csv) — binary, 6 FE × share.
-- [output/tables/phase3_b2b_cmdj_table_B.csv](output/tables/phase3_b2b_cmdj_table_B.csv) — binary, 6 FE × probability.
-- [output/tables/phase3_b2b_cmdj_robustness.csv](output/tables/phase3_b2b_cmdj_robustness.csv) — binary, 4 control-group specs × 2 panels × 3 phases.
-- [output/tables/phase3_b2b_cmdj_eventstudy.csv](output/tables/phase3_b2b_cmdj_eventstudy.csv) — binary event study, 2005-2019.
-- [output/tables/phase3_b2b_cmdj_continuous_phase.csv](output/tables/phase3_b2b_cmdj_continuous_phase.csv) — continuous, phase-aggregated, 3 FE specs.
-- [output/tables/phase3_b2b_cmdj_continuous_eventstudy.csv](output/tables/phase3_b2b_cmdj_continuous_eventstudy.csv) — continuous event study, 2002-2019.
+- [output/tables/phase3_b2b_cdgm_table_A.csv](output/tables/phase3_b2b_cdgm_table_A.csv) — binary, 6 FE × share.
+- [output/tables/phase3_b2b_cdgm_table_B.csv](output/tables/phase3_b2b_cdgm_table_B.csv) — binary, 6 FE × probability.
+- [output/tables/phase3_b2b_cdgm_robustness.csv](output/tables/phase3_b2b_cdgm_robustness.csv) — binary, 4 control-group specs × 2 panels × 3 phases.
+- [output/tables/phase3_b2b_cdgm_eventstudy.csv](output/tables/phase3_b2b_cdgm_eventstudy.csv) — binary event study, 2005-2019.
+- [output/tables/phase3_b2b_cdgm_continuous_phase.csv](output/tables/phase3_b2b_cdgm_continuous_phase.csv) — continuous, phase-aggregated, 3 FE specs.
+- [output/tables/phase3_b2b_cdgm_continuous_eventstudy.csv](output/tables/phase3_b2b_cdgm_continuous_eventstudy.csv) — continuous event study, 2002-2019.
 
 ### Figures
-- [output/figures/phase3_b2b_cmdj_eventstudy.png](output/figures/phase3_b2b_cmdj_eventstudy.png) — binary event study, two-panel.
-- [output/figures/phase3_b2b_cmdj_continuous_eventstudy.png](output/figures/phase3_b2b_cmdj_continuous_eventstudy.png) — continuous event study, share only.
+- [output/figures/phase3_b2b_cdgm_eventstudy.png](output/figures/phase3_b2b_cdgm_eventstudy.png) — binary event study, two-panel.
+- [output/figures/phase3_b2b_cdgm_continuous_eventstudy.png](output/figures/phase3_b2b_cdgm_continuous_eventstudy.png) — continuous event study, share only.
 
 ### Working artifacts
-- `${PROC_DATA}/b2b_cmdj_panel.RData` — built binary B2B panel (RMD only, 2005-2022 balanced).
+- `${PROC_DATA}/b2b_cdgm_panel.RData` — built binary B2B panel (RMD only, 2005-2022 balanced).
 
 ---
 
@@ -284,13 +284,13 @@ CMdG France's Section 3 finding (positive cross-border leakage) does NOT general
 
 Combined with [IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md):
 
-**Belgium does not exhibit measurable carbon leakage at the firm-import-flows level under any cleanly identified specification.** The cross-border channel (CMdG's France finding) is null. The domestic B2B channel — the novel research question that France can't answer — initially looked positive in the wrong direction (consolidation toward ETS sellers, not away) but does not survive the continuous-intensity test or pre-trend diagnostics.
+**Belgium does not exhibit measurable carbon leakage at the firm-import-flows level under any cleanly identified specification.** The cross-border channel (CdGM's France finding) is null. The domestic B2B channel — the novel research question that France can't answer — initially looked positive in the wrong direction (consolidation toward ETS sellers, not away) but does not survive the continuous-intensity test or pre-trend diagnostics.
 
 Two ways to read this:
 
-1. **Substantively:** Belgium is too small, too EU-integrated, and too concentrated in chemicals exporters for the cross-border-leakage mechanism CMdG document for France to operate. Domestically, ETS-regulated firms are the structural supply backbone — buyers had no realistic alternatives within Belgium, regardless of cost-share intensity. The post-2005 "consolidation" reflects pre-existing market structure dynamics that pre-date and survive the policy.
-2. **Methodologically:** Belgian B2B + customs panels are too small to distinguish leakage from market-structure effects at the firm level. CMdG's identification depends on French-style firm count (27k vs Belgium's ~3-5k). Smaller economies need different identification strategies (country panels, structural models, or larger pooled samples).
+1. **Substantively:** Belgium is too small, too EU-integrated, and too concentrated in chemicals exporters for the cross-border-leakage mechanism CdGM document for France to operate. Domestically, ETS-regulated firms are the structural supply backbone — buyers had no realistic alternatives within Belgium, regardless of cost-share intensity. The post-2005 "consolidation" reflects pre-existing market structure dynamics that pre-date and survive the policy.
+2. **Methodologically:** Belgian B2B + customs panels are too small to distinguish leakage from market-structure effects at the firm level. CdGM's identification depends on French-style firm count (27k vs Belgium's ~3-5k). Smaller economies need different identification strategies (country panels, structural models, or larger pooled samples).
 
 ---
 
-*Last revision: 2026-04-27. Authored after Phase 3 RMD execution of `phase3_b2b_cmdj_did.R`, `phase3_b2b_cmdj_eventstudy.R`, and `phase3_b2b_cmdj_did_continuous.R`.*
+*Last revision: 2026-04-27. Authored after Phase 3 RMD execution of `phase3_b2b_cdgm_did.R`, `phase3_b2b_cdgm_eventstudy.R`, and `phase3_b2b_cdgm_did_continuous.R`.*

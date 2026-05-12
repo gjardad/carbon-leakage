@@ -4,7 +4,7 @@
 # PURPOSE:
 #   Plot raw monthly PPI evolution at NACE 4-digit, 1981–2024, normalised so
 #   each sector's 2005 annual average = 1. Four panels:
-#     (A) treated vs non-treated (CMdG-broad NACE 2d set: 17, 19, 20, 23, 24, 25, 35)
+#     (A) treated vs non-treated (CdGM-broad NACE 2d set: 17, 19, 20, 23, 24, 25, 35)
 #     (B) top sectors by 2005–2007 emissions/cost ratio (no EUA factor)
 #     (C) top sectors by 2008–2012 emissions/cost ratio
 #     (D) top sectors by 2008–2012 allowance-shortage/cost ratio
@@ -103,7 +103,7 @@ omega_em_05_07 <- omega_em_05_07 %>% filter(nace4d %in% ppi_4d_set)
 omega_em_08_12 <- omega_em_08_12 %>% filter(nace4d %in% ppi_4d_set)
 omega_sh_08_12 <- omega_sh_08_12 %>% filter(nace4d %in% ppi_4d_set)
 
-# --- Treated set (CMdG broad: NACE 2d 17, 19, 20, 23, 24, 25, 35) ---
+# --- Treated set (CdGM broad: NACE 2d 17, 19, 20, 23, 24, 25, 35) ---
 TREATED_2D <- c("17", "19", "20", "23", "24", "25", "35")
 
 # --- Plot helper ---
@@ -132,14 +132,14 @@ save_plot <- function(p, basename) {
 }
 
 # ============================================================================
-# Plot A: treated (CMdG-broad) vs non-treated
+# Plot A: treated (CdGM-broad) vs non-treated
 # ============================================================================
 ppi_A <- ppi %>%
-  mutate(group = ifelse(nace2d %in% TREATED_2D, "Treated (CMdG)", "Untreated"))
+  mutate(group = ifelse(nace2d %in% TREATED_2D, "Treated (CdGM)", "Untreated"))
 
 pA <- ggplot(ppi_A, aes(x = date, y = idx, group = nace4d, colour = group)) +
   geom_line(linewidth = 0.25, alpha = 0.7) +
-  scale_colour_manual(values = c("Treated (CMdG)" = "#cb181d",
+  scale_colour_manual(values = c("Treated (CdGM)" = "#cb181d",
                                   "Untreated" = "#2171b5"),
                       name = NULL) +
   scale_y_continuous(limits = c(0.4, 4.0), oob = scales::squish) +

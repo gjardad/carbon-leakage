@@ -131,7 +131,7 @@ out <- out[, .(year, cn8, family_id)]
 cat("\nOutput long table:\n")
 cat("  rows                     :", nrow(out), "\n")
 cat("  distinct family_ids      :", uniqueN(out$family_id), "\n")
-cat("  CMDJ benchmark           : 7,051 harmonized products (1995-2020)\n")
+cat("  CDGM benchmark           : 7,051 harmonized products (1995-2020)\n")
 
 fwrite(out, out_path)
 cat("\nWrote", out_path, "\n")

@@ -1,6 +1,6 @@
-# phase3_b2b_cmdj_did.R
+# phase3_b2b_cdgm_did.R
 #
-# B2B CMdG-style diff-in-diff: do Belgian buyers shift purchases away from
+# B2B CdGM-style diff-in-diff: do Belgian buyers shift purchases away from
 # regulated-NACE ETS-domestic sellers post-2005?
 #
 # Spec (parallels Phase 2 Table 1):
@@ -27,7 +27,7 @@
 # Cluster SE: two-way seller + buyer.
 #
 # Plus a control-group robustness mirror of Phase 2:
-#   A. CMdG baseline (sample = ETS sellers only). Treat = regulated NACE.
+#   A. CdGM baseline (sample = ETS sellers only). Treat = regulated NACE.
 #   B. Within-regulated-NACE (sample = regulated NACE sellers only).
 #      Treat = ETS seller.
 #   C. Full sample, treat = ETS x regulated_NACE.
@@ -37,9 +37,9 @@
 # sellers lose buyer share post-2005).
 #
 # Outputs:
-#   output/tables/phase3_b2b_cmdj_table_A.csv  (share, 6 cols x 3 phases)
-#   output/tables/phase3_b2b_cmdj_table_B.csv  (prob, 6 cols x 3 phases)
-#   output/tables/phase3_b2b_cmdj_robustness.csv  (4 specs x 2 panels x 3 phases)
+#   output/tables/phase3_b2b_cdgm_table_A.csv  (share, 6 cols x 3 phases)
+#   output/tables/phase3_b2b_cdgm_table_B.csv  (prob, 6 cols x 3 phases)
+#   output/tables/phase3_b2b_cdgm_robustness.csv  (4 specs x 2 panels x 3 phases)
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
@@ -50,12 +50,12 @@ if (!requireNamespace("fixest", quietly = TRUE)) install.packages("fixest", repo
 library(data.table)
 library(fixest)
 
-panel_path <- file.path(PROC_DATA, "b2b_cmdj_panel.RData")
+panel_path <- file.path(PROC_DATA, "b2b_cdgm_panel.RData")
 load(panel_path)
 d <- as.data.table(panel)
 cat("B2B panel rows:", nrow(d), "\n")
 
-# Restrict to 2000-2019 for CMdG-comparable phases.
+# Restrict to 2000-2019 for CdGM-comparable phases.
 d <- d[year %between% c(2005L, 2019L)]
 
 # Buyer ETS flag for col(6) FE.
@@ -129,8 +129,8 @@ print(B_out)
 
 tab_dir <- file.path(REPO_DIR, "output", "tables")
 dir.create(tab_dir, recursive = TRUE, showWarnings = FALSE)
-fwrite(A_out, file.path(tab_dir, "phase3_b2b_cmdj_table_A.csv"))
-fwrite(B_out, file.path(tab_dir, "phase3_b2b_cmdj_table_B.csv"))
+fwrite(A_out, file.path(tab_dir, "phase3_b2b_cdgm_table_A.csv"))
+fwrite(B_out, file.path(tab_dir, "phase3_b2b_cdgm_table_B.csv"))
 
 # ---------------------------------------------------------------------------
 # Control-group robustness (col 5 FE, 4 specs)
@@ -151,7 +151,7 @@ extract_phase_long <- function(model, label, panel_lab) {
 
 results <- list()
 
-# Spec A -- CMdG baseline analog: sample = ETS sellers only, treat = regulated NACE.
+# Spec A -- CdGM baseline analog: sample = ETS sellers only, treat = regulated NACE.
 # IMPORTANT: in this subsample, regulated_NACE is determined by seller_nace4d
 # (a NACE 2d property propagated to NACE 4d), so sn4d_year FE would mechanically
 # absorb the treatment. Drop sn4d_year for this spec; keep buyer-side
@@ -237,8 +237,8 @@ print(dcast(robust_out[panel == "Prob"],
       `Phase 2` = round(`Phase 2 (2009-12)`, 4),
       `Phase 3` = round(`Phase 3 (2013-19)`, 4))])
 
-fwrite(robust_out, file.path(tab_dir, "phase3_b2b_cmdj_robustness.csv"))
-cat("\nRobustness saved:", file.path(tab_dir, "phase3_b2b_cmdj_robustness.csv"), "\n")
+fwrite(robust_out, file.path(tab_dir, "phase3_b2b_cdgm_robustness.csv"))
+cat("\nRobustness saved:", file.path(tab_dir, "phase3_b2b_cdgm_robustness.csv"), "\n")
 
 cat("\n--- Sign expectation reminder ---\n")
 cat("Under the leakage hypothesis, treated sellers (ETS x regulated_NACE)\n")

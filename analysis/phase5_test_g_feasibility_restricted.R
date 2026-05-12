@@ -71,7 +71,7 @@ POST_FROM <- 2015L  # MSR-binding shock date (Phase 3 convention)
 # ---------------------------------------------------------------------------
 # 1. Load b2b panel + Prep 2 firm_cost_share + buyer's total inputs
 # ---------------------------------------------------------------------------
-load(file.path(PROC_DATA, "b2b_cmdj_panel.RData"))                     # panel
+load(file.path(PROC_DATA, "b2b_cdgm_panel.RData"))                     # panel
 load(file.path(PROC_DATA, "firm_cost_share_flavors.RData"))            # cost_share_outcome, cost_share_regressor
 
 panel <- as.data.table(panel)

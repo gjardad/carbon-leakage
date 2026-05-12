@@ -34,10 +34,10 @@
 #
 # SAMPLE:
 #   All Belgian buyers with at least one B2B inflow in 2005--2022, from the
-#   raw b2b_selected_sample (NOT the regulated-intensive cmdj_panel). The
+#   raw b2b_selected_sample (NOT the regulated-intensive cdgm_panel). The
 #   broader sample is appropriate for a descriptive subsection that asks
 #   "how many buyers face any ETS exposure at all?". §5.1 regressions stay
-#   on the b2b_cmdj_panel.
+#   on the b2b_cdgm_panel.
 #
 # INPUT:
 #   ${PROC_DATA}/b2b_selected_sample.RData
@@ -232,7 +232,7 @@ cat("\n=== M7: buyer-year signal-to-noise distribution ===\n")
 # 4a. Buyer-year denominator: total_inputs from B2B (already computed in
 # buyer_year) + buyer_total_shock numerator from firm_cost_share × pair share.
 # Use buyer's TOTAL-INPUTS-from-B2B as the denominator for pair_shock_total
-# (matches phase5_pair_shock_magnitude.R Moment 4c on the b2b_cmdj_panel,
+# (matches phase5_pair_shock_magnitude.R Moment 4c on the b2b_cdgm_panel,
 # rebuilt here on the broader b2b_selected_sample).
 firm_cs <- as.data.table(firm_exposure)[, .(seller = vat, year, cost_share_total)]
 firm_cs <- firm_cs[!is.na(cost_share_total)]

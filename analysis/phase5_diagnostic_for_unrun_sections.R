@@ -80,11 +80,11 @@ cat("###############################################################\n\n")
 
 # Look for the customs panel file. Prefer the EXTENDED panel (built by P2 =
 # phase2_build_customs_panel.R after the 2026-05 edits: 2000-2022 window
-# with quantity preserved) over the older CMdG-replication panel (2000-2019,
+# with quantity preserved) over the older CdGM-replication panel (2000-2019,
 # no quantity).
 customs_paths <- c(
   file.path(PROC_DATA, "customs_import_panel_extended.RData"),       # P2 output
-  file.path(PROC_DATA, "customs_import_panel_regulated.RData"),      # CMdG panel (no quantity)
+  file.path(PROC_DATA, "customs_import_panel_regulated.RData"),      # CdGM panel (no quantity)
   file.path(PROC_DATA, "mock_customs_import_panel_regulated.RData")  # local-1 mock
 )
 customs_path <- customs_paths[file.exists(customs_paths)][1]

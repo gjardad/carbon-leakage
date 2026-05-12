@@ -6,7 +6,7 @@
 # Used by Phase 2.4 (Figure 4 alternative-control spec). When the bottom
 # threshold rises, small importers stop reporting and apparent intra-EU import
 # volume drops -- creating a structural break that must be absorbed with a
-# dummy variable. CMdG identified one such break in France in 2011 (EUR 150k
+# dummy variable. CdGM identified one such break in France in 2011 (EUR 150k
 # -> EUR 460k). For Belgium, we examine the NBB Intrastat newsletter archive.
 #
 # Sources confirmed (verified 2026-04-27 from NBB newsletters):
@@ -23,7 +23,7 @@
 #
 # IMPLICATION FOR PHASE 2.4:
 #   Within our analytical period (2005-2022), no Intrastat threshold change is
-#   confirmed. CMdG's France-2011 break has no documented Belgian counterpart
+#   confirmed. CdGM's France-2011 break has no documented Belgian counterpart
 #   in 2016-2022. Pre-2016 may contain breaks; flagged as a known gap.
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),

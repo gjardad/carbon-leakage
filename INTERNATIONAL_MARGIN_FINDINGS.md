@@ -2,7 +2,7 @@
 
 *Companion to [REALLOCATION_FINDINGS.md](REALLOCATION_FINDINGS.md), which covers the domestic reallocation margins. This document inventories every estimate on disk that bears on the international (cross-border) margin of carbon leakage in Belgian firm-level data. The unifying question is **whether Belgian importers shifted sourcing toward non-ETS countries, or toward less carbon-intensive products, after the EU ETS was introduced.***
 
-**Headline (one-line read):** The aggregate CMdG (2024) replication on Belgian customs is **null/negative** — the cross-border leakage pattern they document for France does not reproduce here. But the **firm-pair design (B1/B2)** finds **economically meaningful within-pair substitution** concentrated at the heaviest-exposure buyers, with a clean monotone post-trend horizon and no offsetting non-EU price response. The two findings co-exist if the CMdG aggregate spec absorbs identifying variation into FE that the pair design preserves, or if the substitution is concentrated in a sub-population the aggregate spec averages over.
+**Headline (one-line read):** The aggregate CdGM (2024) replication on Belgian customs is **null/negative** — the cross-border leakage pattern they document for France does not reproduce here. But the **firm-pair design (B1/B2)** finds **economically meaningful within-pair substitution** concentrated at the heaviest-exposure buyers, with a clean monotone post-trend horizon and no offsetting non-EU price response. The two findings co-exist if the CdGM aggregate spec absorbs identifying variation into FE that the pair design preserves, or if the substitution is concentrated in a sub-population the aggregate spec averages over.
 
 The right framing of the headline depends on the next batch of cuts (HS6 carbon intensity, pre-MSR vs post-MSR window) and on a clean run of C1 (imports-vs-domestic substitution) on RMD.
 
@@ -24,10 +24,10 @@ All coefficients are on the treatment-by-post interaction (the leakage predictio
 
 | ID | Design | Outcome | Treatment | Coef β | SE | p | Source |
 |---|---|---|---|---:|---:|---:|---|
-| **CMdG-naive col(5)** | CMdG Eq.(1), 6 FE preferred, share, Phase 3 | import share (non-ETS country) | regulated×phase | −0.0024 | 0.0009 | 0.007 | [phase2_cmdj_table1_A.csv](output/tables/phase2_cmdj_table1_A.csv) |
-| CMdG-naive col(5) | as above, **probability** | 1(active) | regulated×phase | +0.004 | 0.010 | 0.67 | [phase2_cmdj_table1_B.csv](output/tables/phase2_cmdj_table1_B.csv) |
-| **CMdG trend-corrected col(5)** | adds firm×year-centered control, share, Phase 3 | as above | regulated×phase + trend | −0.0062 *** | 0.0019 | 0.0014 | [phase6_cmdj_corrected_A.csv](output_rmd/tables/phase6_cmdj_corrected_A.csv) |
-| CMdG trend-corrected col(5), prob | as above | 1(active) | regulated×phase + trend | −0.021 | 0.017 | 0.22 | [phase6_cmdj_corrected_B.csv](output_rmd/tables/phase6_cmdj_corrected_B.csv) |
+| **CdGM-naive col(5)** | CdGM Eq.(1), 6 FE preferred, share, Phase 3 | import share (non-ETS country) | regulated×phase | −0.0024 | 0.0009 | 0.007 | [phase2_cdgm_table1_A.csv](output/tables/phase2_cdgm_table1_A.csv) |
+| CdGM-naive col(5) | as above, **probability** | 1(active) | regulated×phase | +0.004 | 0.010 | 0.67 | [phase2_cdgm_table1_B.csv](output/tables/phase2_cdgm_table1_B.csv) |
+| **CdGM trend-corrected col(5)** | adds firm×year-centered control, share, Phase 3 | as above | regulated×phase + trend | −0.0062 *** | 0.0019 | 0.0014 | [phase6_cdgm_corrected_A.csv](output_rmd/tables/phase6_cdgm_corrected_A.csv) |
+| CdGM trend-corrected col(5), prob | as above | 1(active) | regulated×phase + trend | −0.021 | 0.017 | 0.22 | [phase6_cdgm_corrected_B.csv](output_rmd/tables/phase6_cdgm_corrected_B.csv) |
 | **B1 naive** | pair×year customs, MSR event | within-pair share | pair_exposure_EU × post(2015) | −0.016 | 0.030 | 0.58 | [phase6_b1_corrected.csv](output_rmd/tables/phase6_b1_corrected.csv) |
 | **B1 trend-corrected** | adds pair × year_centered control | as above | pair_exposure_EU × post + trend | **−0.560 \*\*\*** | 0.029 | <1e-58 | as above |
 | **B1 quartile Q4 (heavy)** | B1 trend-corr. split by buyer-side regulatory exposure quartile | within-pair share | pair_exposure_EU × post | −1.835 | 3.01 | 0.54 | [phase6_b2_quartile_split.csv](output_rmd/tables/phase6_b2_quartile_split.csv) |
@@ -39,27 +39,27 @@ All coefficients are on the treatment-by-post interaction (the leakage predictio
 | **C1 (local-1 ES)** | buyer×NACE4d×year, 2014 anchor | import share | regulated_n × post | event-study coeffs only; SEs degenerate (FE collinearity) | — | — | [phase6_c1_imports_vs_domestic_eventstudy.csv](output_local/tables/phase6_c1_imports_vs_domestic_eventstudy.csv) |
 | C2 EU-share pre-trend | as above | EU import share | pair_exposure_EU × year_centered | +0.073 *** | 0.003 | <1e-53 | [phase6_c2_pre_trend_test.csv](output_local/tables/phase6_c2_pre_trend_test.csv) |
 | **China-origin σ revisit** | importer×HS6 long diff 2002→2012, China vs non-China | log(ChinaShare/NonChinaShare) ratio | log(P_China / P_nonChina) | β=+13.5 → σ̂ = −12.5 | 26.6 | — | [phase6_revisit_c1_summary.txt](output_rmd/tables/phase6_revisit_c1_summary.txt) |
-| **B2B-CMdG binary col(5)** | domestic seller×buyer×year, balanced | within-buyer-NACE share | ETS_seller × regulated_NACE × phase | +0.358 *** | — | <0.001 | [phase3_b2b_cmdj_table_A.csv](output/tables/phase3_b2b_cmdj_table_A.csv) |
-| B2B-CMdG continuous col(5) | active pairs, 2002+, with pre-period | within-pair share | firm_cost_share_seller × phase | −76 | 348 | n/a (unidentified) | [phase3_b2b_cmdj_continuous_phase.csv](output/tables/phase3_b2b_cmdj_continuous_phase.csv) |
-| B2B-CMdG continuous col(1) | sn4d×year FE only | as above | as above | β_pre = +32; β_p3 = −0.5 (n.s.) | — | — | as above |
+| **B2B-CdGM binary col(5)** | domestic seller×buyer×year, balanced | within-buyer-NACE share | ETS_seller × regulated_NACE × phase | +0.358 *** | — | <0.001 | [phase3_b2b_cdgm_table_A.csv](output/tables/phase3_b2b_cdgm_table_A.csv) |
+| B2B-CdGM continuous col(5) | active pairs, 2002+, with pre-period | within-pair share | firm_cost_share_seller × phase | −76 | 348 | n/a (unidentified) | [phase3_b2b_cdgm_continuous_phase.csv](output/tables/phase3_b2b_cdgm_continuous_phase.csv) |
+| B2B-CdGM continuous col(1) | sn4d×year FE only | as above | as above | β_pre = +32; β_p3 = −0.5 (n.s.) | — | — | as above |
 
 **Reading the matrix:**
 
-- The CMdG-style aggregate is **null** at face value (naive) and **mildly negative** with trend correction. Neither is the wrong sign for leakage, but both are an order of magnitude smaller than CMdG France's +0.121.
+- The CdGM-style aggregate is **null** at face value (naive) and **mildly negative** with trend correction. Neither is the wrong sign for leakage, but both are an order of magnitude smaller than CdGM France's +0.121.
 - The **B1 firm-pair design with trend correction** is the single largest effect in the table: β = −0.56 *** on a within-pair share, which is the cleanest design for substitution in our data (within-pair FE, post-MSR).
 - B2 horizons show a **monotone trajectory** from a pre-period of −0.37 (h=−9) to post coefficients reaching −0.30 by h=7. The pre-trend is non-zero and motivates the trend-corrected B1.
 - B3 confirms **no offsetting non-EU price adjustment**, which strengthens the B1 substitution interpretation rather than a passive-price mechanism.
 - B4 σ from customs is **unidentified**; the China-origin σ revisit also unidentified (F=1.7).
-- The B2B-CMdG binary positive is a **market-structure artifact**; the continuous version is null.
+- The B2B-CdGM binary positive is a **market-structure artifact**; the continuous version is null.
 - C1 (imports vs domestic) does not have a usable main result yet; only an event study with degenerate SEs on local-1.
 
 ---
 
 ## 2. Per-spec detail
 
-### 2.1 CMdG (2024) replication — phases-aggregated import share (naive)
+### 2.1 CdGM (2024) replication — phases-aggregated import share (naive)
 
-**Spec.** CMdG Eq. (1), exact replication on Belgian customs panel 2000–2019:
+**Spec.** CdGM Eq. (1), exact replication on Belgian customs panel 2000–2019:
 
 ```
 y_{f,p,i,t} = β_1 · 1(regulated)_p × 1(t ∈ 2005–08)
@@ -68,25 +68,25 @@ y_{f,p,i,t} = β_1 · 1(regulated)_p × 1(t ∈ 2005–08)
             + α_{f,p,i} + δ_{i,t} + δ_{s,t} + ε
 ```
 
-Sample restricted to imports from non-ETS source countries only (CMdG's CMdG p. 12–13 baseline; control = unregulated × non-ETS).
+Sample restricted to imports from non-ETS source countries only (CdGM's CdGM p. 12–13 baseline; control = unregulated × non-ETS).
 
-**Headline col(5):** share Phase 3 β = −0.0024 ** (SE 0.0009); probability Phase 3 β = +0.0041 (n.s.). Belgian estimates **two orders of magnitude smaller than CMdG France's (+0.121)** and where significant, wrong-signed. Cross-column pattern: all six FE specs in [−0.005, +0.002] for share, no spec returns CMdG-style positive coefficients.
+**Headline col(5):** share Phase 3 β = −0.0024 ** (SE 0.0009); probability Phase 3 β = +0.0041 (n.s.). Belgian estimates **two orders of magnitude smaller than CdGM France's (+0.121)** and where significant, wrong-signed. Cross-column pattern: all six FE specs in [−0.005, +0.002] for share, no spec returns CdGM-style positive coefficients.
 
 **Robustness.** Four control-group specs (A non-ETS-only baseline, B regulated-only, C full sample, D triple diff) all agree directionally on small null-to-negative coefficients. Spec B fails (VCOV not pos. def.) — within-regulated-NACE×ETS subsample too sparse. **The headline does NOT depend on which control we choose.**
 
-**Pre-trend.** Share: clean parallel pre-trend (−0.0002 to −0.0001 in 2000–03). **Probability: non-zero negative pre-trend** (−0.014 to −0.012, all CIs exclude 0). Treated cells were already *less likely* to be active than control before ETS. CMdG France shows flat pre-trends, so they avoid this issue.
+**Pre-trend.** Share: clean parallel pre-trend (−0.0002 to −0.0001 in 2000–03). **Probability: non-zero negative pre-trend** (−0.014 to −0.012, all CIs exclude 0). Treated cells were already *less likely* to be active than control before ETS. CdGM France shows flat pre-trends, so they avoid this issue.
 
-**Source.** [IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md) (full writeup). Scripts: [phase2_cmdj_table1.R](analysis/phase2_cmdj_table1.R), [phase2_cmdj_table1_robustness.R](analysis/phase2_cmdj_table1_robustness.R), [phase2_cmdj_figure3.R](analysis/phase2_cmdj_figure3.R).
+**Source.** [IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md) (full writeup). Scripts: [phase2_cdgm_table1.R](analysis/phase2_cdgm_table1.R), [phase2_cdgm_table1_robustness.R](analysis/phase2_cdgm_table1_robustness.R), [phase2_cdgm_figure3.R](analysis/phase2_cdgm_figure3.R).
 
-### 2.2 CMdG trend-corrected — same spec with year-centered drift control
+### 2.2 CdGM trend-corrected — same spec with year-centered drift control
 
 **Spec.** Adds a `regulated × year_centered` linear-trend control to absorb the pre-trend visible in 2.1.
 
 **Headline col(5):** share Phase 3 β = **−0.0062 \*\*\*** (SE 0.0019, p = 0.0014); probability Phase 3 β = −0.021 (n.s., p=0.22). The trend coefficient itself is +0.00027 per year ** (p=0.019) on the share outcome, modest but real.
 
-**Reading.** Phase-φ coefficients **become ~2.5× more negative** under trend correction than under the naive CMdG spec. The trend-corrected result is mildly substitution-signed and statistically distinct from zero on the share margin. It's still an order of magnitude below CMdG France and reflects the entire 14 post-period years, not a sharp policy-induced jump.
+**Reading.** Phase-φ coefficients **become ~2.5× more negative** under trend correction than under the naive CdGM spec. The trend-corrected result is mildly substitution-signed and statistically distinct from zero on the share margin. It's still an order of magnitude below CdGM France and reflects the entire 14 post-period years, not a sharp policy-induced jump.
 
-**Source.** [phase6_cmdj_table1_corrected.R](analysis/phase6_cmdj_table1_corrected.R). Output: [phase6_cmdj_corrected_A.csv](output_rmd/tables/phase6_cmdj_corrected_A.csv), [phase6_cmdj_corrected_B.csv](output_rmd/tables/phase6_cmdj_corrected_B.csv).
+**Source.** [phase6_cdgm_table1_corrected.R](analysis/phase6_cdgm_table1_corrected.R). Output: [phase6_cdgm_corrected_A.csv](output_rmd/tables/phase6_cdgm_corrected_A.csv), [phase6_cdgm_corrected_B.csv](output_rmd/tables/phase6_cdgm_corrected_B.csv).
 
 ### 2.3 B1 buyer-supplier customs — within-pair continuous-intensity DiD
 
@@ -178,9 +178,9 @@ within_pair_share_{b,p,t} = β · pair_exposure_EU_{b,p} × 1(t ≥ 2015) + α_{
 
 **Source.** [phase6_revisit_c1_china_origin_theta.R](analysis/phase6_revisit_c1_china_origin_theta.R). Output: [phase6_revisit_c1_summary.txt](output_rmd/tables/phase6_revisit_c1_summary.txt).
 
-### 2.11 B2B-CMdG domestic replication — control case for the international result
+### 2.11 B2B-CdGM domestic replication — control case for the international result
 
-**Spec.** Same CMdG-style binary spec as 2.1 but on the Belgian domestic B2B network: `TREAT_j = 1(seller_is_ets) × 1(seller_is_regulated_NACE)`.
+**Spec.** Same CdGM-style binary spec as 2.1 but on the Belgian domestic B2B network: `TREAT_j = 1(seller_is_ets) × 1(seller_is_regulated_NACE)`.
 
 **Binary headline col(5):** share Phase 3 β = +0.358 *** (SE — , p < 0.001); probability β = +0.829 ***. **Positive, wrong-signed for leakage, very large.**
 
@@ -188,19 +188,19 @@ within_pair_share_{b,p,t} = β · pair_exposure_EU_{b,p} × 1(t ≥ 2015) + α_{
 
 **Reading.** The binary headline does not survive (a) continuous intensity wiping the result and (b) pre-trends failing. Belgian buyers did not (cleanly) shift away from regulated-NACE-ETS BELGIAN sellers in domestic B2B, in addition to not shifting from regulated × non-ETS imports.
 
-**Source.** [B2B_LEAKAGE.md](B2B_LEAKAGE.md). Scripts: [phase3_b2b_cmdj_did.R](analysis/phase3_b2b_cmdj_did.R), [phase3_b2b_cmdj_did_continuous.R](analysis/phase3_b2b_cmdj_did_continuous.R).
+**Source.** [B2B_LEAKAGE.md](B2B_LEAKAGE.md). Scripts: [phase3_b2b_cdgm_did.R](analysis/phase3_b2b_cdgm_did.R), [phase3_b2b_cdgm_did_continuous.R](analysis/phase3_b2b_cdgm_did_continuous.R).
 
 ---
 
 ## 3. The tension: aggregate vs firm-pair
 
-The CMdG aggregate is null/mildly negative. The B1 firm-pair design returns a sharp −0.56. Three reconciliations are possible:
+The CdGM aggregate is null/mildly negative. The B1 firm-pair design returns a sharp −0.56. Three reconciliations are possible:
 
-**R1: Aggregation kills the signal.** The CMdG spec averages across all (firm × product × country) cells with `regulated × non-ETS` flags. If substitution is concentrated in a sub-population (e.g. high-exposure buyers, high-CI products), pooling them with low-substitution cells washes the average toward zero. The firm-pair design retains within-pair identification and survives.
+**R1: Aggregation kills the signal.** The CdGM spec averages across all (firm × product × country) cells with `regulated × non-ETS` flags. If substitution is concentrated in a sub-population (e.g. high-exposure buyers, high-CI products), pooling them with low-substitution cells washes the average toward zero. The firm-pair design retains within-pair identification and survives.
    - **Test:** the quartile split in B2 (heaviest-exposure buyers β = −1.84, others near zero) supports this story but is statistically weak.
-   - **Sharper test:** redo CMdG col(5) restricting to high-exposure buyers (analog of the B2 Q4 cut). If CMdG-on-Q4-buyers turns negative, R1 is confirmed.
+   - **Sharper test:** redo CdGM col(5) restricting to high-exposure buyers (analog of the B2 Q4 cut). If CdGM-on-Q4-buyers turns negative, R1 is confirmed.
 
-**R2: Trend control matters.** The naive CMdG is null because the underlying trend is included in β. The trend-corrected version (2.2) is mildly negative at −0.0062 ***, which is qualitatively consistent with B1 trend-corrected. The two designs both confirm the role of pre-trends; magnitudes differ because the LHS (within-pair share vs aggregated cell share) measure different things.
+**R2: Trend control matters.** The naive CdGM is null because the underlying trend is included in β. The trend-corrected version (2.2) is mildly negative at −0.0062 ***, which is qualitatively consistent with B1 trend-corrected. The two designs both confirm the role of pre-trends; magnitudes differ because the LHS (within-pair share vs aggregated cell share) measure different things.
 
 **R3: B1 is over-fitted to a wrong-sign confound.** The +0.058 per-year drift control absorbed by B1 trend-correction is large; if that drift reflects something other than a true pre-trend (e.g. compositional drift in the customs panel, post-MSR balanced-panel construction artifact), the −0.56 could be an artifact of the trend control rather than substitution.
    - **Test:** the shorter pre-period robustness (2010+) gives trend-corrected −0.097 ** — same sign, much smaller magnitude. Headline result is sensitive to pre-period length, which is consistent with R3 having some bite.
@@ -221,26 +221,26 @@ The next batch of cuts should discriminate among R1/R2/R3.
 **Proposed extensions:**
 - **C1 + HS6-CI:** redo C1 on HS6 × buyer × year, splitting by HS6-CI quartile. Direct test of leakage by product carbon content.
 - **B1 + HS6-CI:** add HS6-CI as a moderator: `pair_exposure_EU × post × hs6_ci_quartile`. Test whether B1 substitution is HS6-CI-loaded (R1 confirmation) or uniform across products (R2/R3).
-- **CMdG + HS6-CI:** redo Table 1 col(5) within HS6-CI quartiles. The CMdG spec is the easiest place to add an HS6-CI cross.
+- **CdGM + HS6-CI:** redo Table 1 col(5) within HS6-CI quartiles. The CdGM spec is the easiest place to add an HS6-CI cross.
 
 ### 4.2 Pre-MSR vs post-MSR cut (priority A)
 
 **Motivation.** Carbon prices were near zero through Phase 2 (2009–12) and most of Phase 3 (2013–18, EUA ~€5–€10). The post-MSR window (2018+) saw EUA spike from €10 to €80+. If leakage is price-driven, the **post-MSR subperiod should carry all the action**. Currently every spec lumps Phases 2 and 3 together or runs the full 2005–2019 / 2005–2022 window.
 
 **Proposed extensions:**
-- **CMdG-style with quartered phases:** split Phase 3 into 2013–14 / 2015–17 / 2018–19 / 2020–22 (the last requires the extended customs panel `customs_import_panel_extended.RData`, which is built). The 2018+ jump should be visible if leakage is price-driven.
+- **CdGM-style with quartered phases:** split Phase 3 into 2013–14 / 2015–17 / 2018–19 / 2020–22 (the last requires the extended customs panel `customs_import_panel_extended.RData`, which is built). The 2018+ jump should be visible if leakage is price-driven.
 - **B1 post=2018 vs post=2015 head-to-head:** redo B1 trend-corrected with `1(year ≥ 2018)` instead of `1(year ≥ 2015)`. If the −0.56 magnitude is stable or grows, post-MSR is the binding price episode; if it shrinks, the 2015–17 announcement-effect window matters more.
 - **C1 pre-MSR vs post-MSR (once C1 is fixed):** split sample at 2017. Should give the cleanest substitution test under a price-driven mechanism.
 
 ### 4.3 Source-country bucket (priority B)
 
-**Motivation.** Belgian imports are 98% intra-EU. Substitution to non-ETS countries means substituting toward a small tail (China, Turkey, Russia, Switzerland). The CMdG-style aggregate uses any-non-ETS as the comparator; a more granular bucket (China / OECD-non-ETS / rest) could detect China-specific patterns masked in the aggregate.
+**Motivation.** Belgian imports are 98% intra-EU. Substitution to non-ETS countries means substituting toward a small tail (China, Turkey, Russia, Switzerland). The CdGM-style aggregate uses any-non-ETS as the comparator; a more granular bucket (China / OECD-non-ETS / rest) could detect China-specific patterns masked in the aggregate.
 
 **Not in scope here unless one of the priority-A cuts surfaces an aggregation artifact specifically.**
 
 ### 4.4 Buyer ETS status (priority B)
 
-**Motivation.** ETS-regulated Belgian buyers face direct carbon cost; non-ETS buyers face only indirect (via supplier prices). Splitting CMdG/B1/C1 by buyer ETS status decomposes the substitution into the two channels.
+**Motivation.** ETS-regulated Belgian buyers face direct carbon cost; non-ETS buyers face only indirect (via supplier prices). Splitting CdGM/B1/C1 by buyer ETS status decomposes the substitution into the two channels.
 
 **Not in scope here unless one of the priority-A cuts requires it for interpretation.**
 
@@ -248,12 +248,12 @@ The next batch of cuts should discriminate among R1/R2/R3.
 
 ## 5. Caveats
 
-1. **Customs panel ends at 2019 by default** (matches CMdG). The extended panel goes to 2022 ([phase6_build_customs_panel_extended.R](analysis/phase6_build_customs_panel_extended.R)) and is the one used in B1/B2/B3/B4 already, but the CMdG Table 1 replication itself stops at 2019. The 2020–22 window has the largest carbon-price action; extending CMdG Table 1 forward is a natural follow-up.
-2. **Pre-trend on probability margin** (CMdG): treated cells were structurally less likely to be active than control before any ETS treatment. Identification under parallel-trends is questionable for Panel B. Share margin pre-trend is clean.
-3. **Trend correction does material work** in both CMdG and B1: naive vs trend-corrected differ by factors of 2.6× and 35× respectively. Whether the absorbed trend is "the right thing to absorb" depends on whether the trend is policy-pre-empting or compositional drift.
+1. **Customs panel ends at 2019 by default** (matches CdGM). The extended panel goes to 2022 ([phase6_build_customs_panel_extended.R](analysis/phase6_build_customs_panel_extended.R)) and is the one used in B1/B2/B3/B4 already, but the CdGM Table 1 replication itself stops at 2019. The 2020–22 window has the largest carbon-price action; extending CdGM Table 1 forward is a natural follow-up.
+2. **Pre-trend on probability margin** (CdGM): treated cells were structurally less likely to be active than control before any ETS treatment. Identification under parallel-trends is questionable for Panel B. Share margin pre-trend is clean.
+3. **Trend correction does material work** in both CdGM and B1: naive vs trend-corrected differ by factors of 2.6× and 35× respectively. Whether the absorbed trend is "the right thing to absorb" depends on whether the trend is policy-pre-empting or compositional drift.
 4. **No structural σ from customs.** B4 and the China-origin revisit both fail first-stage. The paper's σ has to come from PPI panel-LP mapping (already in §4) or PRODCOM (deferred).
-5. **3 contaminated VATs** (NACE 20/24 EUTL artifact post-2020): correctly handled in B1/B2/B3 (excluded from emissions data, not from customs); not relevant for CMdG which uses customs only.
-6. **B2B-CMdG headline result reverses** from binary +0.36 *** to continuous −0.5 (n.s.) and pre-trend failure. The binary spec is **not interpretable as a leakage estimate** in isolation.
+5. **3 contaminated VATs** (NACE 20/24 EUTL artifact post-2020): correctly handled in B1/B2/B3 (excluded from emissions data, not from customs); not relevant for CdGM which uses customs only.
+6. **B2B-CdGM headline result reverses** from binary +0.36 *** to continuous −0.5 (n.s.) and pre-trend failure. The binary spec is **not interpretable as a leakage estimate** in isolation.
 7. **C1 is not yet a clean estimate.** Most direct test of the central question; needs RMD execution.
 
 ---
@@ -262,7 +262,7 @@ The next batch of cuts should discriminate among R1/R2/R3.
 
 The current paper draft ([paper/leakage_within_across/](paper/leakage_within_across/)) treats §5.2 as **partially done with major revisits**:
 
-- §5.2.1 CMdG replication: trend-corrected headline ready (β=−0.0062 ***), original kept as robustness.
+- §5.2.1 CdGM replication: trend-corrected headline ready (β=−0.0062 ***), original kept as robustness.
 - §5.2.2 Buyer-supplier (B1): trend-corrected β=−0.560 *** is the substitution headline.
 - §5.2.3 HTE on B1 (B2): horizon LP + Q4 cut is the heterogeneity argument.
 - §5.2.4 Non-EU price response (B3): null, defends B1 interpretation.
@@ -273,7 +273,7 @@ The current paper draft ([paper/leakage_within_across/](paper/leakage_within_acr
 
 The natural headline structure given the inventory:
 
-> "The aggregate CMdG-style replication on Belgian customs returns a small, trend-corrected substitution coefficient an order of magnitude below France's. But our firm-pair design recovers a much larger within-pair substitution (β=−0.56) with a clean monotone horizon and no offsetting non-EU price response. The substitution is concentrated at the heaviest-exposure buyers, consistent with reallocation operating at a sub-population that the aggregate spec averages over. Domestic supplier reallocation is null on the cleanly identified continuous design (B2B-CMdG continuous). The structural elasticity σ cannot be recovered from customs prices in our identification."
+> "The aggregate CdGM-style replication on Belgian customs returns a small, trend-corrected substitution coefficient an order of magnitude below France's. But our firm-pair design recovers a much larger within-pair substitution (β=−0.56) with a clean monotone horizon and no offsetting non-EU price response. The substitution is concentrated at the heaviest-exposure buyers, consistent with reallocation operating at a sub-population that the aggregate spec averages over. Domestic supplier reallocation is null on the cleanly identified continuous design (B2B-CdGM continuous). The structural elasticity σ cannot be recovered from customs prices in our identification."
 
 Whether this becomes the paper's framing depends on the next batch of cuts:
 
@@ -287,10 +287,10 @@ Whether this becomes the paper's framing depends on the next batch of cuts:
 
 | Estimate | Script | Output table |
 |---|---|---|
-| CMdG Table 1 | [analysis/phase2_cmdj_table1.R](analysis/phase2_cmdj_table1.R) | [output/tables/phase2_cmdj_table1_A.csv](output/tables/phase2_cmdj_table1_A.csv), `_B.csv` |
-| CMdG robustness | [analysis/phase2_cmdj_table1_robustness.R](analysis/phase2_cmdj_table1_robustness.R) | [output/tables/phase2_cmdj_table1_robustness.csv](output/tables/phase2_cmdj_table1_robustness.csv) |
-| CMdG trend-corrected | [analysis/phase6_cmdj_table1_corrected.R](analysis/phase6_cmdj_table1_corrected.R) | [output_rmd/tables/phase6_cmdj_corrected_A.csv](output_rmd/tables/phase6_cmdj_corrected_A.csv), `_B.csv` |
-| CMdG event study (Fig 3) | [analysis/phase2_cmdj_figure3.R](analysis/phase2_cmdj_figure3.R) | [output/tables/phase2_cmdj_figure3.csv](output/tables/phase2_cmdj_figure3.csv) |
+| CdGM Table 1 | [analysis/phase2_cdgm_table1.R](analysis/phase2_cdgm_table1.R) | [output/tables/phase2_cdgm_table1_A.csv](output/tables/phase2_cdgm_table1_A.csv), `_B.csv` |
+| CdGM robustness | [analysis/phase2_cdgm_table1_robustness.R](analysis/phase2_cdgm_table1_robustness.R) | [output/tables/phase2_cdgm_table1_robustness.csv](output/tables/phase2_cdgm_table1_robustness.csv) |
+| CdGM trend-corrected | [analysis/phase6_cdgm_table1_corrected.R](analysis/phase6_cdgm_table1_corrected.R) | [output_rmd/tables/phase6_cdgm_corrected_A.csv](output_rmd/tables/phase6_cdgm_corrected_A.csv), `_B.csv` |
+| CdGM event study (Fig 3) | [analysis/phase2_cdgm_figure3.R](analysis/phase2_cdgm_figure3.R) | [output/tables/phase2_cdgm_figure3.csv](output/tables/phase2_cdgm_figure3.csv) |
 | B1 trend-corrected | [analysis/phase6_b1_corrected.R](analysis/phase6_b1_corrected.R) | [output_rmd/tables/phase6_b1_corrected.csv](output_rmd/tables/phase6_b1_corrected.csv) |
 | B2 horizon + quartile | [analysis/phase6_b1_b2_customs_buyer_supplier.R](analysis/phase6_b1_b2_customs_buyer_supplier.R) | [output_rmd/tables/phase6_b2_horizon_lp.csv](output_rmd/tables/phase6_b2_horizon_lp.csv), `_quartile_split.csv` |
 | B3 non-EU price | [analysis/phase6_b3_nonEU_price_response.R](analysis/phase6_b3_nonEU_price_response.R) | [output_rmd/tables/phase6_b3_nonEU_price_response.csv](output_rmd/tables/phase6_b3_nonEU_price_response.csv) |
@@ -298,7 +298,7 @@ Whether this becomes the paper's framing depends on the next batch of cuts:
 | China σ revisit | [analysis/phase6_revisit_c1_china_origin_theta.R](analysis/phase6_revisit_c1_china_origin_theta.R) | [output_rmd/tables/phase6_revisit_c1_summary.txt](output_rmd/tables/phase6_revisit_c1_summary.txt) |
 | C1 (degenerate) | [analysis/phase6_c1_imports_vs_domestic.R](analysis/phase6_c1_imports_vs_domestic.R) | [output_local/tables/phase6_c1_imports_vs_domestic_eventstudy.csv](output_local/tables/phase6_c1_imports_vs_domestic_eventstudy.csv) |
 | C2 pre-trend | [analysis/phase6_c2_parallel_trends_eu_share.R](analysis/phase6_c2_parallel_trends_eu_share.R) | [output_local/tables/phase6_c2_pre_trend_test.csv](output_local/tables/phase6_c2_pre_trend_test.csv) |
-| B2B-CMdG | [analysis/phase3_b2b_cmdj_did.R](analysis/phase3_b2b_cmdj_did.R), `_continuous.R` | [output/tables/phase3_b2b_cmdj_table_A.csv](output/tables/phase3_b2b_cmdj_table_A.csv), `_continuous_phase.csv` |
+| B2B-CdGM | [analysis/phase3_b2b_cdgm_did.R](analysis/phase3_b2b_cdgm_did.R), `_continuous.R` | [output/tables/phase3_b2b_cdgm_table_A.csv](output/tables/phase3_b2b_cdgm_table_A.csv), `_continuous_phase.csv` |
 | HS6 CI builder | [analysis/phase6_build_hs6_carbon_intensity.R](analysis/phase6_build_hs6_carbon_intensity.R) | (data artifact) |
 
 ---
@@ -372,7 +372,7 @@ New script: [phase6_b5_b1_heterogeneity.R](analysis/phase6_b5_b1_heterogeneity.R
 The post-MSR cut delivers a sharp positive result (β_diff_postmsr = −0.30 ***) that strengthens the "substitution is real" reading of B1. The HS6-CI cut delivers a null on the moderator, which weakens R1's "substitution lives in a high-CI sub-population" story. Two updates to the inventory:
 
 1. **R2 (trend-correction doing the work)** gains weight relative to R1 (sub-population aggregation). If substitution were sub-population-driven, the high-CI sub-sample should have noticeably larger β. It doesn't on the downsample.
-2. **Pre-MSR vs post-MSR is a strong identifying split.** Worth pushing into the CMdG-aggregate replication too: redo Table 1 with the post period sub-split at 2017/2018 to see if the aggregate null-headline survives, or if it concentrates the leakage signal into the price-spike window.
+2. **Pre-MSR vs post-MSR is a strong identifying split.** Worth pushing into the CdGM-aggregate replication too: redo Table 1 with the post period sub-split at 2017/2018 to see if the aggregate null-headline survives, or if it concentrates the leakage signal into the price-spike window.
 
 The natural next RMD batch:
 
@@ -380,9 +380,9 @@ The natural next RMD batch:
 |---|---|---:|
 | `phase6_c1_imports_vs_domestic.R` (hardened) | C1 main result + post-MSR cut | ~5 min |
 | `phase6_b5_b1_heterogeneity.R` (new) | HS6-CI + post-MSR heterogeneity on B1 | ~5 min |
-| `phase6_cmdj_table1_postmsr.R` (TODO) | CMdG aggregate split at 2017/2018 | ~15 min (new script needed) |
+| `phase6_cdgm_table1_postmsr.R` (TODO) | CdGM aggregate split at 2017/2018 | ~15 min (new script needed) |
 
-The third script doesn't exist yet — extending the CMdG aggregate to a post-MSR sub-split is the natural follow-up if the user wants to push the heterogeneity story all the way through.
+The third script doesn't exist yet — extending the CdGM aggregate to a post-MSR sub-split is the natural follow-up if the user wants to push the heterogeneity story all the way through.
 
 ---
 

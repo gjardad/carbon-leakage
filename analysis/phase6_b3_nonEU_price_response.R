@@ -8,7 +8,7 @@
 #
 # where p^{unit} = value / quantity, computed at the HS6 × source-country ×
 # year level (collapsed across importers). Sample restricted to non-ETS source
-# countries (per CMdG identifying logic).
+# countries (per CdGM identifying logic).
 #
 # Identification: HS6 × source-country FE absorbs persistent quality
 # differences; source-country × year FE absorbs global price trends and

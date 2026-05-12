@@ -5,9 +5,9 @@
 This document consolidates findings from three approaches:
 - **Section A — OLS / descriptive** (S1–S6, alternative denominators, heterogeneity).
 - **Section B — Känzig CPShock identification** (S7–S12, monthly panel-LP).
-- **Section C — CMdG-style event study** (regulated vs unregulated NACE 4d PPI).
+- **Section C — CdGM-style event study** (regulated vs unregulated NACE 4d PPI).
 
-Each approach answers the same headline question — "does the EU ETS raise prices in regulated Belgian sectors?" — with different identification assumptions and panel structures. The three are complementary: OLS is reduced-form descriptive, CPShock imports a structural-VAR identification of the carbon-policy shock, and CMdG uses a treated/untreated diff-in-diff at the sector level.
+Each approach answers the same headline question — "does the EU ETS raise prices in regulated Belgian sectors?" — with different identification assumptions and panel structures. The three are complementary: OLS is reduced-form descriptive, CPShock imports a structural-VAR identification of the carbon-policy shock, and CdGM uses a treated/untreated diff-in-diff at the sector level.
 
 ---
 
@@ -18,8 +18,8 @@ Each approach answers the same headline question — "does the EU ETS raise pric
 | **A — OLS** (S1–S6) | Sector + year FE only | Annual cumulative pass-through near zero (+0.07 to +0.15 in log-PPI per pp exposure), insignificant. Negative S1 reflects selection-into-exposure. |
 | **B — CPShock annual (S7–S10)** | Känzig Surprise / Shock × intensity | Surprise-based: dead first stages (cluster-F ≤ 0.05). Shock-based: significant positive at lagged horizons (LP h=1yr, β = +5.09, t = 2.98). |
 | **B — CPShock monthly panel-LP (S12)** | Same with monthly frequency | **β = +4.08 at h = 12 months (SE 0.64, t = 6.39)**. Coherent IRF matching Känzig's aggregate HICP. **Cleanest CPShock result.** |
-| **C — CMdG event study (baseline)** | Regulated NACE 4d × year × FE | Phase 2 β = +0.13 (tight) / +0.11 (broad), p < 0.001. Shape matches CMdG Figure 1. **But pre-trend confounded — see C.6, C.7 diagnostics.** |
-| **C — CMdG event study with sector trends** | Same + nace4d-specific linear trends | Phase 2 +0.094 ** survives; Phase 3 collapses to +0.017 (n.s.); Phase 4 halves to +0.113 **. Phase 1 effectively null. |
+| **C — CdGM event study (baseline)** | Regulated NACE 4d × year × FE | Phase 2 β = +0.13 (tight) / +0.11 (broad), p < 0.001. Shape matches CdGM Figure 1. **But pre-trend confounded — see C.6, C.7 diagnostics.** |
+| **C — CdGM event study with sector trends** | Same + nace4d-specific linear trends | Phase 2 +0.094 ** survives; Phase 3 collapses to +0.017 (n.s.); Phase 4 halves to +0.113 **. Phase 1 effectively null. |
 | **B — CPShock Phase IV (S11, S12b)** | Un-residualized log-return surprises | Wrong-signed / null. Macro contamination from Covid/Ukraine/gas. Not informative. |
 
 The three approaches converge on a qualitative finding (positive pass-through, especially Phase 2/Phase 4) but disagree on magnitudes that are not directly comparable (different units: exposure-share elasticity vs. shock-size response vs. treatment binary).
@@ -37,13 +37,13 @@ The three approaches converge on a qualitative finding (positive pass-through, e
 | Statbel + Eurostat PPI | `deflator_nace4d_2005base.RData` | NACE 4d × year, 2000–2025 | Outcome variable; chained to 2005 = 100 |
 | NBB B2B (downsampled) | `b2b_selected_sample.RData` | Supplier-buyer pairs × year | Network weights for upstream-exposure (S3) |
 | Känzig CPShock | `carbonPolicyShocks.xlsx` | Monthly Surprise + Shock, 2005m1–2019m12 | CPShock specifications |
-| CMdG Table A.5 | [data/concordances/cmdj_table_a5_ri_naf.csv](data/concordances/cmdj_table_a5_ri_naf.csv) | NAF-138 ETS / R-I / CBAM flags | CMdG-tight treatment definition |
+| CdGM Table A.5 | [data/concordances/cdgm_table_a5_ri_naf.csv](data/concordances/cdgm_table_a5_ri_naf.csv) | NAF-138 ETS / R-I / CBAM flags | CdGM-tight treatment definition |
 | BLM 2018 raw CN | `Website_nc8corresp/` | EU CN nomenclature 1995–2018 | Step 1 (regulated CN8 list) |
 | GRANTPA xlsx | `product_id_pc8plus_pc8_cn8_final*.csv` | 1995–2018, 3,124 stable products | CN ↔ PC ↔ NACE bridge |
 | Eurostat BE Use table | `naio_10_cp1610_*.csv` | 2010–2022, A*64 × CPA | Regulated-producing / R-I / core-input lists |
 
 Panel sample sizes (after restriction to goods-producing NACE 2d 05–39):
-- Annual sector × year (S1–S11): **2,502 obs**, 139 NACE 4d, 2005–2022. Extended to **3,058 obs**, 2001–2022 for the CMdG-style spec.
+- Annual sector × year (S1–S11): **2,502 obs**, 139 NACE 4d, 2005–2022. Extended to **3,058 obs**, 2001–2022 for the CdGM-style spec.
 - Monthly sector × month (S12): 23,986 obs at h = 0, 2005m1–2019m12.
 
 ### Phases (ETS regulatory periods)
@@ -69,11 +69,11 @@ with `base_cost_{s}` = mean total cost over 2010–2012. Removes mechanical endo
 
 Network-adjusted exposure (S3, 2012–2021): `(I − A_base)^{-1} · direct_exposure` from frozen 2005–2012 input matrix. Currently uses downsampled B2B locally — directional only until rebuilt on RMD.
 
-### Treatment definition (Section C, CMdG)
+### Treatment definition (Section C, CdGM)
 
 Two variants of "regulated NACE 2d":
 - **Broad (our list, 14 NACE 2d):** `{05, 06, 07, 08, 17, 19, 20, 21, 23, 24, 25, 27, 28, 35}`. Derived in Phase 0 from the regulated CN8 list × CN→NACE bridge.
-- **CMdG-tight (7 NACE 2d):** `{17, 19, 20, 23, 24, 25, 35}`. From CMdG Table A.5 col (1)/(4) ETS sectors collapsed to 2d.
+- **CdGM-tight (7 NACE 2d):** `{17, 19, 20, 23, 24, 25, 35}`. From CdGM Table A.5 col (1)/(4) ETS sectors collapsed to 2d.
 
 A NACE 4d sector inherits its 2d parent's treatment status. 66 (broad) / 33 (tight) treated 4d sectors out of 139 total in the goods-section panel.
 
@@ -294,7 +294,7 @@ The CPShock results survive only because of the structural-VAR machinery; Surpri
 
 ---
 
-## Section C — CMdG-style event study
+## Section C — CdGM-style event study
 
 ### C.1 — Specification
 
@@ -306,7 +306,7 @@ log(PPI_{s,t}) = Σ_τ β_τ · 1(s ∈ regulated) · 1(year = τ) + α_s + δ_t
 
 with NACE 4d + year FE, cluster on NACE 4d, ref year 2004 (last pre-ETS).
 
-We replicate on Belgian PPI under both **broad** and **CMdG-tight** treatment definitions (see Shared Infrastructure above).
+We replicate on Belgian PPI under both **broad** and **CdGM-tight** treatment definitions (see Shared Infrastructure above).
 
 ### C.2 — Sample and pre-trend
 
@@ -318,7 +318,7 @@ We replicate on Belgian PPI under both **broad** and **CMdG-tight** treatment de
 
 Reference = pre-ETS 2001–2004 baseline.
 
-| Phase | Broad (14 NACE 2d) | CMdG-tight (7 NACE 2d) |
+| Phase | Broad (14 NACE 2d) | CdGM-tight (7 NACE 2d) |
 |---|---|---|
 | **1 (2005–2007)** | **+0.072** *** | **+0.082** *** |
 | **2 (2008–2012)** | **+0.108** *** | **+0.134** *** |
@@ -327,7 +327,7 @@ Reference = pre-ETS 2001–2004 baseline.
 
 All four phases significant under both treatment definitions. Tight estimates ~1–3 log-pp larger than broad — consistent with the broader list including weaker-effect sectors (NACE 21 pharma, 27 electrical, 28 machinery).
 
-### C.4 — Year-by-year coefficients (CMdG-tight, ref = 2004)
+### C.4 — Year-by-year coefficients (CdGM-tight, ref = 2004)
 
 Rough text plot (β in log-points × 100):
 
@@ -342,9 +342,9 @@ Rough text plot (β in log-points × 100):
                           2022: +21.4
 ```
 
-### C.5 — Comparison with CMdG French Figure 1
+### C.5 — Comparison with CdGM French Figure 1
 
-| Period | Belgium (tight, this paper) | France (CMdG) |
+| Period | Belgium (tight, this paper) | France (CdGM) |
 |---|---|---|
 | Pre-trend 2001–2003 | −0.06 to −0.09 | similar (decline of ~0.06) |
 | Phase 1 peak (2007) | +0.040 | ~+0.18 |
@@ -353,25 +353,25 @@ Rough text plot (β in log-points × 100):
 | Phase 3 recovery (2018–2019) | +0.048 to +0.061 | ~+0.18 |
 | Phase 4 (2022) | **+0.214** | not in their sample |
 
-**Shape matches CMdG closely.** Magnitude ~40–50% of theirs, plausibly because:
+**Shape matches CdGM closely.** Magnitude ~40–50% of theirs, plausibly because:
 - Belgian industrial mix has more chemicals exporters at large scale (export prices anchored globally).
 - Belgian manufacturing has fewer domestic energy-intensive heavy industries than France.
-- We use annual data; CMdG monthly (loses some signal but not direction).
+- We use annual data; CdGM monthly (loses some signal but not direction).
 
 ### C.6 — Pre-trend interpretation
 
-Pre-trend coefficients are negative (−0.06 to −0.09). Same pattern CMdG's Figure 1 shows. The pattern suggests regulated Belgian sectors had *lower* relative prices in 2001–2003 than in 2004, with regulated prices recovering toward 2004 — possibly anticipation of ETS, possibly a broader sector trend. The post-2005 jump dwarfs the pre-trend: Phase 2 = +0.10 to +0.13 vs pre-trend = −0.05.
+Pre-trend coefficients are negative (−0.06 to −0.09). Same pattern CdGM's Figure 1 shows. The pattern suggests regulated Belgian sectors had *lower* relative prices in 2001–2003 than in 2004, with regulated prices recovering toward 2004 — possibly anticipation of ETS, possibly a broader sector trend. The post-2005 jump dwarfs the pre-trend: Phase 2 = +0.10 to +0.13 vs pre-trend = −0.05.
 
-CMdG treat their analogous pre-trend as benign. We follow the same interpretation.
+CdGM treat their analogous pre-trend as benign. We follow the same interpretation.
 
-### C.7 — Departures from CMdG's exact spec
+### C.7 — Departures from CdGM's exact spec
 
 Five differences worth noting:
 
-1. **Annual vs monthly data.** CMdG runs at monthly frequency with `sector × month` FE absorbing seasonality. Our Belgian 4d PPI is annual. No within-year seasonality to absorb, so this is a setup difference, not a loss.
-2. **Reference year shift.** CMdG references 2004; we now also use 2004 (after extending the deflator back to 2001 in this revision).
-3. **Treatment is broader by default.** Our Phase 0 Step 6 list (14 NACE 2d) includes mining 05–08, pharma 21, electrical 27, machinery 28 in addition to CMdG's 7 manufacturing+utility 2d. The "tight" specification restricts to CMdG's 7 NACE 2d for direct comparability.
-4. **Sample extends to 2022.** Lets us see the post-MSR / Russia gas crisis spike (Phase 4) that CMdG's 2000–2019 sample doesn't capture.
+1. **Annual vs monthly data.** CdGM runs at monthly frequency with `sector × month` FE absorbing seasonality. Our Belgian 4d PPI is annual. No within-year seasonality to absorb, so this is a setup difference, not a loss.
+2. **Reference year shift.** CdGM references 2004; we now also use 2004 (after extending the deflator back to 2001 in this revision).
+3. **Treatment is broader by default.** Our Phase 0 Step 6 list (14 NACE 2d) includes mining 05–08, pharma 21, electrical 27, machinery 28 in addition to CdGM's 7 manufacturing+utility 2d. The "tight" specification restricts to CdGM's 7 NACE 2d for direct comparability.
+4. **Sample extends to 2022.** Lets us see the post-MSR / Russia gas crisis spike (Phase 4) that CdGM's 2000–2019 sample doesn't capture.
 5. **Belgium ≠ France.** Industrial composition, ETS exposure, market structure all differ.
 
 ### C.6 — Diagnostic 1: sector-specific linear trends absorb most of the signal
@@ -409,7 +409,7 @@ Even with no ETS, "treated" sectors accumulated a +0.09 log-point gap relative t
 
 ### C.8 — Section C interpretation (revised)
 
-The CMdG-style event study on Belgian PPI **does not, on its own, identify a causal effect of ETS on regulated-sector PPI.** A pre-existing differential trend confounds the design. After absorbing sector-specific linear trends:
+The CdGM-style event study on Belgian PPI **does not, on its own, identify a causal effect of ETS on regulated-sector PPI.** A pre-existing differential trend confounds the design. After absorbing sector-specific linear trends:
 
 - **Phase 1 effect (2005-2007):** indistinguishable from pre-trend continuation.
 - **Phase 2 effect (2008-2012):** survives at +0.094 ***. The strongest piece of identifiable evidence in this section.
@@ -418,9 +418,9 @@ The CMdG-style event study on Belgian PPI **does not, on its own, identify a cau
 
 The original interpretation — "Belgian regulated PPI rises significantly relative to unregulated PPI in every ETS phase, magnitudes ~50% of France's" — needs revision to: "Phase 2 and Phase 4 effects survive sector-specific trends; Phase 1 and Phase 3 effects are confounded with pre-existing dynamics."
 
-**This does not invalidate CMdG's overall paper.** Their identification is in Section 3 (the firm × product × country × year customs panel), not Figure 1. The PPI figure is *motivation* — it shows the cost-shock channel that creates the *incentive* for downstream firms to switch suppliers — and Section 3 then identifies the switching directly using a triple-difference (firm × product × ETS-vs-non-ETS country) that is robust to whatever pre-trend exists in regulated PPI overall.
+**This does not invalidate CdGM's overall paper.** Their identification is in Section 3 (the firm × product × country × year customs panel), not Figure 1. The PPI figure is *motivation* — it shows the cost-shock channel that creates the *incentive* for downstream firms to switch suppliers — and Section 3 then identifies the switching directly using a triple-difference (firm × product × ETS-vs-non-ETS country) that is robust to whatever pre-trend exists in regulated PPI overall.
 
-For our Belgian replication, this means **Phase 2 of CMdG_REPLICATION.md (the customs panel) is the load-bearing step**, not the PPI replication. The PPI evidence alone is too weak to claim ETS effects.
+For our Belgian replication, this means **Phase 2 of CdGM_REPLICATION.md (the customs panel) is the load-bearing step**, not the PPI replication. The PPI evidence alone is too weak to claim ETS effects.
 
 ---
 
@@ -428,7 +428,7 @@ For our Belgian replication, this means **Phase 2 of CMdG_REPLICATION.md (the cu
 
 The three sections estimate different objects on the same panel. Cross-walking them:
 
-| Object | Section A (OLS) | Section B (CPShock) | Section C (CMdG) |
+| Object | Section A (OLS) | Section B (CPShock) | Section C (CdGM) |
 |---|---|---|---|
 | Identification | Sector + year FE | Külbach VAR-identified shock | Treatment binary |
 | RHS | Continuous exposure share | CPShock × intensity | 1(regulated) × 1(year) |
@@ -437,13 +437,13 @@ The three sections estimate different objects on the same panel. Cross-walking t
 | Best estimate | S6 cumulative ≈ 0 | S12 h=12: +4.08 (per unit shock × intensity) | Phase 2: +0.13 (tight) |
 | Translation to %-PPI per Phase | ~0–2% | ~2% (per ±1 SD monthly shock × intensity 0.005) | ~13% over Phase 2 |
 
-The three are *not contradictory*. OLS measures within-sector pass-through of exposure changes (small). CPShock measures dynamic IRF to a structural shock at a given intensity (positive, peaked at 12 months). CMdG measures the average regulated-vs-unregulated PPI gap (positive but largely confounded by pre-trends).
+The three are *not contradictory*. OLS measures within-sector pass-through of exposure changes (small). CPShock measures dynamic IRF to a structural shock at a given intensity (positive, peaked at 12 months). CdGM measures the average regulated-vs-unregulated PPI gap (positive but largely confounded by pre-trends).
 
 **Combined picture:**
 
 - **Section A (OLS)** says: within-sector, year-to-year, the exposure-elasticity of PPI is ~0. Selection drives the negative S1; sector trends fix the sign at +0.07 but kill the magnitude.
 - **Section B (CPShock S12)** says: a unit Känzig structural shock × intensity raises PPI by +4.08 log-pp at h=12 months (t=6.39). This is the only cleanly-identified positive evidence in the document, conditional on Känzig's VAR structure.
-- **Section C (CMdG with diagnostics)** says: the cross-sector regulated-vs-unregulated PPI gap is largely confounded by pre-trends. Phase 2 and Phase 4 effects (+0.09, +0.11) survive sector trends; Phase 1 and Phase 3 do not.
+- **Section C (CdGM with diagnostics)** says: the cross-sector regulated-vs-unregulated PPI gap is largely confounded by pre-trends. Phase 2 and Phase 4 effects (+0.09, +0.11) survive sector trends; Phase 1 and Phase 3 do not.
 
 The strongest piece of evidence remains **Section B's S12 monthly panel-LP**, because (a) it has structural identification via Känzig's external instrument, (b) the IRF shape is coherent (gradual buildup, peak at 12 months, fade at 24), (c) it reproduces Känzig's aggregate HICP IRF in his own pipeline-validation. Section A is descriptive and reduced-form; Section C is treatment-binary but pre-trend-confounded.
 
@@ -458,7 +458,7 @@ The OLS-vs-CPShock disagreement (Section A near-zero, Section B significant posi
 | **This paper — annual OLS (S2, S6)** | Belgium, NACE4d, 2005–22 | log(PPI) ~ exp. share | +0.07 to +0.15 (insignificant); cumulative −0.05 |
 | **This paper — annual LP (S10-shk)** | Belgium, NACE4d, 2005–19, Känzig Shock × intensity | log(PPI) ~ Shock × int | h=1yr: +5.09 (t=2.98) |
 | **This paper — monthly panel-LP (S12)** | Belgium, NACE4d, 2005m1–2019m12 | log(PPI) ~ Shock × int | h=12 mo: +4.08 (t=6.39) |
-| **This paper — CMdG event study** | Belgium, NACE4d, 2001–2022 | log(PPI) ~ 1(reg) × 1(year) | Phase 2: +0.13; Phase 4: +0.21 |
+| **This paper — CdGM event study** | Belgium, NACE4d, 2001–2022 | log(PPI) ~ 1(reg) × 1(year) | Phase 2: +0.13; Phase 4: +0.21 |
 | **Coster-di Giovanni-Méjean 2025** | France, NAF-138, 2000–2019 | log(PPI) ~ 1(reg) × 1(year) | Phase 2 peak ~+0.24; Phase 3 ~+0.10–0.18 |
 | **Bauer, Känzig & Rudebusch 2026** | European energy futures, daily | log(price) ~ CPShock | Electricity 0.2–0.4 |
 | **Känzig 2025** (JMP) | Euro area, macro VAR, monthly | headline HICP ~ CPShock | Aggregate peak ~0.2% per 1% energy shock |
@@ -488,11 +488,11 @@ Sectoral PPI pass-through sits where it should on the price-chain attenuation: w
 7. **Phase IV CPShock (S11, S12b) un-residualized.** Macro contamination from Covid, Ukraine, gas crisis. Need Bauer-Swanson 2023 residualization or BKR refined extended series. Currently uninformative.
 8. **`intensity_base` time-invariant** (2013–2016 mean). Sectors whose carbon intensity changed materially after 2016 not captured.
 
-### Section C (CMdG)
+### Section C (CdGM)
 
-9. **Treatment defined at NACE 2d.** CMdG defined at NAF-138 (more granular). Our broad list is wider than theirs by 7 sectors (mining 05–08, pharma 21, electrical 27, machinery 28); robustness column with CMdG-tight 7-sector set produces qualitatively identical results.
-10. **No monthly Belgian PPI in regression panel.** Annual aggregate. The CPShock S12 spec uses monthly PPI but a different RHS; no direct CMdG-style monthly replication.
-11. **Pre-trend strongly violates parallel trends** (Wald F = 36.4, p < 2e-16 on placebo). After absorbing sector-specific linear trends, only Phase 2 and Phase 4 effects survive. The PPI event study **does not, on its own, identify a causal effect of ETS** — CMdG's identification is in their Section 3 customs panel, not in Figure 1.
+9. **Treatment defined at NACE 2d.** CdGM defined at NAF-138 (more granular). Our broad list is wider than theirs by 7 sectors (mining 05–08, pharma 21, electrical 27, machinery 28); robustness column with CdGM-tight 7-sector set produces qualitatively identical results.
+10. **No monthly Belgian PPI in regression panel.** Annual aggregate. The CPShock S12 spec uses monthly PPI but a different RHS; no direct CdGM-style monthly replication.
+11. **Pre-trend strongly violates parallel trends** (Wald F = 36.4, p < 2e-16 on placebo). After absorbing sector-specific linear trends, only Phase 2 and Phase 4 effects survive. The PPI event study **does not, on its own, identify a causal effect of ETS** — CdGM's identification is in their Section 3 customs panel, not in Figure 1.
 
 ---
 
@@ -506,7 +506,7 @@ Sectoral PPI pass-through sits where it should on the price-chain attenuation: w
 | Build firm-year and sector-year exposure panels | [analysis/phase3_build_exposure_panel.R](analysis/phase3_build_exposure_panel.R) |
 | Build annual NACE 4d PPI deflator (Statbel + Eurostat, 2000–2025) | [analysis/phase0_build_deflator.R](analysis/phase0_build_deflator.R) |
 | Build monthly Belgian NACE 4d PPI 2005–2024 | [analysis/phase0_build_deflator_monthly.R](analysis/phase0_build_deflator_monthly.R) |
-| CMdG concordance: regulated CN8 list | [analysis/phase0_build_regulated_cn8.R](analysis/phase0_build_regulated_cn8.R) |
+| CdGM concordance: regulated CN8 list | [analysis/phase0_build_regulated_cn8.R](analysis/phase0_build_regulated_cn8.R) |
 | BLM C³ harmonization | [analysis/phase0_build_cn_families.R](analysis/phase0_build_cn_families.R) |
 | CN8 ↔ NACE 4d bridge | [analysis/phase0_build_cn_to_nace.R](analysis/phase0_build_cn_to_nace.R) |
 | Regulated-producing / R-I / core-input lists from BE Use table | [analysis/phase0_build_io_sectors.R](analysis/phase0_build_io_sectors.R) |
@@ -529,11 +529,11 @@ Sectoral PPI pass-through sits where it should on the price-chain attenuation: w
 | Replicate Känzig JMP HICP IRF | [analysis/phase3_replicate_kanzig_hicp.R](analysis/phase3_replicate_kanzig_hicp.R) |
 | Monthly panel-LP of PPI on CPShock × intensity (S12, S12b) | [analysis/phase3_ppi_passthrough_monthly.R](analysis/phase3_ppi_passthrough_monthly.R) |
 
-### Section C (CMdG)
+### Section C (CdGM)
 
 | Purpose | Script |
 |---|---|
-| Phase 1 CMdG-style event study | [analysis/phase1_ppi_passthrough_cmdj.R](analysis/phase1_ppi_passthrough_cmdj.R) |
+| Phase 1 CdGM-style event study | [analysis/phase1_ppi_passthrough_cdgm.R](analysis/phase1_ppi_passthrough_cdgm.R) |
 
 ---
 
@@ -549,8 +549,8 @@ Sectoral PPI pass-through sits where it should on the price-chain attenuation: w
 - [output/figures/phase3_ppi_lp_monthly_phase4.pdf](output/figures/phase3_ppi_lp_monthly_phase4.pdf) — S12b Phase IV LP.
 
 ### Section C
-- [output/figures/phase1_figure1_cmdj_style.png](output/figures/phase1_figure1_cmdj_style.png) — CMdG-tight event study, CMdG visual style.
-- [output/figures/phase1_figure1_cmdj_style_broad.png](output/figures/phase1_figure1_cmdj_style_broad.png) — broad treatment, same style.
+- [output/figures/phase1_figure1_cdgm_style.png](output/figures/phase1_figure1_cdgm_style.png) — CdGM-tight event study, CdGM visual style.
+- [output/figures/phase1_figure1_cdgm_style_broad.png](output/figures/phase1_figure1_cdgm_style_broad.png) — broad treatment, same style.
 - [output/figures/phase1_ppi_figure1_be.png](output/figures/phase1_ppi_figure1_be.png) — descriptive average PPI gap.
 - [output/figures/phase1_eventstudy_be.png](output/figures/phase1_eventstudy_be.png) — both treatments overlaid.
 - [output/figures/phase1_diag1_sector_trends.png](output/figures/phase1_diag1_sector_trends.png) — Diagnostic 1: baseline vs. with sector-specific linear trends.
@@ -567,9 +567,9 @@ Priority-ordered:
 2. **Phase IV CPShock residualization à la Bauer-Swanson 2023.** Orthogonalize 2020–2024 daily log-return surprises against oil (Brent), gas (TTF), climate-news index, pre-event macro. Would let S11/S12b produce clean numbers. ~1 week.
 3. **Request BKR-extended daily refined surprise series (2020–2024).** Alternative to #2.
 4. **Network panel rebuild on RMD.** S3 currently uses downsampled B2B.
-5. **CMdG monthly-frequency replication.** Currently annual. Belgian monthly NACE 4d PPI is sparse but doable for a subset.
+5. **CdGM monthly-frequency replication.** Currently annual. Belgian monthly NACE 4d PPI is sparse but doable for a subset.
 6. **PRODCOM workstream.** See [PRODCOM_PLAN.md](PRODCOM_PLAN.md). Highest research priority for within-firm dose-response.
 
 ---
 
-*Last revision: 2026-04-27. Consolidates [PASSTHROUGH_OLS.md](PASSTHROUGH_OLS.md) (Section A), [PASSTHROUGH_CPSHOCK.md](PASSTHROUGH_CPSHOCK.md) (Section B), and Phase 1 of the CMdG replication (Section C, see [CMdG_REPLICATION.md](CMdG_REPLICATION.md)).*
+*Last revision: 2026-04-27. Consolidates [PASSTHROUGH_OLS.md](PASSTHROUGH_OLS.md) (Section A), [PASSTHROUGH_CPSHOCK.md](PASSTHROUGH_CPSHOCK.md) (Section B), and Phase 1 of the CdGM replication (Section C, see [CdGM_REPLICATION.md](CdGM_REPLICATION.md)).*

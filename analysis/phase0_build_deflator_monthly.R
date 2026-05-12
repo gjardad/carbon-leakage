@@ -14,7 +14,7 @@
 #                         from sts_inppd_m). For most regulated NACE 2d the
 #                         underlying I10 series goes back to 1981; we extend
 #                         the panel to 2000-01 to provide pre-ETS observations
-#                         needed for CMdG-style event-study replication.
+#                         needed for CdGM-style event-study replication.
 #     2010-01 to 2024-12: Statbel NACE 4-digit domestic monthly PPI
 #                         (chain-linked to Eurostat at 2010-01).
 #

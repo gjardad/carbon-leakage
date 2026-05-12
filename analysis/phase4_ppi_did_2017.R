@@ -4,7 +4,7 @@
 # PURPOSE:
 #   Diff-in-diff regressions of Belgian NACE 4-digit log-PPI on three
 #   pre-treatment exposure measures interacted with a post-2017 dummy:
-#     (A) binary Treated_s × Post_t   (CMdG-broad NACE 2d set)
+#     (A) binary Treated_s × Post_t   (CdGM-broad NACE 2d set)
 #     (B) ω_emissions_s × Post_t      (ω built on 2015–2016 emissions/cost)
 #     (C) ω_shortage_s  × Post_t      (ω built on 2015–2016 shortage/cost)
 #
@@ -225,7 +225,7 @@ cat(sprintf("\nSaved: %s\n",
 
 cat("\n========== SUMMARY ==========\n")
 cat("Coefficient interpretation:\n")
-cat("  (A) Treated × Post: log-PPI difference for CMdG-broad treated\n")
+cat("  (A) Treated × Post: log-PPI difference for CdGM-broad treated\n")
 cat("      sectors after 2017 vs untreated. exp(coef) - 1 = % rise.\n")
 cat("  (B) omega_em × Post: per-unit-of-(tCO2/EUR) post-2017 differential.\n")
 cat("      Multiply by a sector's omega_em (e.g. 0.005 for cement) for\n")

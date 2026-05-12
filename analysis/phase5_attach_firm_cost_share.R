@@ -26,7 +26,7 @@
 #
 # Reads:
 #   - firm_year_belgian_euets.RData (built upstream)
-#   - EUA price series (hardcoded; matches phase3_b2b_cmdj_did_continuous.R)
+#   - EUA price series (hardcoded; matches phase3_b2b_cdgm_did_continuous.R)
 #
 # Drops the 3 VATs flagged as contaminated post-2020 in NACE 20 / 24 (per
 # memory note 2026-04-23): exclude them from both flavors so they cannot
@@ -60,7 +60,7 @@ CONTAMINATED_VATS <- c(
 )
 CONTAMINATION_YEAR_FROM <- 2021L
 
-# EUA prices (Angle 4 convention; matches phase3_b2b_cmdj_did_continuous.R:73-76).
+# EUA prices (Angle 4 convention; matches phase3_b2b_cdgm_did_continuous.R:73-76).
 eua_prices <- data.table(
   year = 2005:2022,
   eua_price = c(22, 18, 0.7, 22, 13, 14, 13, 7.5,
@@ -82,7 +82,7 @@ cat("After dropping 3 contaminated VATs (2021+):", nrow(ets), "\n")
 ets <- merge(ets, eua_prices, by = "year", all.x = TRUE)
 
 # Compute carbon cost and total cost. Use the same construction as
-# phase3_b2b_cmdj_did_continuous.R for consistency.
+# phase3_b2b_cdgm_did_continuous.R for consistency.
 ets[, shortage    := pmax(emissions - allocated_free, 0, na.rm = TRUE)]
 ets[, carbon_cost := shortage * eua_price]
 ets[, mat_inputs  := revenue - value_added]

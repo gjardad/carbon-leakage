@@ -12,7 +12,7 @@
 #   Each sector's PPI normalised so its 2017 annual average = 1.
 #
 #   Three panels:
-#     (A) treated vs untreated (CMdG-broad NACE 2d set; treated 2d codes
+#     (A) treated vs untreated (CdGM-broad NACE 2d set; treated 2d codes
 #         present in the pure 4-digit panel: 17, 20, 23, 24, 25)
 #     (B) top NACE 4d sectors by 2013–2015 emissions/cost (no EUA factor)
 #     (C) top NACE 4d sectors by 2013–2015 allowance shortage/cost
@@ -153,7 +153,7 @@ omega_em_13_15 <- omega_period(exposure_m, 2013:2015, "total_emissions") %>%
 omega_sh_13_15 <- omega_period(exposure_m, 2013:2015, "total_shortage")  %>%
   filter(nace4d %in% ppi_4d_set)
 
-# --- Treated set: CMdG-broad 2d codes that exist in pure-4d panel ---
+# --- Treated set: CdGM-broad 2d codes that exist in pure-4d panel ---
 TREATED_2D <- c("17", "19", "20", "23", "24", "25", "35")
 present_treated <- intersect(TREATED_2D, unique(ppi$nace2d))
 cat(sprintf("\nTreated NACE 2d codes present in pure-4d panel: %s\n",
@@ -187,11 +187,11 @@ save_plot <- function(p, basename) {
 # Plot A: treated vs untreated
 # ============================================================================
 ppi_A <- ppi %>%
-  mutate(group = ifelse(nace2d %in% present_treated, "Treated (CMdG)", "Untreated"))
+  mutate(group = ifelse(nace2d %in% present_treated, "Treated (CdGM)", "Untreated"))
 
 pA <- ggplot(ppi_A, aes(x = date, y = idx, group = nace4d, colour = group)) +
   geom_line(linewidth = 0.3, alpha = 0.7) +
-  scale_colour_manual(values = c("Treated (CMdG)" = "#cb181d",
+  scale_colour_manual(values = c("Treated (CdGM)" = "#cb181d",
                                   "Untreated" = "#2171b5"),
                       name = NULL) +
   scale_y_continuous(limits = c(0.5, 2.5), oob = scales::squish) +

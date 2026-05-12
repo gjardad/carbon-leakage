@@ -1,6 +1,6 @@
 # phase3_run_all.R
 #
-# One-click runner: builds the B2B CMdG panel, then runs the regression with
+# One-click runner: builds the B2B CdGM panel, then runs the regression with
 # control-group robustness, then the event study. Use on RMD when you want
 # to go for a run while it churns.
 #
@@ -17,9 +17,9 @@ REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
 while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
 
 steps <- c(
-  "phase3_build_b2b_cmdj_panel.R",
-  "phase3_b2b_cmdj_did.R",
-  "phase3_b2b_cmdj_eventstudy.R"
+  "phase3_build_b2b_cdgm_panel.R",
+  "phase3_b2b_cdgm_did.R",
+  "phase3_b2b_cdgm_eventstudy.R"
 )
 
 t_total <- Sys.time()

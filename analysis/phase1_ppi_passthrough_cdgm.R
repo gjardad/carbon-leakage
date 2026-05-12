@@ -1,6 +1,6 @@
-# Phase 1 -- Belgian PPI pass-through, CMDJ Figure 1 analog.
+# Phase 1 -- Belgian PPI pass-through, CDGM Figure 1 analog.
 #
-# Replicates CMDJ Figure 1 ("Evolution of relative prices of regulated versus
+# Replicates CDGM Figure 1 ("Evolution of relative prices of regulated versus
 # unregulated products: Evidence from French PPI data") on Belgian data.
 #
 # Inputs:
@@ -25,7 +25,7 @@
 #      with FE on NACE 4d and year, cluster on NACE 4d.
 #
 # Sample: NACE 4d in goods-producing sections (B/C/D = NACE 2d 05-39) since
-# regulation only applies to goods. Years 2005-2022 (CMDJ uses 2000-2019; we
+# regulation only applies to goods. Years 2005-2022 (CDGM uses 2000-2019; we
 # match what data we have).
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
@@ -46,11 +46,11 @@ ETS_PHASE3 <- 2013L
 ETS_PHASE4 <- 2021L
 SAMPLE_START <- 2001L  # earliest year with full Eurostat 2d coverage
 SAMPLE_END   <- 2022L  # last year with full deflator data
-REF_YEAR     <- 2004L  # last pre-ETS year (CMdG reference)
+REF_YEAR     <- 2004L  # last pre-ETS year (CdGM reference)
 
-# CMdG-tight regulated NACE 2d set (Table A.5 col (1)/(4) ETS sectors collapsed
+# CdGM-tight regulated NACE 2d set (Table A.5 col (1)/(4) ETS sectors collapsed
 # to 2-digit). For "exact replication" robustness column.
-CMDJ_TIGHT_2D <- c("17", "19", "20", "23", "24", "25", "35")
+CDGM_TIGHT_2D <- c("17", "19", "20", "23", "24", "25", "35")
 
 # -------------------------------------------------------------------------
 # 1. Load data
@@ -65,21 +65,21 @@ reg[, nace2d := sprintf("%02d", as.integer(nace2d))]
 reg_2d <- reg$nace2d
 cat("Regulated-producing NACE 2d (broad, our list,", length(reg_2d), "): ",
     paste(reg_2d, collapse = ", "), "\n", sep = "")
-cat("Regulated-producing NACE 2d (CMdG-tight,", length(CMDJ_TIGHT_2D), "): ",
-    paste(CMDJ_TIGHT_2D, collapse = ", "), "\n", sep = "")
+cat("Regulated-producing NACE 2d (CdGM-tight,", length(CDGM_TIGHT_2D), "): ",
+    paste(CDGM_TIGHT_2D, collapse = ", "), "\n", sep = "")
 
 # Filter to goods-producing (B/C/D = NACE 2d 05-39), cap years at SAMPLE_END.
 def <- def[as.integer(nace2d) %between% c(5L, 39L) &
            year %between% c(SAMPLE_START, SAMPLE_END)]
 def[, treated_broad := nace2d %in% reg_2d]
-def[, treated_tight := nace2d %in% CMDJ_TIGHT_2D]
+def[, treated_tight := nace2d %in% CDGM_TIGHT_2D]
 def[, log_ppi := log(ppi)]
 
 cat("\nSample sizes:\n")
 cat("  total (sector, year)             :", nrow(def), "\n")
 cat("  distinct NACE 4d                 :", uniqueN(def$nace4d_str), "\n")
 cat("  treated NACE 4d (broad)          :", uniqueN(def[treated_broad == TRUE, nace4d_str]), "\n")
-cat("  treated NACE 4d (CMdG-tight)     :", uniqueN(def[treated_tight == TRUE, nace4d_str]), "\n")
+cat("  treated NACE 4d (CdGM-tight)     :", uniqueN(def[treated_tight == TRUE, nace4d_str]), "\n")
 cat("  control NACE 4d (broad)          :", uniqueN(def[treated_broad == FALSE, nace4d_str]), "\n")
 cat("  control NACE 4d (tight)          :", uniqueN(def[treated_tight == FALSE, nace4d_str]), "\n")
 cat("  years                            :", min(def$year), "-", max(def$year), "\n")
@@ -120,12 +120,12 @@ diff_tight <- make_diff_dt("treated_tight")
 diff_both <- rbind(diff_broad, diff_tight)
 diff_both[, treat_label := ifelse(treat_def == "treated_broad",
                                    "Broad (our list, 14 NACE 2d)",
-                                   "CMdG-tight (7 NACE 2d)")]
+                                   "CdGM-tight (7 NACE 2d)")]
 
 cat("\nDescriptive (regulated - unregulated log PPI, rebased to", REF_YEAR, "= 0):\n")
 cat("\n  -- Broad treatment --\n")
 print(diff_broad[, .(year, diff_rebased = round(diff_rebased, 3))])
-cat("\n  -- CMdG-tight treatment --\n")
+cat("\n  -- CdGM-tight treatment --\n")
 print(diff_tight[, .(year, diff_rebased = round(diff_rebased, 3))])
 
 # Plot
@@ -163,7 +163,7 @@ p_fig1 <- ggplot(diff_both, aes(x = year, y = diff_rebased,
     subtitle = sprintf("Average log(PPI) reg - unreg, rebased to %d = 0", REF_YEAR),
     x = NULL, y = "Log PPI difference (reg - unreg)",
     color = "Treatment", fill = "Treatment",
-    caption = "Source: Statbel + Eurostat chained PPI. Tight = NACE {17,19,20,23,24,25,35} per CMdG Table A.5 col (1)/(4)."
+    caption = "Source: Statbel + Eurostat chained PPI. Tight = NACE {17,19,20,23,24,25,35} per CdGM Table A.5 col (1)/(4)."
   ) +
   theme_minimal(base_size = 11) +
   theme(legend.position = "bottom")
@@ -197,7 +197,7 @@ run_es <- function(treat_col, label) {
   out
 }
 es_broad <- run_es("treated_broad", "Broad (our list, 14 NACE 2d)")
-es_tight <- run_es("treated_tight", "CMdG-tight (7 NACE 2d)")
+es_tight <- run_es("treated_tight", "CdGM-tight (7 NACE 2d)")
 es_both  <- rbind(es_broad, es_tight)
 
 cat("\nEvent-study coefficients, BROAD treatment (ref = 2004):\n")
@@ -206,7 +206,7 @@ print(es_broad[, .(year, beta = round(estimate, 3),
                    ci_lo = round(ci_lo, 3),
                    ci_hi = round(ci_hi, 3))])
 
-cat("\nEvent-study coefficients, CMdG-TIGHT treatment (ref = 2004):\n")
+cat("\nEvent-study coefficients, CdGM-TIGHT treatment (ref = 2004):\n")
 print(es_tight[, .(year, beta = round(estimate, 3),
                    se = round(se, 3),
                    ci_lo = round(ci_lo, 3),
@@ -257,11 +257,11 @@ phase_tight <- feols(log_ppi ~ i(phase, treated_tight, ref = "0 (Pre-ETS, 2001-2
                      data = def)
 cat("\n=== Phase-aggregated event study, BROAD (ref = Pre-ETS 2001-2004) ===\n")
 print(summary(phase_broad))
-cat("\n=== Phase-aggregated event study, CMdG-TIGHT (ref = Pre-ETS 2001-2004) ===\n")
+cat("\n=== Phase-aggregated event study, CdGM-TIGHT (ref = Pre-ETS 2001-2004) ===\n")
 print(summary(phase_tight))
 
 # -------------------------------------------------------------------------
-# 4. CMdG-style Figure 1 -- exact visual replica
+# 4. CdGM-style Figure 1 -- exact visual replica
 # -------------------------------------------------------------------------
 # Headline figure uses the SECTOR-SPECIFIC LINEAR TRENDS spec (es_tight_dt /
 # es_broad_dt computed below in section 5), since the no-trend version has
@@ -273,10 +273,10 @@ print(summary(phase_tight))
 #
 # The no-trend version is computed earlier (es_tight, es_broad) but is no
 # longer the headline figure; it was the previous version of figure
-# phase1_figure1_cmdj_style.png and remains as a baseline-without-trends
+# phase1_figure1_cdgm_style.png and remains as a baseline-without-trends
 # comparator inside Diagnostic 1 (phase1_diag1_sector_trends.png).
 #
-# CMdG aesthetic: capped error bars (point-range), Phase 1 and Phase 3
+# CdGM aesthetic: capped error bars (point-range), Phase 1 and Phase 3
 # shaded in light blue, Phase 2 unshaded, "Pre-ETS / Phase 1 / Phase 2 /
 # Phase 3" labels at top, x-axis 2001-2019 to match their sample.
 
@@ -304,20 +304,20 @@ run_es_with_trends_inline <- function(treat_col, label) {
   setorder(out, year)
   out
 }
-es_cmdj       <- run_es_with_trends_inline("treated_tight", "Tight + sector trends")[year <= 2019L]
-es_cmdj_broad <- run_es_with_trends_inline("treated_broad", "Broad + sector trends")[year <= 2019L]
+es_cdgm       <- run_es_with_trends_inline("treated_tight", "Tight + sector trends")[year <= 2019L]
+es_cdgm_broad <- run_es_with_trends_inline("treated_broad", "Broad + sector trends")[year <= 2019L]
 
-cmdj_phase_band <- function(xmin, xmax, fill = "lightblue", alpha = 0.25) {
+cdgm_phase_band <- function(xmin, xmax, fill = "lightblue", alpha = 0.25) {
   annotate("rect", xmin = xmin - 0.5, xmax = xmax + 0.5,
            ymin = -Inf, ymax = Inf, fill = fill, alpha = alpha)
 }
 
-y_top <- max(es_cmdj$ci_hi, na.rm = TRUE) * 1.05
-y_bot <- min(es_cmdj$ci_lo, na.rm = TRUE) - 0.02
+y_top <- max(es_cdgm$ci_hi, na.rm = TRUE) * 1.05
+y_bot <- min(es_cdgm$ci_lo, na.rm = TRUE) - 0.02
 
-p_cmdj <- ggplot(es_cmdj, aes(x = year, y = estimate)) +
-  cmdj_phase_band(ETS_PHASE1, ETS_PHASE2 - 1) +     # Phase 1 (2005-2007)
-  cmdj_phase_band(ETS_PHASE3, 2019L) +              # Phase 3 (2013-2019)
+p_cdgm <- ggplot(es_cdgm, aes(x = year, y = estimate)) +
+  cdgm_phase_band(ETS_PHASE1, ETS_PHASE2 - 1) +     # Phase 1 (2005-2007)
+  cdgm_phase_band(ETS_PHASE3, 2019L) +              # Phase 3 (2013-2019)
   geom_hline(yintercept = 0, color = "firebrick", linewidth = 0.5) +
   geom_pointrange(aes(ymin = ci_lo, ymax = ci_hi),
                   size = 0.3, fatten = 1.8,
@@ -333,24 +333,24 @@ p_cmdj <- ggplot(es_cmdj, aes(x = year, y = estimate)) +
   scale_x_continuous(breaks = seq(SAMPLE_START, 2019, by = 5)) +
   scale_y_continuous(limits = c(y_bot, y_top * 1.05)) +
   labs(
-    title = "Belgian PPI: regulated vs. unregulated NACE 4d sectors (CMdG Fig. 1 style)",
-    subtitle = sprintf("Beta_tau on (regulated x year=tau), ref = %d; FE: NACE 4d + year + NACE 4d-specific linear trends; cluster: NACE 4d (CMdG-tight, 7 NACE 2d)", REF_YEAR),
+    title = "Belgian PPI: regulated vs. unregulated NACE 4d sectors (CdGM Fig. 1 style)",
+    subtitle = sprintf("Beta_tau on (regulated x year=tau), ref = %d; FE: NACE 4d + year + NACE 4d-specific linear trends; cluster: NACE 4d (CdGM-tight, 7 NACE 2d)", REF_YEAR),
     x = NULL, y = expression(beta[tau]),
-    caption = "Vertical bars = 95% CI. Shaded areas = ETS Phases 1 and 3 (per CMdG Fig 1 convention)."
+    caption = "Vertical bars = 95% CI. Shaded areas = ETS Phases 1 and 3 (per CdGM Fig 1 convention)."
   ) +
   theme_minimal(base_size = 11) +
   theme(panel.grid.minor = element_blank())
-ggsave(file.path(fig_dir, "phase1_figure1_cmdj_style.png"),
-       p_cmdj, width = 8, height = 5, dpi = 220)
-cat("\nCMdG-style figure saved:",
-    file.path(fig_dir, "phase1_figure1_cmdj_style.png"), "\n")
+ggsave(file.path(fig_dir, "phase1_figure1_cdgm_style.png"),
+       p_cdgm, width = 8, height = 5, dpi = 220)
+cat("\nCdGM-style figure saved:",
+    file.path(fig_dir, "phase1_figure1_cdgm_style.png"), "\n")
 
 # Same plot, broad treatment (for completeness).
-y_top_b <- max(es_cmdj_broad$ci_hi, na.rm = TRUE) * 1.05
-y_bot_b <- min(es_cmdj_broad$ci_lo, na.rm = TRUE) - 0.02
-p_cmdj_broad <- ggplot(es_cmdj_broad, aes(x = year, y = estimate)) +
-  cmdj_phase_band(ETS_PHASE1, ETS_PHASE2 - 1) +
-  cmdj_phase_band(ETS_PHASE3, 2019L) +
+y_top_b <- max(es_cdgm_broad$ci_hi, na.rm = TRUE) * 1.05
+y_bot_b <- min(es_cdgm_broad$ci_lo, na.rm = TRUE) - 0.02
+p_cdgm_broad <- ggplot(es_cdgm_broad, aes(x = year, y = estimate)) +
+  cdgm_phase_band(ETS_PHASE1, ETS_PHASE2 - 1) +
+  cdgm_phase_band(ETS_PHASE3, 2019L) +
   geom_hline(yintercept = 0, color = "firebrick", linewidth = 0.5) +
   geom_pointrange(aes(ymin = ci_lo, ymax = ci_hi),
                   size = 0.3, fatten = 1.8, color = "navy") +
@@ -365,17 +365,17 @@ p_cmdj_broad <- ggplot(es_cmdj_broad, aes(x = year, y = estimate)) +
   scale_x_continuous(breaks = seq(SAMPLE_START, 2019, by = 5)) +
   scale_y_continuous(limits = c(y_bot_b, y_top_b * 1.05)) +
   labs(
-    title = "Belgian PPI: regulated vs. unregulated NACE 4d sectors (CMdG Fig. 1 style)",
+    title = "Belgian PPI: regulated vs. unregulated NACE 4d sectors (CdGM Fig. 1 style)",
     subtitle = sprintf("Beta_tau, ref = %d; FE: NACE 4d + year + NACE 4d-specific linear trends; cluster: NACE 4d (broad, 14 NACE 2d)", REF_YEAR),
     x = NULL, y = expression(beta[tau]),
-    caption = "Vertical bars = 95% CI. Shaded areas = ETS Phases 1 and 3 (per CMdG Fig 1 convention)."
+    caption = "Vertical bars = 95% CI. Shaded areas = ETS Phases 1 and 3 (per CdGM Fig 1 convention)."
   ) +
   theme_minimal(base_size = 11) +
   theme(panel.grid.minor = element_blank())
-ggsave(file.path(fig_dir, "phase1_figure1_cmdj_style_broad.png"),
-       p_cmdj_broad, width = 8, height = 5, dpi = 220)
-cat("CMdG-style figure (broad) saved:",
-    file.path(fig_dir, "phase1_figure1_cmdj_style_broad.png"), "\n")
+ggsave(file.path(fig_dir, "phase1_figure1_cdgm_style_broad.png"),
+       p_cdgm_broad, width = 8, height = 5, dpi = 220)
+cat("CdGM-style figure (broad) saved:",
+    file.path(fig_dir, "phase1_figure1_cdgm_style_broad.png"), "\n")
 
 # -------------------------------------------------------------------------
 # 5. Diagnostic 1 -- sector-specific linear trends
@@ -439,7 +439,7 @@ p_diag1 <- ggplot(diag1_compare, aes(x = year, y = estimate,
   scale_color_manual(values = c("steelblue", "darkorange")) +
   scale_fill_manual(values = c("steelblue", "darkorange")) +
   labs(title = "Diagnostic 1: event study with vs. without sector-specific linear trends",
-       subtitle = "Tight treatment (CMdG-comparable). Sector trends absorb pre-existing differential trends.",
+       subtitle = "Tight treatment (CdGM-comparable). Sector trends absorb pre-existing differential trends.",
        x = NULL, y = expression(beta[tau]),
        color = NULL, fill = NULL) +
   theme_minimal(base_size = 11) +

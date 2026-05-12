@@ -1,18 +1,18 @@
-# phase2_cmdj_table1.R
+# phase2_cdgm_table1.R
 #
-# Replicates CMdG Table 1 ("Imports of regulated vs. unregulated inputs from
-# non-ETS countries") EXACTLY. Per CMdG p. 12-13, the sample is restricted
+# Replicates CdGM Table 1 ("Imports of regulated vs. unregulated inputs from
+# non-ETS countries") EXACTLY. Per CdGM p. 12-13, the sample is restricted
 # to non-ETS source countries (because intra-EU imports suffer from the 2011
 # Intrastat threshold change). The control group is unregulated x non-ETS.
 #
-# Spec (CMdG Eq 1, phase-aggregated):
+# Spec (CdGM Eq 1, phase-aggregated):
 #   sample: is_non_ets_country == 1
 #   y_{f,p,i,t} = b_1 * 1(regulated)_p * 1(t in 2005-08)
 #               + b_2 * 1(regulated)_p * 1(t in 2009-12)
 #               + b_3 * 1(regulated)_p * 1(t in 2013-19) + FE
 #
 # For an alternative-control comparison (regulated x ETS, regulated x non-ETS
-# vs all other 3 cells, triple-difference), see phase2_cmdj_table1_robustness.R.
+# vs all other 3 cells, triple-difference), see phase2_cdgm_table1_robustness.R.
 #
 # Outcomes:
 #   Panel A: share_{f,p,i,t} = value / sum_{p,i}(value | f,t)  (intensive margin)
@@ -33,8 +33,8 @@
 #   * local 1: NBB_data/processed/mock_customs_import_panel_regulated.RData
 #
 # Outputs:
-#   * output/tables/phase2_cmdj_table1_A.csv  (share, 6 columns x 3 phases)
-#   * output/tables/phase2_cmdj_table1_B.csv  (prob,  6 columns x 3 phases)
+#   * output/tables/phase2_cdgm_table1_A.csv  (share, 6 columns x 3 phases)
+#   * output/tables/phase2_cdgm_table1_B.csv  (prob,  6 columns x 3 phases)
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
@@ -58,12 +58,12 @@ if (USE_MOCK) {
 }
 cat("Panel rows (full):", nrow(d), "\n")
 
-# CMdG-EXACT: restrict regression sample to non-ETS source countries.
+# CdGM-EXACT: restrict regression sample to non-ETS source countries.
 d <- d[is_non_ets_country == 1L]
 cat("Panel rows (non-ETS only):", nrow(d), "\n")
 
 # Outcome A: share within (firm, year) over THIS subsample.
-# Per CMdG p. 13, the denominator is the firm's total imports in year t over
+# Per CdGM p. 13, the denominator is the firm's total imports in year t over
 # the regression sample. With the non-ETS restriction, the denominator is
 # implicitly non-ETS-imports only.
 d[, total_value_ft := sum(value), by = .(vat, year)]
@@ -96,7 +96,7 @@ d[, country_year := paste(partner_iso2, year, sep = "_")]
 d[, sector_year := paste(buyer_nace2d, year, sep = "_")]
 d[, year_etsfirm := paste(year, is_ets_firm, sep = "_")]
 
-# Restrict to 2000-2019 (CMdG sample).
+# Restrict to 2000-2019 (CdGM sample).
 d <- d[year %between% c(2000L, 2019L)]
 
 # Helper: extract phase coefficients with two-way clustered SE.
@@ -109,7 +109,7 @@ extract_phase_coefs <- function(model, label) {
 }
 
 # ----- Panel A: SHARE (intensive margin) -----
-# Use OLS (linear) for the share regression to mirror CMdG Table 1, Panel A.
+# Use OLS (linear) for the share regression to mirror CdGM Table 1, Panel A.
 cat("\n===== PANEL A: SHARE (intensive margin) =====\n")
 A_specs <- list(
   c1 = feols(share ~ treat_p1 + treat_p2 + treat_p3 | prod_country + year,
@@ -134,7 +134,7 @@ cat("\n--- Panel A coefficients ---\n")
 print(A_out)
 
 # ----- Panel B: PROBABILITY (extensive margin) -----
-# Use OLS LPM mirroring CMdG.
+# Use OLS LPM mirroring CdGM.
 cat("\n===== PANEL B: PROBABILITY (extensive margin) =====\n")
 B_specs <- list(
   c1 = feols(prob_active ~ treat_p1 + treat_p2 + treat_p3 | prod_country + year,
@@ -162,16 +162,16 @@ print(B_out)
 tab_dir <- file.path(REPO_DIR, "output", "tables")
 dir.create(tab_dir, recursive = TRUE, showWarnings = FALSE)
 out_A <- file.path(tab_dir,
-                   ifelse(USE_MOCK, "phase2_cmdj_table1_A_MOCK.csv",
-                                     "phase2_cmdj_table1_A.csv"))
+                   ifelse(USE_MOCK, "phase2_cdgm_table1_A_MOCK.csv",
+                                     "phase2_cdgm_table1_A.csv"))
 out_B <- file.path(tab_dir,
-                   ifelse(USE_MOCK, "phase2_cmdj_table1_B_MOCK.csv",
-                                     "phase2_cmdj_table1_B.csv"))
+                   ifelse(USE_MOCK, "phase2_cdgm_table1_B_MOCK.csv",
+                                     "phase2_cdgm_table1_B.csv"))
 fwrite(A_out, out_A)
 fwrite(B_out, out_B)
 cat("\nPanel A saved:", out_A, "\n")
 cat("Panel B saved:", out_B, "\n")
 
-# Quick CMdG benchmark check.
-cat("\nCMdG benchmark (Table 1 col (5)): Phase 3 share ~+0.121 (SE 0.029); ",
+# Quick CdGM benchmark check.
+cat("\nCdGM benchmark (Table 1 col (5)): Phase 3 share ~+0.121 (SE 0.029); ",
     "prob ~+0.071 (SE 0.015).\n")

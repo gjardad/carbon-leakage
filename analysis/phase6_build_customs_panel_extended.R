@@ -3,11 +3,11 @@
 #
 # Modifies phase2_build_customs_panel.R in two ways:
 #   (1) preserve quantity (kg) alongside value (EUR)
-#   (2) extend LASTYEAR to 2022 (the existing build hardcoded 2019 to match CMdG;
+#   (2) extend LASTYEAR to 2022 (the existing build hardcoded 2019 to match CdGM;
 #       buyer-supplier analyses in §5.2.2-§5.2.5 want the Phase IV window)
 #
 # Both EU and non-EU source country rows are kept (with is_non_ets_country as
-# a flag); the CMdG-replication sample restriction is applied at regression
+# a flag); the CdGM-replication sample restriction is applied at regression
 # time, not at the build stage. This is unchanged from phase2_build_customs_panel.R.
 #
 # All other filters (manufacturing buyer, regulated-intensive NACE, core-input,
@@ -15,7 +15,7 @@
 #
 # Output:
 #   ${PROC_DATA}/customs_import_panel_extended.RData (does NOT overwrite
-#   the existing CMdG-replication panel)
+#   the existing CdGM-replication panel)
 # =============================================================================
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
@@ -152,7 +152,7 @@ d[is.na(is_ets_firm), is_ets_firm := 0L]
 # 11. Balance the panel; zero-fill missing cells (value=0, quantity=NA)
 # ---------------------------------------------------------------------------
 # Quantity is NA for zero-filled cells (no transaction took place; quantity
-# is undefined, not zero). Value is set to 0 to match the CMdG convention.
+# is undefined, not zero). Value is set to 0 to match the CdGM convention.
 
 triplets <- unique(d[, .(vat, cn8, partner_iso2)])
 years_dt <- data.table(year = FIRSTYEAR:LASTYEAR)

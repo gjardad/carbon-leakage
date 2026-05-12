@@ -2,7 +2,7 @@
 # phase4_intl_extensive_margin.R
 #
 # PURPOSE
-#   International reallocation margin -- extensive side. CMdG (2024) Figure 2
+#   International reallocation margin -- extensive side. CdGM (2024) Figure 2
 #   panel (b) for Belgium: probability of sourcing (extensive margin) by
 #   (product-regulation x source-country-ETS-status) cell, by year.
 #
@@ -19,7 +19,7 @@
 #       cell 3  ETS-Unregulated    = is_regulated_product==0 & is_non_ets_country==0   (computed; not plotted)
 #       cell 4  Non-ETS-Unregulated= is_regulated_product==0 & is_non_ets_country==1   (control)
 #
-#   Replicates CMdG Figure 2 panel (b). Plot shows 3 lines per CMdG.
+#   Replicates CdGM Figure 2 panel (b). Plot shows 3 lines per CdGM.
 #
 # INPUTS
 #   ${PROC_DATA}/customs_import_panel_extended.RData (preferred, 2000-2022)
@@ -72,7 +72,7 @@ cat(sprintf("After dropping zero-activity years: %d rows, years %d-%d\n",
 # ---------------------------------------------------------------------------
 # 2. Cell classification (time-invariant partner ETS flag)
 # ---------------------------------------------------------------------------
-# CMdG Figure 2 uses time-invariant country classification: a partner is
+# CdGM Figure 2 uses time-invariant country classification: a partner is
 # "ETS" if it is *ever* in the EU ETS (i.e., has is_non_ets_country == 0 in
 # any sample year). The panel's year-specific flag is 1 for all countries
 # pre-2005 (because country_ets_status.csv starts in 2005), so we override
@@ -118,7 +118,7 @@ fwrite(ext, out_tab)
 cat("\nTable saved:", out_tab, "\n")
 
 # ---------------------------------------------------------------------------
-# 5. Plot (3 lines, CMdG-style)
+# 5. Plot (3 lines, CdGM-style)
 # ---------------------------------------------------------------------------
 plot_dt <- ext[cell %in% c("Non-ETS-Regulated", "ETS-Regulated", "Non-ETS-Unregulated")]
 plot_dt[, cell := droplevels(cell)]
@@ -137,7 +137,7 @@ p <- ggplot(plot_dt, aes(x = year, y = prob, color = cell, shape = cell)) +
   scale_y_continuous(labels = scales::number_format(accuracy = 0.01)) +
   scale_color_manual(values = cmdg_colors, name = NULL) +
   scale_shape_manual(values = cmdg_shapes, name = NULL) +
-  labs(title    = "International reallocation -- extensive margin (CMdG Fig. 2b)",
+  labs(title    = "International reallocation -- extensive margin (CdGM Fig. 2b)",
        subtitle = "Probability of sourcing (mean of 1[value > 0]) by (product, source-country) cell. Belgium customs panel.",
        x = NULL, y = "Import probability") +
   theme_minimal(base_size = 11) +

@@ -1,6 +1,6 @@
-# phase3_b2b_cmdj_eventstudy.R
+# phase3_b2b_cdgm_eventstudy.R
 #
-# Event-study version of the B2B CMdG-style design. Year-by-year coefficients,
+# Event-study version of the B2B CdGM-style design. Year-by-year coefficients,
 # col(5) FE preferred spec, ref = 2004.
 #
 # Spec:
@@ -14,13 +14,13 @@
 #
 # Cluster SE: two-way seller + buyer.
 #
-# Sample: 2005-2019 to match Phase 2 / CMdG window.
+# Sample: 2005-2019 to match Phase 2 / CdGM window.
 # (The B2B panel itself extends to 2022; we keep that data but restrict the
-# event study to the CMdG window.)
+# event study to the CdGM window.)
 #
 # Outputs:
-#   output/figures/phase3_b2b_cmdj_eventstudy.png
-#   output/tables/phase3_b2b_cmdj_eventstudy.csv
+#   output/figures/phase3_b2b_cdgm_eventstudy.png
+#   output/tables/phase3_b2b_cdgm_eventstudy.csv
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
@@ -42,7 +42,7 @@ SAMPLE_HI <- 2019L
 # (Note: panel only starts at 2005 by construction, so REF_YEAR = 2004 here
 # acts as an absorbed baseline; effective leads are 2005, 2006, ... vs 2005.)
 
-panel_path <- file.path(PROC_DATA, "b2b_cmdj_panel.RData")
+panel_path <- file.path(PROC_DATA, "b2b_cdgm_panel.RData")
 load(panel_path)
 d <- as.data.table(panel)
 d <- d[year %between% c(SAMPLE_LO, SAMPLE_HI)]
@@ -117,7 +117,7 @@ p_prob  <- make_es_plot(es_prob,  expression(beta[tau]),
                         "(b) Pair active, ETS x regulated-NACE seller")
 combined <- (p_share / p_prob) +
   plot_annotation(
-    title = "B2B CMdG event study: Belgian domestic supplier switching",
+    title = "B2B CdGM event study: Belgian domestic supplier switching",
     subtitle = sprintf("Treatment = ETS x regulated_NACE seller; FE: seller^buyer + seller_nace4d^year + buyer_nace4d^year; cluster: seller + buyer; ref = %s",
                        ref),
     caption = "Sign expectation under leakage hypothesis: NEGATIVE post-2005.")
@@ -127,10 +127,10 @@ tab_dir <- file.path(REPO_DIR, "output", "tables")
 dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(tab_dir, recursive = TRUE, showWarnings = FALSE)
 
-ggsave(file.path(fig_dir, "phase3_b2b_cmdj_eventstudy.png"),
+ggsave(file.path(fig_dir, "phase3_b2b_cdgm_eventstudy.png"),
        combined, width = 9, height = 8, dpi = 200)
-cat("\nFigure saved:", file.path(fig_dir, "phase3_b2b_cmdj_eventstudy.png"), "\n")
+cat("\nFigure saved:", file.path(fig_dir, "phase3_b2b_cdgm_eventstudy.png"), "\n")
 
 fwrite(rbind(es_share, es_prob),
-       file.path(tab_dir, "phase3_b2b_cmdj_eventstudy.csv"))
-cat("Coefficients saved:", file.path(tab_dir, "phase3_b2b_cmdj_eventstudy.csv"), "\n")
+       file.path(tab_dir, "phase3_b2b_cdgm_eventstudy.csv"))
+cat("Coefficients saved:", file.path(tab_dir, "phase3_b2b_cdgm_eventstudy.csv"), "\n")

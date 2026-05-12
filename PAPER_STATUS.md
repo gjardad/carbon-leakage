@@ -59,7 +59,7 @@ The numbering below uses the actual `\label{}` keys from the .tex files.
 | Subsection | Status | Script |
 |---|---|---|
 | CPShock LP (Strategy 1) | ✅ | `phase3_ppi_passthrough.R` (CPShock branch) |
-| CMdG event-study (Strategy 2) | ✅ | `phase1_ppi_passthrough_cmdj.R` |
+| CdGM event-study (Strategy 2) | ✅ | `phase1_ppi_passthrough_cdgm.R` |
 | OLS with sector trends (Strategy 3) | ✅ | `phase3_ppi_passthrough.R` (OLS branch) |
 
 ---
@@ -98,7 +98,7 @@ The numbering below uses the actual `\label{}` keys from the .tex files.
 
 | Subsection | Label | Status | Script | Notes |
 |---|---|---|---|---|
-| **CMdG replication** | `sec:international_cmdg` | ✅ | `phase2_cmdj_table1.R` (original, in paper) + `phase6_cmdj_table1_corrected.R` (trend-corrected, RMD-RUN 2026-05-04) | Trend-corrected version run on RMD. Trend slope is small but real (+0.000269/year ** Panel A col 5). Phase-φ coefficients become **more negative** by ~2.5× (Phase 3 share: −0.0024 → −0.0062 ***). Same sign as original, sharper magnitude. Paper §5.2.1 headline to be updated to use trend-corrected numbers; original kept as robustness reference. |
+| **CdGM replication** | `sec:international_cmdg` | ✅ | `phase2_cdgm_table1.R` (original, in paper) + `phase6_cdgm_table1_corrected.R` (trend-corrected, RMD-RUN 2026-05-04) | Trend-corrected version run on RMD. Trend slope is small but real (+0.000269/year ** Panel A col 5). Phase-φ coefficients become **more negative** by ~2.5× (Phase 3 share: −0.0024 → −0.0062 ***). Same sign as original, sharper magnitude. Paper §5.2.1 headline to be updated to use trend-corrected numbers; original kept as robustness reference. |
 | Buyer-supplier (B1) | `sec:international_buyer_supplier` | ✅ | `phase6_b1_corrected.R` | Trend-corrected β = -0.560 on RMD. Event-study figure regenerated 2026-05-04, both naive and de-trended figures clean. |
 | HTE on B1 (B2) | `sec:international_hte` | ✅ | `phase6_b1_b2_customs_buyer_supplier.R` (RMD-RUN 2026-05-04) | Horizon LP confirms B1-corrected naive event study: pre-trend rises monotonically from -0.37 (h=-9) to ~0 (h=-1, all significant), post-period declines monotonically from -0.022 (h=0) to -0.306 (h=7, all *** post-h=1). Quartile split: Q4 (heaviest) β = -1.84, Q1 = -0.23, both n.s. (large SE). |
 | Non-EU price response (B3) | `sec:international_price_response` | ✅ | `phase6_b3_nonEU_price_response.R` (RMD-RUN 2026-05-04) | β = +0.069 (s.e. 0.054, p=0.20). **Null**: non-EU exporters did not systematically adjust unit-value prices in response to EU ETS. Year-by-year: 2017 = +0.21 ** (one notable spike), other post-2015 years insignificant. **Strengthens the B1 substitution interpretation** — the cross-border substitution we recover reflects real reallocation, not strategic pricing offset by non-EU exporters. |
@@ -124,8 +124,8 @@ The numbering below uses the actual `\label{}` keys from the .tex files.
 §5.1.2   → phase6_a1_test_h_horizon_lp.R
 §5.1.4   → phase6_a2_test_i_horizon_hte.R
 §5.1.6,7 → phase6_a3_a4_phase2_eventstudy.R    (depends on P1)
-§5.2.1   → phase2_cmdj_table1.R                (existing, in paper)
-§5.2.1*  → phase6_cmdj_table1_corrected.R      (NEW, trend-corrected revisit)
+§5.2.1   → phase2_cdgm_table1.R                (existing, in paper)
+§5.2.1*  → phase6_cdgm_table1_corrected.R      (NEW, trend-corrected revisit)
 §5.2.2   → phase6_b1_corrected.R               (RUN; β = -0.560 trend-corrected)
 §5.2.3   → phase6_b1_b2_customs_buyer_supplier.R (formal quartile HTE; horizon already in B1)
 §5.2.4   → phase6_b3_nonEU_price_response.R    (depends on P2)
@@ -139,7 +139,7 @@ The numbering below uses the actual `\label{}` keys from the .tex files.
 
 ## Open methodological issues / things to revisit
 
-1. **CMdG trend-correction.** Just pushed `phase6_cmdj_table1_corrected.R`. RMD result will tell us whether §5.2.1's Belgium null is robust to the pre-trend that hit B1, or whether the headline needs to flip. Three possible outcomes documented in the script's docstring.
+1. **CdGM trend-correction.** Just pushed `phase6_cdgm_table1_corrected.R`. RMD result will tell us whether §5.2.1's Belgium null is robust to the pre-trend that hit B1, or whether the headline needs to flip. Three possible outcomes documented in the script's docstring.
 
 2. **Test H trend-correction (analog for §5.1.1).** Test H's pre-trend test in the original paper used a continuous-trend control on the headline regressor and got a non-significant slope (p = 0.42). So Test H is plausibly trend-robust already. **Worth confirming** by running Test H with the explicit linear-trend control as a sibling to phase6_b1_corrected, just to be belt-and-braces. Not high priority.
 
@@ -153,7 +153,7 @@ The numbering below uses the actual `\label{}` keys from the .tex files.
 
 ## Recommended RMD next runs (in order)
 
-1. ~~`phase6_cmdj_table1_corrected.R`~~ ✅ **DONE** (RMD-RUN 2026-05-04). §5.2.1 headline reinforced.
+1. ~~`phase6_cdgm_table1_corrected.R`~~ ✅ **DONE** (RMD-RUN 2026-05-04). §5.2.1 headline reinforced.
 2. **`phase6_a1_test_h_horizon_lp.R`** — within-country horizon IRF (§5.1.2). Tests whether Test H is trend-active or stays Cobb-Douglas across horizons. ~5 min.
 3. **`phase6_b3_nonEU_price_response.R`** — non-EU exporter pricing, fills §5.2.4. ~5 min.
 4. **`phase6_b4_sigma_from_customs_prices.R`** — structural σ from customs prices, fills §5.2.5. ~10 min.

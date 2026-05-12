@@ -226,7 +226,7 @@ Restrict to buyer NACE 2d == "23" (cement / non-metallic minerals — the only s
 
 ## Test I — across-NACE-4d category substitution (May 2026)
 
-[analysis/phase5_test_i_cross_nace_substitution.R](analysis/phase5_test_i_cross_nace_substitution.R) is the buyer-side analog of CMdG's regulated-vs-unregulated PPI event study, but on the **input-mix** rather than the output-PPI margin. It asks: when carbon pricing raises the average price of input category n (driven by category n's average ETS exposure), do Belgian buyers reweight expenditure away from category n toward less-exposed categories?
+[analysis/phase5_test_i_cross_nace_substitution.R](analysis/phase5_test_i_cross_nace_substitution.R) is the buyer-side analog of CdGM's regulated-vs-unregulated PPI event study, but on the **input-mix** rather than the output-PPI margin. It asks: when carbon pricing raises the average price of input category n (driven by category n's average ETS exposure), do Belgian buyers reweight expenditure away from category n toward less-exposed categories?
 
 ### Construction
 
@@ -251,7 +251,7 @@ Identification: buyer × year FE absorbs each buyer's overall scale and time pat
 | I.1 pooled (no detrend) | +34.5 | 15.2 | 0.023 | wrong sign, significant |
 | I.2 detrended POST | −43.3 | 12.5 | 0.0005 | right sign, but artifact of linear-trend imposition (see below) |
 | I.2 detrended TREND | +9.1 | 2.2 | <0.001 | strong full-sample drift (high-exposure categories grew their share over 2005-2022) |
-| **I.3 binary regulated × Post (CMdG-domestic analog)** | **−0.0026** | **0.0087** | **0.76** | **null** |
+| **I.3 binary regulated × Post (CdGM-domestic analog)** | **−0.0026** | **0.0087** | **0.76** | **null** |
 | Robustness: log(spend) | +153.96 | 13.4 | <1e-30 | wrong sign, very significant |
 
 Detrended event study (year-by-year coefficient on `nace_exposure × year_f`, post-hoc detrended on the 2005-2014 linear fit):
@@ -274,7 +274,7 @@ Detrended event study (year-by-year coefficient on `nace_exposure × year_f`, po
 
 I.2 imposes a *single linear trend* fit on the full panel. The event-study evidence shows the data does not fit a single linear trend: pre-period coefficients jump between −24.5 (2011, financial-crisis aftermath) and +33.8 (2012, post-crisis rebound). Imposing a single slope of +9.09/year on this jagged series forces the post-period level shift to be negative even though the year-by-year detrended event-study coefficients are uniformly positive.
 
-The cleaner specifications — I.3 (binary regulated dummy, the most direct CMdG-domestic analog), I.4 (event study with pre-period-only trend), and the log-spend robustness — all point in the opposite direction: no substitution, or the wrong sign.
+The cleaner specifications — I.3 (binary regulated dummy, the most direct CdGM-domestic analog), I.4 (event study with pre-period-only trend), and the log-spend robustness — all point in the opposite direction: no substitution, or the wrong sign.
 
 ### Test I quartile split: degenerate
 

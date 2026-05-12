@@ -1,7 +1,7 @@
 # Phase 0 Step 1 — build the regulated CN8 list.
 #
 # Inputs:
-#   * data/concordances/regulated_hs_rules.csv — encoded rules from CMDJ Tables A.2 + A.3.
+#   * data/concordances/regulated_hs_rules.csv — encoded rules from CDGM Tables A.2 + A.3.
 #   * NBB_data/raw/Correspondences_and_dictionaries/Website_nc8corresp/nom_nc8/CN_unpacked/
 #     CN_yyyy.csv (1995-2018) — Bergounhon-Lenoir-Mejean (2018) companion CN nomenclatures.
 #     Complete EU CN universe 1995-2018 with no PRODCOM restriction. PRIMARY universe source.
@@ -20,7 +20,7 @@
 #   5. Apply CBAM rules analogously, with group_id = cbam_category.
 #   6. is_regulated = is_ets | is_cbam.
 #   7. Single-year sanity check: restrict to codes existing in 2014 and compare per-chapter
-#      counts to CMDJ Table A.4.
+#      counts to CDGM Table A.4.
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
@@ -110,40 +110,40 @@ cat("  ETS-regulated CN8s :", sum(cn$is_ets), "\n")
 cat("  CBAM-regulated CN8s:", sum(cn$is_cbam), "\n")
 cat("  Union              :", sum(cn$is_regulated), "\n")
 
-cat("\n--- 2014 single-year snapshot (CMDJ-comparable universe) ---\n")
+cat("\n--- 2014 single-year snapshot (CDGM-comparable universe) ---\n")
 cn_2014 <- cn[exists_2014 == TRUE]
 cat("  Universe size      :", nrow(cn_2014),
-    " (CMDJ raw universe: 10,174 across all years)\n")
+    " (CDGM raw universe: 10,174 across all years)\n")
 cat("  ETS-regulated CN8s :", sum(cn_2014$is_ets),
-    " (CMDJ Table A.4 ETS  1,444 -- caveat: harmonized-product count)\n")
+    " (CDGM Table A.4 ETS  1,444 -- caveat: harmonized-product count)\n")
 cat("  CBAM-regulated CN8s:", sum(cn_2014$is_cbam),
-    " (CMDJ Table A.4 CBAM   421)\n")
+    " (CDGM Table A.4 CBAM   421)\n")
 cat("  Union              :", sum(cn_2014$is_regulated),
-    " (CMDJ Table A.4 Union 1,464)\n")
+    " (CDGM Table A.4 Union 1,464)\n")
 
-cat("\nETS counts by HS chapter, 2014 snapshot (compare with CMDJ Table A.4 col (1)):\n")
-cmdj_ets <- c("25"=20, "26"=26, "27"=109, "28"=219, "29"=435, "31"=0, "38"=1,
+cat("\nETS counts by HS chapter, 2014 snapshot (compare with CDGM Table A.4 col (1)):\n")
+cdgm_ets <- c("25"=20, "26"=26, "27"=109, "28"=219, "29"=435, "31"=0, "38"=1,
               "47"=17, "48"=61, "68"=7, "69"=49, "70"=131, "72"=321, "73"=249,
               "74"=65, "75"=17, "76"=56, "78"=11, "79"=11, "80"=8, "81"=69)
 ours_ets_2014 <- cn_2014[is_ets == TRUE, .N, by = hs2][order(hs2)]
-ours_ets_2014[, cmdj := cmdj_ets[hs2]]
-ours_ets_2014[, ratio := round(N / cmdj, 2)]
+ours_ets_2014[, cdgm := cdgm_ets[hs2]]
+ours_ets_2014[, ratio := round(N / cdgm, 2)]
 print(ours_ets_2014)
 
-cat("\nCBAM counts by HS chapter, 2014 snapshot (compare with CMDJ Table A.4 col (3)):\n")
-cmdj_cbam <- c("25"=7, "26"=1, "27"=1, "28"=5, "31"=24, "72"=308, "73"=157, "76"=49)
+cat("\nCBAM counts by HS chapter, 2014 snapshot (compare with CDGM Table A.4 col (3)):\n")
+cdgm_cbam <- c("25"=7, "26"=1, "27"=1, "28"=5, "31"=24, "72"=308, "73"=157, "76"=49)
 ours_cbam_2014 <- cn_2014[is_cbam == TRUE, .N, by = hs2][order(hs2)]
-ours_cbam_2014[, cmdj := cmdj_cbam[hs2]]
-ours_cbam_2014[, ratio := round(N / cmdj, 2)]
+ours_cbam_2014[, cdgm := cdgm_cbam[hs2]]
+ours_cbam_2014[, ratio := round(N / cdgm, 2)]
 print(ours_cbam_2014)
 
-cat("\nUnion counts by HS chapter, 2014 snapshot (compare with CMDJ Table A.4 col (5)):\n")
-cmdj_union <- c("25"=21, "26"=26, "27"=109, "28"=219, "29"=435, "31"=24, "38"=1,
+cat("\nUnion counts by HS chapter, 2014 snapshot (compare with CDGM Table A.4 col (5)):\n")
+cdgm_union <- c("25"=21, "26"=26, "27"=109, "28"=219, "29"=435, "31"=24, "38"=1,
                 "47"=17, "48"=61, "68"=7, "69"=49, "70"=131, "72"=321, "73"=249,
                 "74"=65, "75"=17, "76"=56, "78"=11, "79"=11, "80"=8, "81"=69)
 ours_un_2014 <- cn_2014[is_regulated == TRUE, .N, by = hs2][order(hs2)]
-ours_un_2014[, cmdj := cmdj_union[hs2]]
-ours_un_2014[, ratio := round(N / cmdj, 2)]
+ours_un_2014[, cdgm := cdgm_union[hs2]]
+ours_un_2014[, ratio := round(N / cdgm, 2)]
 print(ours_un_2014)
 
 # 3. Write the output.

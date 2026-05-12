@@ -37,7 +37,7 @@
 #      year, inputs_VAT, turnover_VAT, nace5d)
 #   ${PROC_DATA}/firm_year_domestic_input_cost.RData
 #     (firm_year_domestic_input_cost; vat, year, input_cost)
-#   ${PROC_DATA}/b2b_cmdj_panel.RData (panel) -- for buyer set + buyer NACE
+#   ${PROC_DATA}/b2b_cdgm_panel.RData (panel) -- for buyer set + buyer NACE
 #
 # OUTPUT:
 #   output/tables/phase5_moment5_buyer_volatility_inputsVAT.csv
@@ -76,7 +76,7 @@ cat("Loading firm-year domestic input cost...\n")
 load(file.path(PROC_DATA, "firm_year_domestic_input_cost.RData"))
 
 cat("Loading B2B panel (for buyer set)...\n")
-load(file.path(PROC_DATA, "b2b_cmdj_panel.RData"))
+load(file.path(PROC_DATA, "b2b_cdgm_panel.RData"))
 
 # ---- Buyer set: VATs that appear as buyers in the B2B leakage panel ----
 b2b_buyers <- panel %>% distinct(buyer) %>% pull(buyer)
@@ -414,7 +414,7 @@ write.csv(ds_summary,
 # Apples-to-apples with pair_shock (option (b) in user's framing).
 #
 # Caveat: NACE-4d spending here uses domestic B2B-aggregated values from
-# b2b_cmdj_panel; misses imports and intra-firm transactions in that NACE.
+# b2b_cdgm_panel; misses imports and intra-firm transactions in that NACE.
 # This is the closest measurable proxy.
 # ===========================================================================
 cat("\n=== sigma_nace: scale-stripped sigma at (buyer x NACE 4d) level ===\n")

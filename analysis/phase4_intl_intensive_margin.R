@@ -2,7 +2,7 @@
 # phase4_intl_intensive_margin.R
 #
 # PURPOSE
-#   International reallocation margin -- intensive side. CMdG (2024) Figure 2
+#   International reallocation margin -- intensive side. CdGM (2024) Figure 2
 #   panel (a) for Belgium: aggregate import share by (product-regulation x
 #   source-country-ETS-status) cell, by year.
 #
@@ -17,8 +17,8 @@
 #       share_{c,t} = sum_{f,p,i in cell c} value_{f,p,i,t}
 #                   / sum_{f,p,i}          value_{f,p,i,t}
 #
-#   Replicates CMdG Figure 2 panel (a). Plot shows 3 lines (ETS-Regulated,
-#   Non-ETS-Regulated, Non-ETS-Unregulated) per CMdG. The ETS-Unregulated cell
+#   Replicates CdGM Figure 2 panel (a). Plot shows 3 lines (ETS-Regulated,
+#   Non-ETS-Regulated, Non-ETS-Unregulated) per CdGM. The ETS-Unregulated cell
 #   is computed and saved in the CSV but not drawn (it is the implicit fourth
 #   that closes the four shares to 1).
 #
@@ -73,7 +73,7 @@ cat(sprintf("After dropping zero-activity years: %d rows, years %d-%d\n",
 # ---------------------------------------------------------------------------
 # 2. Cell classification (4 cells; 3 plotted)
 # ---------------------------------------------------------------------------
-# CMdG Figure 2 uses time-invariant country classification: a partner is
+# CdGM Figure 2 uses time-invariant country classification: a partner is
 # "ETS" if it is *ever* in the EU ETS (i.e., has is_non_ets_country == 0 in
 # any sample year). The panel as built carries year-specific is_non_ets_country
 # which is 1 for ALL countries pre-2005 (because country_ets_status.csv only
@@ -119,12 +119,12 @@ fwrite(agg[, .(year, cell, value, total_year = total, share)], out_tab)
 cat("\nTable saved:", out_tab, "\n")
 
 # ---------------------------------------------------------------------------
-# 5. Plot (3 lines, CMdG-style)
+# 5. Plot (3 lines, CdGM-style)
 # ---------------------------------------------------------------------------
 plot_dt <- agg[cell %in% c("Non-ETS-Regulated", "ETS-Regulated", "Non-ETS-Unregulated")]
 plot_dt[, cell := droplevels(cell)]
 
-# CMdG palette: dark navy (treated), steel-grey (ETS-Reg control), pale blue (Non-ETS-Unreg control).
+# CdGM palette: dark navy (treated), steel-grey (ETS-Reg control), pale blue (Non-ETS-Unreg control).
 cmdg_colors  <- c("Non-ETS-Regulated"   = "#1f3b5b",
                   "ETS-Regulated"       = "#7a8da0",
                   "Non-ETS-Unregulated" = "#a9c5d8")
@@ -139,7 +139,7 @@ p <- ggplot(plot_dt, aes(x = year, y = share, color = cell, shape = cell)) +
   scale_y_continuous(labels = scales::number_format(accuracy = 0.1)) +
   scale_color_manual(values = cmdg_colors, name = NULL) +
   scale_shape_manual(values = cmdg_shapes, name = NULL) +
-  labs(title    = "International reallocation -- intensive margin (CMdG Fig. 2a)",
+  labs(title    = "International reallocation -- intensive margin (CdGM Fig. 2a)",
        subtitle = "Aggregate import share by (product, source-country) cell. Belgium customs panel.",
        x = NULL, y = "Import share") +
   theme_minimal(base_size = 11) +

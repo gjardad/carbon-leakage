@@ -1,6 +1,6 @@
-# phase3_b2b_cmdj_did_continuous.R
+# phase3_b2b_cdgm_did_continuous.R
 #
-# Three changes vs phase3_b2b_cmdj_did.R:
+# Three changes vs phase3_b2b_cdgm_did.R:
 #
 #   (1) Continuous-intensity treatment: firm_cost_share_j (per Angle 4 /
 #       phase4_b2b_supplier_switching.R) replaces the binary
@@ -40,9 +40,9 @@
 #                  separately.
 #
 # Outputs:
-#   output/tables/phase3_b2b_cmdj_continuous_phase.csv  (phase-aggregated, 6 cols + 1 robustness)
-#   output/tables/phase3_b2b_cmdj_continuous_eventstudy.csv  (year-by-year)
-#   output/figures/phase3_b2b_cmdj_continuous_eventstudy.png
+#   output/tables/phase3_b2b_cdgm_continuous_phase.csv  (phase-aggregated, 6 cols + 1 robustness)
+#   output/tables/phase3_b2b_cdgm_continuous_eventstudy.csv  (year-by-year)
+#   output/figures/phase3_b2b_cdgm_continuous_eventstudy.png
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
@@ -238,7 +238,7 @@ out_share_c4 <- extract_continuous(m_share_c4, "share, col4 FE (seller_buyer + b
 
 # NOTE on probability outcome (extensive margin):
 # The probability regression requires a balanced (zero-fill) panel. The
-# existing b2b_cmdj_panel.RData only covers 2005+ (it was built from
+# existing b2b_cdgm_panel.RData only covers 2005+ (it was built from
 # b2b_selected_sample which restricted to 2005+). Running probability on
 # that panel would mean no pre-trend test for the extensive margin.
 # Rebuilding a 2002+ balanced panel is non-trivial because of the cross-join
@@ -252,9 +252,9 @@ phase_out[, ci_hi := estimate + 1.96 * se]
 
 tab_dir <- file.path(REPO_DIR, "output", "tables")
 dir.create(tab_dir, recursive = TRUE, showWarnings = FALSE)
-fwrite(phase_out, file.path(tab_dir, "phase3_b2b_cmdj_continuous_phase.csv"))
+fwrite(phase_out, file.path(tab_dir, "phase3_b2b_cdgm_continuous_phase.csv"))
 cat("\nPhase table saved:",
-    file.path(tab_dir, "phase3_b2b_cmdj_continuous_phase.csv"), "\n")
+    file.path(tab_dir, "phase3_b2b_cdgm_continuous_phase.csv"), "\n")
 
 # ---------------------------------------------------------------------------
 # 10. Event study: year-by-year coefficients on (firm_cost_share x year_f)
@@ -288,7 +288,7 @@ print(es_share[, .(year, beta = round(estimate, 4),
                    ci_lo = round(ci_lo, 4),
                    ci_hi = round(ci_hi, 4))])
 
-fwrite(es_share, file.path(tab_dir, "phase3_b2b_cmdj_continuous_eventstudy.csv"))
+fwrite(es_share, file.path(tab_dir, "phase3_b2b_cdgm_continuous_eventstudy.csv"))
 
 # Plot.
 make_es_plot <- function(es_dt, ylab, panel_title) {
@@ -304,14 +304,14 @@ p_share <- make_es_plot(es_share, expression(beta[tau]),
                         "Share, active pairs only -- continuous intensity (firm_cost_share)")
 combined <- p_share +
   plot_annotation(
-    title = "B2B CMdG continuous-intensity event study",
+    title = "B2B CdGM continuous-intensity event study",
     subtitle = sprintf("Treatment = firm_cost_share x year (vs %d). FE: seller^buyer + sn4d^year + bn4d^year. Cluster: seller + buyer.",
                        REF_YEAR),
     caption = "Active-pairs-only sample. Pre-period 2002-2004 included to test parallel trends.")
 
 fig_dir <- file.path(REPO_DIR, "output", "figures")
 dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
-ggsave(file.path(fig_dir, "phase3_b2b_cmdj_continuous_eventstudy.png"),
+ggsave(file.path(fig_dir, "phase3_b2b_cdgm_continuous_eventstudy.png"),
        combined, width = 9, height = 5, dpi = 200)
 cat("\nFigure saved:",
-    file.path(fig_dir, "phase3_b2b_cmdj_continuous_eventstudy.png"), "\n")
+    file.path(fig_dir, "phase3_b2b_cdgm_continuous_eventstudy.png"), "\n")

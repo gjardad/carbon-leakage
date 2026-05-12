@@ -9,7 +9,7 @@
 #   * EU-1 2013 accession (HR) -- 2013+.
 #   * EEA-EFTA (IS, LI, NO) -- 2008+.
 #   * Switzerland (CH) -- separate Swiss ETS linked only from 2020. Treated as
-#     non-ETS in the CMdG framework throughout.
+#     non-ETS in the CdGM framework throughout.
 #
 # Output: data/concordances/country_ets_status.csv long form
 #         (iso2, year, is_ets, accession_year, country_group).

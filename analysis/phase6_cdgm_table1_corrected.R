@@ -1,16 +1,16 @@
 # =============================================================================
-# Trend-corrected CMdG Table 1 (paper §5.2.1, addressing the same concern that
+# Trend-corrected CdGM Table 1 (paper §5.2.1, addressing the same concern that
 # motivated phase6_b1_corrected on the buyer-supplier specification).
 #
-# The original phase2_cmdj_table1.R reports CMdG's Phase-φ binary specification
+# The original phase2_cdgm_table1.R reports CdGM's Phase-φ binary specification
 # without a continuous-time trend control. On the buyer-supplier B1 spec we
 # found that adding a `pair_exposure_EU × year_centered` continuous trend
 # control flipped the headline coefficient by an order of magnitude and changed
-# the sign on Belgium. The natural follow-up question is: does the CMdG
+# the sign on Belgium. The natural follow-up question is: does the CdGM
 # specification ALSO have a hidden linear trend that the Phase-φ binaries
 # don't absorb?
 #
-# Spec extension. CMdG's original equation:
+# Spec extension. CdGM's original equation:
 #   y_{f,p,i,t} = β_1 · 1[reg]_p × 1[t ∈ Phase 1]
 #               + β_2 · 1[reg]_p × 1[t ∈ Phase 2]
 #               + β_3 · 1[reg]_p × 1[t ∈ Phase 3]
@@ -25,15 +25,15 @@
 # diverging on the y outcome before and outside the Phase boundaries.
 #
 # Same panel, same six FE columns, same two-way clustering as the original
-# phase2_cmdj_table1.R. Same outcomes (share + probability).
+# phase2_cdgm_table1.R. Same outcomes (share + probability).
 #
-# Sample window: 2000-2019 to match CMdG exactly. The extended panel through
+# Sample window: 2000-2019 to match CdGM exactly. The extended panel through
 # 2022 is NOT used here — that extension is for the buyer-supplier spec
-# (phase6_b1_corrected) where comparability with CMdG France isn't a goal.
+# (phase6_b1_corrected) where comparability with CdGM France isn't a goal.
 #
 # Outputs:
-#   ${OUT_TAB}/phase6_cmdj_corrected_A.csv  — share, 6 columns × (3 phases + 1 trend)
-#   ${OUT_TAB}/phase6_cmdj_corrected_B.csv  — prob,  6 columns × (3 phases + 1 trend)
+#   ${OUT_TAB}/phase6_cdgm_corrected_A.csv  — share, 6 columns × (3 phases + 1 trend)
+#   ${OUT_TAB}/phase6_cdgm_corrected_B.csv  — prob,  6 columns × (3 phases + 1 trend)
 # =============================================================================
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
@@ -49,7 +49,7 @@ OUT_TAB <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "tables")
 dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
 
 # ---------------------------------------------------------------------------
-# 1. Load customs panel — same as phase2_cmdj_table1.R
+# 1. Load customs panel — same as phase2_cdgm_table1.R
 # ---------------------------------------------------------------------------
 USE_MOCK <- !file.exists(file.path(PROC_DATA, "customs_import_panel_regulated.dta"))
 if (USE_MOCK) {
@@ -65,11 +65,11 @@ if (USE_MOCK) {
 }
 cat("Panel rows (full):", nrow(d), "\n")
 
-# CMdG-EXACT: restrict regression sample to non-ETS source countries.
+# CdGM-EXACT: restrict regression sample to non-ETS source countries.
 d <- d[is_non_ets_country == 1L]
 cat("Panel rows (non-ETS only):", nrow(d), "\n")
 
-# Sample window: 2000-2019 to match CMdG exactly.
+# Sample window: 2000-2019 to match CdGM exactly.
 d <- d[year %between% c(2000L, 2019L)]
 
 # Outcomes.
@@ -170,11 +170,11 @@ print(B_out)
 # 4. Save
 # ---------------------------------------------------------------------------
 out_A <- file.path(OUT_TAB,
-                    ifelse(USE_MOCK, "phase6_cmdj_corrected_A_MOCK.csv",
-                                      "phase6_cmdj_corrected_A.csv"))
+                    ifelse(USE_MOCK, "phase6_cdgm_corrected_A_MOCK.csv",
+                                      "phase6_cdgm_corrected_A.csv"))
 out_B <- file.path(OUT_TAB,
-                    ifelse(USE_MOCK, "phase6_cmdj_corrected_B_MOCK.csv",
-                                      "phase6_cmdj_corrected_B.csv"))
+                    ifelse(USE_MOCK, "phase6_cdgm_corrected_B_MOCK.csv",
+                                      "phase6_cdgm_corrected_B.csv"))
 fwrite(A_out, out_A)
 fwrite(B_out, out_B)
 cat("\nPanel A saved:", out_A, "\n")
@@ -189,7 +189,7 @@ cat("=========================================================\n")
 cat("Each Phase-φ coefficient β_φ now identifies the LEVEL SHIFT\n")
 cat("over that phase window relative to pre-2005, NET of the linear\n")
 cat("regulated-vs-unregulated trend (captured by treat_yearc).\n\n")
-cat("Compare against the original (no-trend) phase2_cmdj_table1 results\n")
+cat("Compare against the original (no-trend) phase2_cdgm_table1 results\n")
 cat("(local-1 col 5 reference: Phase 3 share -0.0024**).\n\n")
 cat("- If treat_yearc is small / insignificant: original headline is\n")
 cat("  trend-robust. The Phase-φ coefficients should be similar to the\n")

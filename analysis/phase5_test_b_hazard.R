@@ -62,7 +62,7 @@ POST_FROM <- 2015L
 # ---------------------------------------------------------------------------
 # 1. Load balanced B2B panel (Phase 3 universe; 2005-2022)
 # ---------------------------------------------------------------------------
-load(file.path(PROC_DATA, "b2b_cmdj_panel.RData"))   # panel
+load(file.path(PROC_DATA, "b2b_cdgm_panel.RData"))   # panel
 load(file.path(PROC_DATA, "b2b_pair_age.RData"))     # pair_age
 load(file.path(PROC_DATA, "firm_cost_share_flavors.RData"))   # cost_share_regressor
 
