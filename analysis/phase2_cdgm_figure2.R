@@ -43,11 +43,15 @@
 #                                          non-ETS pool. Tests whether China
 #                                          drives the non-ETS lines.
 #
-# Inputs:
-#   * RMD: ${PROC_NBB}/customs_import_panel_regulated.dta
-#   * local 1: NBB_data/processed/customs_import_panel_regulated.RData
-#     (or mock_customs_import_panel_regulated.RData if not present; toggle
-#     via USE_MOCK).
+# Inputs (in preference order):
+#   * customs_import_panel_extended.RData  (2000-2022, preferred on RMD)
+#   * customs_import_panel_regulated.dta   (2000-2019, CdGM-window, RMD/local)
+#   * customs_import_panel_regulated.RData (2000-2019, local-1)
+#   * mock_customs_import_panel_regulated.RData (development fallback)
+#
+# The extended panel adds the 2020-2022 Phase IV / EUA-spike window, which
+# is critical for any leakage signal that's price-driven. The regulated panel
+# stops at 2019 (CdGM-window) and is kept as a fallback.
 #
 # Outputs (per paths.R: output_local/ on local-1, output_rmd/ on RMD):
 #   * figures/phase2_cdgm_figure2.png
@@ -67,17 +71,32 @@ library(data.table)
 library(ggplot2)
 library(patchwork)
 
-# Toggle: TRUE on local 1 to test against the mock panel; FALSE on RMD.
-USE_MOCK <- !file.exists(file.path(PROC_DATA, "customs_import_panel_regulated.dta"))
+# Load panel: prefer the 2000-2022 extended panel; fall back to the
+# 2000-2019 regulated panel; fall back to mock. USE_MOCK is set TRUE only
+# when no real panel is found.
+ext_rdata <- file.path(PROC_DATA, "customs_import_panel_extended.RData")
+reg_dta   <- file.path(PROC_DATA, "customs_import_panel_regulated.dta")
+reg_rdata <- file.path(PROC_DATA, "customs_import_panel_regulated.RData")
+mock_path <- file.path(PROC_DATA, "mock_customs_import_panel_regulated.RData")
 
-if (USE_MOCK) {
-  cat("USING MOCK CUSTOMS PANEL (local 1).\n")
-  load(file.path(PROC_DATA, "mock_customs_import_panel_regulated.RData"))
+USE_MOCK <- FALSE
+if (file.exists(ext_rdata)) {
+  cat("USING EXTENDED CUSTOMS PANEL (2000-2022).\n")
+  load(ext_rdata)
+  d <- as.data.table(panel)
+} else if (file.exists(reg_dta)) {
+  cat("WARNING: extended panel not found; using CdGM-window panel (2000-2019).\n")
+  if (!requireNamespace("haven", quietly = TRUE)) install.packages("haven", repos = "https://cloud.r-project.org")
+  d <- as.data.table(haven::read_dta(reg_dta))
+} else if (file.exists(reg_rdata)) {
+  cat("WARNING: extended panel not found; using CdGM-window panel (2000-2019, RData).\n")
+  load(reg_rdata)
   d <- as.data.table(panel)
 } else {
-  cat("USING REAL CUSTOMS PANEL (RMD).\n")
-  if (!requireNamespace("haven", quietly = TRUE)) install.packages("haven", repos = "https://cloud.r-project.org")
-  d <- as.data.table(haven::read_dta(file.path(PROC_DATA, "customs_import_panel_regulated.dta")))
+  cat("USING MOCK CUSTOMS PANEL (local 1, no real panel found).\n")
+  USE_MOCK <- TRUE
+  load(mock_path)
+  d <- as.data.table(panel)
 }
 
 cat("Panel rows:", nrow(d),
@@ -214,8 +233,9 @@ make_figure <- function(d_in, sample_label, fname_suffix) {
   p_combined <- (p_a / p_b) +
     plot_annotation(
       title = sprintf("CdGM Figure 2 replication: %s", sample_label),
-      subtitle = sprintf("Belgium customs panel%s, 2000-2019",
-                         ifelse(USE_MOCK, " (MOCK DATA)", "")),
+      subtitle = sprintf("Belgium customs panel%s, %d-%d",
+                         ifelse(USE_MOCK, " (MOCK DATA)", ""),
+                         min(d_in$year), max(d_in$year)),
       caption = paste("Four lines:",
                       paste(GROUP_LEVELS, collapse = "; "),
                       ".  Panel (a) denominator: within-regulation-status",
