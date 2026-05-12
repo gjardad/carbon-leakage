@@ -767,12 +767,48 @@ Combined with the §3.1 evidence — within-sector reallocation ≈ 0 by GK deco
 
 **The within-NACE4d analysis is closed.** Remaining margins to test (per [TODO.md §1b](TODO.md)) are across-NACE4d (intensive + extensive) and international supplier substitution (intensive + extensive).
 
-### Section 8: Caveats (whole Phase 4 B2B network)
+### Section 8: Caveats (whole Phase 4 B2B network within-NACE4d)
 
 - Tests 1–3 and 6 only cover reallocation involving the ~150–200 large EUTL-regulated firms in Belgium per year (the omega-rankable supplier universe). Reallocation among smaller non-ETS firms in the same NACE4d is not measured by this design.
 - Tests 1 and 3 use top-omega vs bottom-omega within-cell — but top-omega supplier ≈ top-by-sales supplier in ~45% of cells, so the specifications partly capture size dynamics. Pure omega isolation would require Tests 2 (top-Q by omega gap) or 6 (omega-rank as outcome).
 - Test 6 fixed-rank DiD strips within-firm omega evolution by construction. Test 6 also reports the hybrid (year-t rank) trajectory separately to characterise the within-firm channel.
 - All p-values are unconditional; we have not adjusted for the multiple hypothesis testing implicit in running six tests × three event years × multiple sample restrictions.
+
+---
+
+## Phase 4 (B2B network) — across-NACE4d reallocation
+
+Added 2026-05-12. Scripts: the `analysis/phase4_across_nace4d_intensive_*.R` family (4 cuts) and `analysis/phase4_across_nace4d_extensive_*.R` family (4 cuts × 2 outcomes). All findings below on full NBB-RMD data.
+
+Companion to the within-NACE4d section. Asks whether buyers shift expenditure or supplier choice **across NACE4d sectors** in response to ETS — e.g., from ETS-treated to non-ETS NACE4d, or from high-shortage to low-shortage ETS-NACE4d. Headline definition: a NACE4d is "ETS-treated" if it contains ≥1 EUTL-listed firm in any year; "high-shortage" if its 2008–12 sum_shortage / sum_total_cost (over EUTL firms in that NACE4d) is positive.
+
+### Four heterogeneity cuts × two margins
+
+| Cut | Intensive margin (share of buyer expenditure) | Extensive margin (share of buyers + count of distinct sectors) |
+|---|---|---|
+| **#1 Sector shortage** (high vs low ETS-NACE4d) | High-shortage ≈ 3%, low-shortage ≈ 13%, non-ETS ≈ 83%. **All three flat 2005–2022.** [`_intensive_by_shortage.png`](output_rmd/figures/phase4_across_nace4d_intensive_by_shortage.png) | Share: high-shortage drifts ~53% → ~43% pre-2015, then a ~17pp upward step at 2015–16, settling ~60%+ post-2016. **The 2015–16 break survives full sample — a real B2B reporting discontinuity, not downsampling.** Count: both bins flat at ~2.3 / ~2.7. [`_extensive_by_shortage_share.png`](output_rmd/figures/phase4_across_nace4d_extensive_by_shortage_share.png), [`_count.png`](output_rmd/figures/phase4_across_nace4d_extensive_by_shortage_count.png) |
+| **#2 Buyer pre-period exposure quartile** | Q3 high-exposure ~13% (2012) → ~10% (2022), monotonic. Q0/Q1/Q2 cluster <4%. **The Q3 decline is the most consistent positive-direction signal but timing doesn't line up with ETS events** — see note below. [`_intensive_by_buyer_exposure.png`](output_rmd/figures/phase4_across_nace4d_intensive_by_buyer_exposure.png) | Share: Q3 stable at 90–95%; Q3 buyer-level count of distinct high-shortage NACE4d *rises* 2.7 → 3.1 post-2018. [`_extensive_by_buyer_exposure_share.png`](output_rmd/figures/phase4_across_nace4d_extensive_by_buyer_exposure_share.png), [`_count.png`](output_rmd/figures/phase4_across_nace4d_extensive_by_buyer_exposure_count.png) |
+| **#4 Domestic vs imported** (same NACE4d set via HS→NACE4d concordance) | Domestic ~80%, imports ~20%, **flat across 2005–2018**. No leakage-via-imports signal. [`_domestic_vs_imported.png`](output_rmd/figures/phase4_across_nace4d_domestic_vs_imported.png) | Share of buyers importing any high-shortage product: ~1%, flat. Count of imported high-shortage NACE4d per buyer: 0.36, flat. [`_extensive_domestic_vs_imported_share.png`](output_rmd/figures/phase4_across_nace4d_extensive_domestic_vs_imported_share.png) |
+| **#7 Size × exposure** (size quartiles within each pre-period exposure bin) | In the high-exposure facet, Q4 (largest) drifts down ~95% → ~80% across 2010–2022. Q1/Q2/Q3 hold steady. Other facets show no pattern. [`_intensive_by_size_holding_exposure.png`](output_rmd/figures/phase4_across_nace4d_intensive_by_size_holding_exposure.png) | Q4 high-exposure count of distinct high-shortage NACE4d ~4 throughout, slight upward drift. Other facets flat or near-zero. [`_extensive_by_size_holding_exposure_share.png`](output_rmd/figures/phase4_across_nace4d_extensive_by_size_holding_exposure_share.png), [`_count.png`](output_rmd/figures/phase4_across_nace4d_extensive_by_size_holding_exposure_count.png) |
+
+### Interpretation
+
+Seven of ten cells in the table above are clean flats. Two of the three "movement" cells are contaminated by known issues:
+
+- **The pre-2015 decline in cut #1 extensive share** is bracketed by the 2015–16 B2B reporting discontinuity (the same one we identified earlier in supplier-counts diagnostics). The pre-2015 segment isn't paired with a clean post-period, so we can't run a credible DiD.
+- **The size-within-exposure Q4 drift in cut #7** is partly mechanical: the Q4 cohort starts near saturation (~95%) and any sectoral diversification mechanically pulls them down; it's also confounded with the same size-omega correlation we flagged in the within-NACE4d Tests 1 and 3.
+
+The remaining candidate signal is cut #2's **Q3 high-exposure intensive decline** (~13% in 2011–12 to ~10% in 2022). We've recorded this pattern but **we don't have a strong reason to believe it's connected to ETS pricing**. The decline starts in 2011, which doesn't line up with any ETS regime change (Phase III begins in 2013; MSR decision in 2017; EUA price jump in 2018), and the magnitude is modest (~3pp over a decade). Most plausibly the trajectory reflects compositional churn in the Q3 cohort, a structural decline in specific high-shortage Belgian sectors over 2012–2022 (steel restructuring, refining contraction), or a denominator effect (Q3 buyers' total B2B spend growing in non-ETS sectors faster than in high-shortage sectors). We have not investigated mechanism — deliberately, because the timing offers no policy hook. Flagging for posterity, not pursuing.
+
+### Bottom line
+
+Across-NACE4d reallocation is **inactive on all four heterogeneity cuts and both margins** that we can credibly identify. The two extensive-margin movement cells are data artefacts; the intensive-margin Q3 cohort decline isn't policy-timed and is most plausibly compositional or structural-sectoral.
+
+### Caveats
+
+- We have no formal DiD on the across-NACE4d batch. The within-NACE4d new-supplier omega-rank DiD with τ−1-fixed rank (above, Section 6) is the closest comparison — that one produced a clean β ≈ 0 at τ = 2013. We expect across-NACE4d to land similarly but have not run the equivalent specification.
+- The 2015–16 B2B reporting discontinuity (the "Belgian VAT-reporting threshold change" or similar — origin not yet diagnosed; checking with NBB) contaminates any pre/post comparison that straddles it. Pre-2015 segments can be read cleanly; post-2016 segments require a separate baseline.
+- The local-1 downsampled B2B has been confirmed to track full-RMD on trends for these cuts but not on levels (especially the domestic-vs-imported levels). All numbers above are RMD.
 
 ---
 
