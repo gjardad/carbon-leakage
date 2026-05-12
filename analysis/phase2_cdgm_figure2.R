@@ -9,17 +9,24 @@
 #   (b) Aggregate PROBABILITY of sourcing by year (extensive margin), three
 #       groups.
 #
-# Three groups:
-#   Control (unregulated x non-ETS):  regulated_product == 0 AND non_ets_country == 1
-#   Treated (regulated x non-ETS):    regulated_product == 1 AND non_ets_country == 1
-#   Regulated x ETS country (added):  regulated_product == 1 AND non_ets_country == 0
+# Three groups, classified by the time-invariant `is_ets_country_ever` flag
+# from country_ets_status.csv (joined on partner_iso2 × year). This avoids
+# the artificial 2005 jump that arose when EU-15 imports flipped from
+# is_non_ets_country = 1 (pre-2005, ETS didn't yet exist) to 0 (post-2005,
+# ETS member). With the new flag, EU-15 and EU-10 countries are classified
+# as "ETS country" for all years 2000-2022, even pre-policy; late joiners
+# (EU-2 from 2007, EU-1 from 2013, EEA-EFTA from 2008) remain time-varying
+# at their accession year. The Table 1 regression in phase2_cdgm_table1.R
+# still uses the time-varying is_non_ets_country and is unaffected.
+#
+#   Control (unregulated x non-ETS):  regulated_product == 0 AND is_ets_country_ever == FALSE
+#   Treated (regulated x non-ETS):    regulated_product == 1 AND is_ets_country_ever == FALSE
+#   Regulated x ETS country (added):  regulated_product == 1 AND is_ets_country_ever == TRUE
 #
 # Denominator for panel (a): total Belgian imports across ALL cells per year
 # (i.e. across both ETS and non-ETS source countries, both regulated and
 # unregulated products). This is the only choice that makes the three lines
-# directly comparable on the same axis. The two non-ETS lines no longer sum
-# to 1 (they sum to the share of non-ETS imports in total), but their TRENDS
-# are unchanged versus the original CdGM specification.
+# directly comparable on the same axis.
 #
 # Inputs:
 #   * RMD: ${PROC_NBB}/customs_import_panel_regulated.dta
@@ -62,16 +69,30 @@ if (USE_MOCK) {
 cat("Panel rows:", nrow(d),
     "  (firm x cn8 x partner x year cells, including zeros)\n")
 
-# Three-group classification on the FULL panel (no upfront non-ETS restriction).
+# Join the time-invariant ETS-country flag on (partner_iso2, year). The
+# customs panel currently only carries the time-varying is_non_ets_country;
+# the time-invariant `is_ets_country_ever` is read from country_ets_status.csv
+# here at runtime. Once phase2_build_customs_panel.R is re-run on RMD with
+# the updated builder, the flag will be in the panel directly and this join
+# becomes redundant — but harmless.
+ets_status_path <- file.path(REPO_DIR, "data", "concordances",
+                             "country_ets_status.csv")
+ets_status <- data.table::fread(ets_status_path,
+                                select = c("iso2", "year", "is_ets_country_ever"))
+setnames(ets_status, "iso2", "partner_iso2")
+d <- merge(d, ets_status, by = c("partner_iso2", "year"), all.x = TRUE)
+d[is.na(is_ets_country_ever), is_ets_country_ever := FALSE]
+
+# Three-group classification on the FULL panel (no upfront restriction).
 # Cells with unregulated x ETS-country are dropped (not in any of the three
 # groups), but they still contribute to the total-imports denominator for
 # panel (a).
 d[, group := fcase(
-  is_regulated_product == 0L & is_non_ets_country == 1L,
+  is_regulated_product == 0L & is_ets_country_ever == FALSE,
     "Control (unregulated x non-ETS)",
-  is_regulated_product == 1L & is_non_ets_country == 1L,
+  is_regulated_product == 1L & is_ets_country_ever == FALSE,
     "Treated (regulated x non-ETS)",
-  is_regulated_product == 1L & is_non_ets_country == 0L,
+  is_regulated_product == 1L & is_ets_country_ever == TRUE,
     "Regulated x ETS country",
   default = NA_character_
 )]

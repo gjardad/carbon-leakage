@@ -48,7 +48,7 @@
 #     (also saved as .dta for compatibility if downstream Stata users want it)
 #     Schema: vat, cn8, partner_iso2, year, value, quantity,
 #             nace4d, buyer_nace2d, is_regulated_product,
-#             is_non_ets_country, is_ets_firm
+#             is_non_ets_country, is_ets_country_ever, is_ets_firm
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
@@ -190,12 +190,22 @@ d <- merge(d, reg, by = "cn8", all.x = TRUE)
 d[is.na(is_regulated_product), is_regulated_product := 0L]
 
 # ---------------------------------------------------------------------------
-# 9. Country ETS-status flag
+# 9. Country ETS-status flags
+#   * is_non_ets_country  — historical truth, time-varying. Used by Table 1
+#                            regression (phase2_cdgm_table1.R).
+#   * is_ets_country_ever — time-invariant-from-EU-membership flag for
+#                            descriptive figures (phase2_cdgm_figure2.R).
+#                            TRUE for EU-15/EU-10/UK from 2000+, time-varying
+#                            at accession year for late joiners (EU-2/EU-1/
+#                            EEA-EFTA). See phase0_build_country_ets_status.R.
 # ---------------------------------------------------------------------------
 etsc <- fread(file.path(REPO_DIR, "data", "concordances", "country_ets_status.csv"))
-etsc <- unique(etsc[, .(partner_iso2 = iso2, year, is_ets_country = as.integer(is_ets))])
+etsc <- unique(etsc[, .(partner_iso2 = iso2, year,
+                         is_ets_country     = as.integer(is_ets),
+                         is_ets_country_ever = as.integer(is_ets_country_ever))])
 d <- merge(d, etsc, by = c("partner_iso2", "year"), all.x = TRUE)
-d[is.na(is_ets_country), is_ets_country := 0L]
+d[is.na(is_ets_country),      is_ets_country      := 0L]
+d[is.na(is_ets_country_ever), is_ets_country_ever := 0L]
 d[, is_non_ets_country := 1L - is_ets_country]
 d[, is_ets_country := NULL]
 
@@ -249,9 +259,10 @@ for (cl in prop_cols) {
 }
 
 # Time-varying: re-merge ETS country and ETS firm flags for zero-filled cells.
-bal[, c("is_non_ets_country", "is_ets_firm") := NULL]
+bal[, c("is_non_ets_country", "is_ets_country_ever", "is_ets_firm") := NULL]
 bal <- merge(bal, etsc, by = c("partner_iso2", "year"), all.x = TRUE)
-bal[is.na(is_ets_country), is_ets_country := 0L]
+bal[is.na(is_ets_country),      is_ets_country      := 0L]
+bal[is.na(is_ets_country_ever), is_ets_country_ever := 0L]
 bal[, is_non_ets_country := 1L - is_ets_country]
 bal[, is_ets_country := NULL]
 bal <- merge(bal, ets, by = c("vat", "year"), all.x = TRUE)
@@ -266,7 +277,8 @@ setorder(bal, vat, cn8, partner_iso2, year)
 keep_cols <- c("vat", "cn8", "partner_iso2", "year", "value")
 if ("quantity" %in% names(bal)) keep_cols <- c(keep_cols, "quantity")
 keep_cols <- c(keep_cols, "nace4d", "buyer_nace2d",
-               "is_regulated_product", "is_non_ets_country", "is_ets_firm")
+               "is_regulated_product", "is_non_ets_country",
+               "is_ets_country_ever", "is_ets_firm")
 panel <- bal[, ..keep_cols]
 
 # Save to a new filename that does not collide with the existing

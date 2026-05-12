@@ -12,15 +12,34 @@
 #     non-ETS in the CdGM framework throughout.
 #
 # Output: data/concordances/country_ets_status.csv long form
-#         (iso2, year, is_ets, accession_year, country_group).
+#         (iso2, year, is_ets, is_ets_country_ever, accession_year,
+#          country_group).
+#
+# Two flags:
+#   * is_ets — time-varying historical truth. TRUE only for country-years
+#     when the country was in the EU ETS. Used by Table 1 regression
+#     (phase2_cdgm_table1.R) where the treatment is the time-varying
+#     1(non-ETS country) × phase interaction.
+#   * is_ets_country_ever — time-invariant-from-membership flag intended
+#     for descriptive figures. TRUE if the country is part of the EU ETS
+#     in year t OR was part of it in any earlier year. For EU-15, EU-10
+#     and UK (countries that were EU members at ETS start), this is TRUE
+#     for all years 2000-2022 (or through Brexit for UK). For late joiners
+#     (EU-2 from 2007, EU-1 from 2013, EEA-EFTA from 2008), this is
+#     time-varying at their accession year — TRUE only from accession+.
+#     This eliminates the artificial 2005 jump in CdGM Figure 2 caused by
+#     EU-15 countries flipping classification, while preserving smaller
+#     accession-year discontinuities for late joiners (which the user
+#     explicitly chose; see git history).
 #
 # Notes:
 #   * Customs data may use "EL" for Greece (EU convention) or "GR" (ISO 3166).
 #     We emit BOTH "EL" and "GR" rows pointing to the same status.
 #   * Customs data may use "UK" for United Kingdom (informal) or "GB" (ISO).
 #     We emit both.
-#   * Pre-2005 no country is ETS (ETS did not exist). The CSV records is_ets
-#     only for ETS country-years; non-presence = non-ETS.
+#   * The CSV emits one row per (country, year) within YEAR_RANGE for every
+#     country that ever has is_ets_country_ever=TRUE. Non-presence in the
+#     join (i.e., countries not in the table at all) = both flags FALSE.
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
@@ -60,26 +79,39 @@ ALIASES <- list(
 )
 
 build_country_year <- function(group_dict, accession_year, group_label,
+                                pre_membership_from = NULL,
                                 last_year = max(YEAR_RANGE)) {
+  # If pre_membership_from is set, emit rows from that year onwards. Rows
+  # before accession_year get is_ets=FALSE but is_ets_country_ever=TRUE
+  # (the country is classified as "ever-ETS" for the figure even though
+  # it wasn't yet ETS-regulated). This is the right convention for EU-15
+  # and EU-10 (which joined EU before ETS started) and for UK (which was
+  # in ETS from 2005-2020 inclusive). For late joiners (EU-2, EU-1,
+  # EEA-EFTA), leave pre_membership_from = NULL so only accession+ rows
+  # are emitted and both flags rise together at the accession year.
+  first_year <- if (is.null(pre_membership_from)) accession_year
+                else pre_membership_from
   rbindlist(lapply(names(group_dict), function(iso) {
-    yrs <- accession_year:last_year
+    yrs <- first_year:last_year
     yrs <- yrs[yrs %in% YEAR_RANGE]
     if (length(yrs) == 0) return(NULL)
     data.table(iso2 = iso,
                country = group_dict[[iso]],
                year = yrs,
-               is_ets = TRUE,
+               is_ets = yrs >= accession_year,
+               is_ets_country_ever = TRUE,
                accession_year = accession_year,
                country_group = group_label)
   }))
 }
 
 dt <- rbindlist(list(
-  build_country_year(EU15,      ETS_START, "EU-15"),
-  build_country_year(EU10_2004, ETS_START, "EU-10 (2004)"),
+  build_country_year(EU15,      ETS_START, "EU-15",         pre_membership_from = min(YEAR_RANGE)),
+  build_country_year(EU10_2004, ETS_START, "EU-10 (2004)",  pre_membership_from = min(YEAR_RANGE)),
   build_country_year(EU2_2007,  2007L,     "EU-2 (2007)"),
   build_country_year(EU1_2013,  2013L,     "EU-1 (2013)"),
   build_country_year(UK_only,   ETS_START, "UK (in until 2020)",
+                     pre_membership_from = min(YEAR_RANGE),
                      last_year = UK_LAST_YEAR),
   build_country_year(EEA_EFTA,  2008L,     "EEA-EFTA")
 ))
