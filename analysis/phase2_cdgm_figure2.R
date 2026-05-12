@@ -2,14 +2,16 @@
 #
 # Replicates CdGM Figure 2 ("Aggregate import shares and probability of
 # sourcing from a new supplier market: control vs. treatment groups"),
-# extended with a third line for regulated products from ETS countries.
+# extended with the full 2x2 product-x-country classification (four lines
+# per panel) and a robustness version with China removed from the non-ETS
+# pool to check whether China dominates the non-ETS lines.
 #
-# Two panels:
-#   (a) Aggregate import SHARE by year, three groups.
-#   (b) Aggregate PROBABILITY of sourcing by year (extensive margin), three
+# Two panels per figure:
+#   (a) Aggregate import SHARE by year, four groups.
+#   (b) Aggregate PROBABILITY of sourcing by year (extensive margin), four
 #       groups.
 #
-# Three groups, classified by the time-invariant `is_ets_country_ever` flag
+# Four groups, classified by the time-invariant `is_ets_country_ever` flag
 # from country_ets_status.csv (joined on partner_iso2 × year). This avoids
 # the artificial 2005 jump that arose when EU-15 imports flipped from
 # is_non_ets_country = 1 (pre-2005, ETS didn't yet exist) to 0 (post-2005,
@@ -19,34 +21,39 @@
 # at their accession year. The Table 1 regression in phase2_cdgm_table1.R
 # still uses the time-varying is_non_ets_country and is unaffected.
 #
-#   Control (unregulated x non-ETS):  regulated_product == 0 AND is_ets_country_ever == FALSE
-#   Treated (regulated x non-ETS):    regulated_product == 1 AND is_ets_country_ever == FALSE
-#   Regulated x ETS country (added):  regulated_product == 1 AND is_ets_country_ever == TRUE
+#   Unregulated x non-ETS:  is_regulated_product == 0 AND is_ets_country_ever == FALSE
+#   Regulated x non-ETS:    is_regulated_product == 1 AND is_ets_country_ever == FALSE
+#   Regulated x ETS:        is_regulated_product == 1 AND is_ets_country_ever == TRUE
+#   Unregulated x ETS:      is_regulated_product == 0 AND is_ets_country_ever == TRUE
 #
 # Denominator for panel (a): total Belgian imports across ALL cells per year
-# (i.e. across both ETS and non-ETS source countries, both regulated and
-# unregulated products). This is the only choice that makes the three lines
-# directly comparable on the same axis.
+# (within the working sample — i.e. after the same filters apply to all four
+# groups). All four lines sum to ~1 in each panel (a).
+#
+# Two output figures per run:
+#   * phase2_cdgm_figure2.png            — full sample.
+#   * phase2_cdgm_figure2_excl_china.png — China (CN, HK) excluded from the
+#                                          non-ETS pool. Tests whether China
+#                                          drives the non-ETS lines.
 #
 # Inputs:
 #   * RMD: ${PROC_NBB}/customs_import_panel_regulated.dta
-#   * local 1: NBB_data/processed/mock_customs_import_panel_regulated.RData
-#     (toggle via USE_MOCK).
+#   * local 1: NBB_data/processed/customs_import_panel_regulated.RData
+#     (or mock_customs_import_panel_regulated.RData if not present; toggle
+#     via USE_MOCK).
 #
-# Outputs:
-#   * output_${MACHINE_TAG}/figures/phase2_cdgm_figure2.png  (replication of CdGM Fig 2 + ETS line)
-#   * output_${MACHINE_TAG}/tables/phase2_cdgm_figure2.csv   (annual aggregates per group)
-#
-# Note on output directory: per paths.R guideline, local-1 runs write to
-# output_local/, RMD runs write to output_rmd/. The legacy output/ folder
-# is preserved for historical phase 0-4 artifacts and is NOT touched.
+# Outputs (per paths.R: output_local/ on local-1, output_rmd/ on RMD):
+#   * figures/phase2_cdgm_figure2.png
+#   * figures/phase2_cdgm_figure2_excl_china.png
+#   * tables/phase2_cdgm_figure2.csv
+#   * tables/phase2_cdgm_figure2_excl_china.csv
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
                      error = function(e) normalizePath(getwd(), winslash = "/"))
 while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
 source(file.path(REPO_DIR, "paths.R"))
 
-if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2", repos = "https://cloud.r-project.org")
+if (!requireNamespace("ggplot2",   quietly = TRUE)) install.packages("ggplot2",   repos = "https://cloud.r-project.org")
 if (!requireNamespace("patchwork", quietly = TRUE)) install.packages("patchwork", repos = "https://cloud.r-project.org")
 
 library(data.table)
@@ -69,12 +76,10 @@ if (USE_MOCK) {
 cat("Panel rows:", nrow(d),
     "  (firm x cn8 x partner x year cells, including zeros)\n")
 
-# Join the time-invariant ETS-country flag on (partner_iso2, year). The
-# customs panel currently only carries the time-varying is_non_ets_country;
-# the time-invariant `is_ets_country_ever` is read from country_ets_status.csv
-# here at runtime. Once phase2_build_customs_panel.R is re-run on RMD with
-# the updated builder, the flag will be in the panel directly and this join
-# becomes redundant — but harmless.
+# Join the time-invariant ETS-country flag on (partner_iso2, year). Once
+# phase2_build_customs_panel.R is re-run on RMD with the updated builder,
+# the flag will be in the panel directly and this join becomes redundant —
+# but harmless.
 ets_status_path <- file.path(REPO_DIR, "data", "concordances",
                              "country_ets_status.csv")
 ets_status <- data.table::fread(ets_status_path,
@@ -83,175 +88,157 @@ setnames(ets_status, "iso2", "partner_iso2")
 d <- merge(d, ets_status, by = c("partner_iso2", "year"), all.x = TRUE)
 d[is.na(is_ets_country_ever), is_ets_country_ever := FALSE]
 
-# Three-group classification on the FULL panel (no upfront restriction).
-# Cells with unregulated x ETS-country are dropped (not in any of the three
-# groups), but they still contribute to the total-imports denominator for
-# panel (a).
+# Four-group classification (full 2x2 of product regulation × country ETS).
+GROUP_LEVELS <- c("Unregulated x non-ETS",
+                  "Regulated x non-ETS",
+                  "Regulated x ETS",
+                  "Unregulated x ETS")
+GROUP_COLORS <- c("grey50", "steelblue", "firebrick", "darkorange")
+names(GROUP_COLORS) <- GROUP_LEVELS
+
 d[, group := fcase(
-  is_regulated_product == 0L & is_ets_country_ever == FALSE,
-    "Control (unregulated x non-ETS)",
-  is_regulated_product == 1L & is_ets_country_ever == FALSE,
-    "Treated (regulated x non-ETS)",
-  is_regulated_product == 1L & is_ets_country_ever == TRUE,
-    "Regulated x ETS country",
-  default = NA_character_
+  is_regulated_product == 0L & is_ets_country_ever == FALSE, "Unregulated x non-ETS",
+  is_regulated_product == 1L & is_ets_country_ever == FALSE, "Regulated x non-ETS",
+  is_regulated_product == 1L & is_ets_country_ever == TRUE,  "Regulated x ETS",
+  is_regulated_product == 0L & is_ets_country_ever == TRUE,  "Unregulated x ETS"
 )]
-d[, group := factor(group,
-                    levels = c("Control (unregulated x non-ETS)",
-                               "Treated (regulated x non-ETS)",
-                               "Regulated x ETS country"))]
+d[, group := factor(group, levels = GROUP_LEVELS)]
 
-cat("\nRows per group:\n"); print(d[, .N, by = group])
+cat("\nRows per group (full sample):\n"); print(d[, .N, by = group])
+
+# China ISO2 codes to exclude in the robustness version. CN is mainland
+# China; HK is Hong Kong (often included with China origin in customs
+# trade-flow work, cf. the phase6 China-origin-sigma revisit).
+CHINA_ISO2 <- c("CN", "HK")
 
 # -------------------------------------------------------------------------
-# Diagnostic: time-frame coverage by group.
-# We expect all three groups to span 2000-2019 (the panel build window).
-# A group that only starts at 2005 on RMD would indicate a data-build bug;
-# on local-1 the downsampled panel is known to have no regulated x ETS
-# rows before 2005, which is a downsample artifact.
+# Figure-construction function. Takes a panel subset, a label suffix for
+# titles/captions, and a filename suffix; produces (figure, table) writes.
 # -------------------------------------------------------------------------
-year_cov <- d[!is.na(group) & value > 0,
-              .(year_min  = min(year),
-                year_max  = max(year),
-                n_years   = uniqueN(year),
-                n_cells   = .N),
-              by = group]
-cat("\nTime-frame coverage by group (cells with value > 0):\n")
-print(year_cov)
-expected_min <- min(d$year, na.rm = TRUE)
-expected_max <- max(d$year, na.rm = TRUE)
-cat(sprintf("\nPanel year span overall: %d - %d\n",
-            expected_min, expected_max))
-truncated <- year_cov[year_min > expected_min | year_max < expected_max]
-if (nrow(truncated) > 0) {
-  cat("WARNING: the following groups do NOT span the full panel window:\n")
-  print(truncated)
-  cat("On RMD with the full customs panel, all three groups should span",
-      sprintf("%d-%d.", expected_min, expected_max),
-      "If this warning fires on RMD, check the customs panel build for a",
-      "filter that drops early-year ETS-source rows.\n")
-} else {
-  cat("All three groups span the full panel window.\n")
+make_figure <- function(d_in, sample_label, fname_suffix) {
+
+  # --- Time-frame coverage diagnostic ----------------------------------
+  year_cov <- d_in[!is.na(group) & value > 0,
+                    .(year_min = min(year), year_max = max(year),
+                      n_years = uniqueN(year), n_cells = .N),
+                    by = group]
+  cat(sprintf("\n=== Figure: %s ===\n", sample_label))
+  cat("Time-frame coverage by group (cells with value > 0):\n")
+  print(year_cov)
+  expected_min <- min(d_in$year, na.rm = TRUE)
+  expected_max <- max(d_in$year, na.rm = TRUE)
+  cat(sprintf("Panel year span overall: %d - %d\n",
+              expected_min, expected_max))
+  truncated <- year_cov[year_min > expected_min | year_max < expected_max]
+  if (nrow(truncated) > 0) {
+    cat("WARNING: some groups do NOT span the full panel window:\n")
+    print(truncated)
+  } else {
+    cat("All four groups span the full panel window.\n")
+  }
+
+  # --- Panel (a): share of total imports ------------------------------
+  total_imports <- d_in[, .(total = sum(value)), by = year]
+  share_dt <- d_in[!is.na(group), .(value = sum(value)),
+                    by = .(year, group)]
+  share_dt <- merge(share_dt, total_imports, by = "year")
+  share_dt[, share := value / total]
+
+  # --- Panel-completeness guard ---------------------------------------
+  annual_total <- d_in[!is.na(group), .(annual_value = sum(value)),
+                        by = year]
+  setorder(annual_total, year)
+  median_total <- median(annual_total$annual_value)
+  incomplete_years <- annual_total[annual_value < 0.5 * median_total, year]
+  if (length(incomplete_years) > 0) {
+    cat(sprintf("WARNING: dropping %d year(s) with incomplete aggregates",
+                length(incomplete_years)),
+        "(< 50% of the median annual import value):\n")
+    print(annual_total[year %in% incomplete_years])
+    share_dt <- share_dt[!year %in% incomplete_years]
+  }
+
+  cat("Aggregate share by group/year:\n")
+  print(dcast(share_dt, year ~ group, value.var = "share"))
+
+  p_a <- ggplot(share_dt, aes(x = year, y = share, color = group)) +
+    geom_vline(xintercept = 2004.5, linetype = "dashed", color = "grey40") +
+    geom_line(linewidth = 0.9) + geom_point(size = 1.6) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+    scale_color_manual(values = GROUP_COLORS, drop = FALSE) +
+    annotate("text", x = 2002, y = max(share_dt$share, na.rm = TRUE),
+             label = "Pre-ETS", size = 3, color = "grey40") +
+    annotate("text", x = 2012, y = max(share_dt$share, na.rm = TRUE),
+             label = "Post-2005 (ETS)", size = 3, color = "grey40") +
+    labs(title = sprintf("(a) Aggregate import share, %s", sample_label),
+         x = NULL, y = "Share of total Belgian imports", color = NULL) +
+    theme_minimal(base_size = 11) +
+    theme(legend.position = "bottom")
+
+  # --- Panel (b): probability of sourcing -----------------------------
+  prob_dt <- d_in[!is.na(group), .(active = mean(value > 0)),
+                   by = .(year, group)]
+  if (length(incomplete_years) > 0) {
+    prob_dt <- prob_dt[!year %in% incomplete_years]
+  }
+
+  cat("Probability of sourcing by group/year:\n")
+  print(dcast(prob_dt, year ~ group, value.var = "active"))
+
+  p_b <- ggplot(prob_dt, aes(x = year, y = active, color = group)) +
+    geom_vline(xintercept = 2004.5, linetype = "dashed", color = "grey40") +
+    geom_line(linewidth = 0.9) + geom_point(size = 1.6) +
+    scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
+    scale_color_manual(values = GROUP_COLORS, drop = FALSE) +
+    labs(title = "(b) Probability of sourcing (extensive margin)",
+         x = NULL, y = "P(value > 0 | triplet, year)", color = NULL) +
+    theme_minimal(base_size = 11) +
+    theme(legend.position = "bottom")
+
+  # --- Combine and save -----------------------------------------------
+  p_combined <- (p_a / p_b) +
+    plot_annotation(
+      title = sprintf("CdGM Figure 2 replication: %s", sample_label),
+      subtitle = sprintf("Belgium customs panel%s, 2000-2019",
+                         ifelse(USE_MOCK, " (MOCK DATA)", "")),
+      caption = paste("Four lines:",
+                      paste(GROUP_LEVELS, collapse = "; "),
+                      ".  Panel (a) denominator: total Belgian imports",
+                      "(within this sample).",
+                      sep = " ")
+    ) &
+    theme(plot.title = element_text(size = 12),
+          legend.position = "bottom")
+
+  fig_dir <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "figures")
+  tab_dir <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "tables")
+  dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
+  dir.create(tab_dir, recursive = TRUE, showWarnings = FALSE)
+
+  mock_tag <- if (USE_MOCK) "_MOCK" else ""
+  out_fig <- file.path(fig_dir, sprintf("phase2_cdgm_figure2%s%s.png",
+                                         fname_suffix, mock_tag))
+  ggsave(out_fig, p_combined, width = 9, height = 8, dpi = 200)
+  cat(sprintf("Figure saved: %s\n", out_fig))
+
+  out_tab <- file.path(tab_dir, sprintf("phase2_cdgm_figure2%s%s.csv",
+                                         fname_suffix, mock_tag))
+  agg <- merge(share_dt[, .(year, group, share)],
+               prob_dt[, .(year, group, prob_active = active)],
+               by = c("year", "group"))
+  fwrite(agg, out_tab)
+  cat(sprintf("Table saved:  %s\n", out_tab))
 }
 
 # -------------------------------------------------------------------------
-# Panel (a): aggregate import share.
-# Denominator = total Belgian imports across ALL cells per year (regulated
-# and unregulated, ETS and non-ETS source). This is the only choice that
-# puts the three lines on the same axis. With the old non-ETS-only
-# denominator, the two non-ETS lines summed to 1; here they sum to the
-# share of non-ETS in total imports (typically much less than 1, since
-# ~98% of Belgian trade is intra-EU).
+# Run twice: full sample, and with China (CN, HK) removed.
 # -------------------------------------------------------------------------
-total_imports <- d[, .(total = sum(value)), by = year]
-share_dt <- d[!is.na(group), .(value = sum(value)), by = .(year, group)]
-share_dt <- merge(share_dt, total_imports, by = "year")
-share_dt[, share := value / total]
+make_figure(d, "all source countries", "")
 
-# -------------------------------------------------------------------------
-# Panel-completeness guard.
-# Partial-year data at the start or end of the panel produces dramatic
-# downward spikes in the share series. Detect any year whose aggregate
-# import value is below 50% of the median annual aggregate, warn, and drop
-# from both panels. On RMD with the full 2000-2019 panel the final year
-# can come in incomplete (NBB administrative cutoff); on local-1 it shows
-# up as a zero in 2019.
-# -------------------------------------------------------------------------
-annual_total <- d[!is.na(group), .(annual_value = sum(value)), by = year]
-setorder(annual_total, year)
-median_total <- median(annual_total$annual_value)
-incomplete_years <- annual_total[annual_value < 0.5 * median_total, year]
-if (length(incomplete_years) > 0) {
-  cat(sprintf("\nWARNING: dropping %d year(s) with incomplete aggregates",
-              length(incomplete_years)),
-      "(< 50% of the median annual import value across groups):\n")
-  print(annual_total[year %in% incomplete_years])
-  cat("If this warning fires on RMD, verify the customs-panel build window",
-      "matches the NBB administrative cutoff.\n\n")
-  share_dt <- share_dt[!year %in% incomplete_years]
-  prob_dt_filter_years <- incomplete_years   # used below for panel (b) too
-} else {
-  prob_dt_filter_years <- integer(0)
-}
+d_no_china <- d[!partner_iso2 %in% CHINA_ISO2]
+cat(sprintf("\nExcluding China (CN, HK): %d rows -> %d rows (%.1f%% kept)\n",
+            nrow(d), nrow(d_no_china),
+            100 * nrow(d_no_china) / nrow(d)))
+make_figure(d_no_china, "excluding China (CN, HK)", "_excl_china")
 
-cat("\nAggregate share by group/year (denominator = total Belgian imports):\n")
-print(dcast(share_dt, year ~ group, value.var = "share"))
-
-p_a <- ggplot(share_dt, aes(x = year, y = share, color = group)) +
-  geom_vline(xintercept = 2004.5, linetype = "dashed", color = "grey40") +
-  geom_line(linewidth = 0.9) + geom_point(size = 1.6) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  scale_color_manual(values = c("grey40", "steelblue", "firebrick")) +
-  annotate("text", x = 2002, y = max(share_dt$share, na.rm = TRUE),
-           label = "Pre-ETS", size = 3, color = "grey40") +
-  annotate("text", x = 2012, y = max(share_dt$share, na.rm = TRUE),
-           label = "Post-2005 (ETS)", size = 3, color = "grey40") +
-  labs(title = "(a) Aggregate import share, all source countries",
-       x = NULL, y = "Share of total Belgian imports", color = NULL) +
-  theme_minimal(base_size = 11) +
-  theme(legend.position = "bottom")
-
-# -------------------------------------------------------------------------
-# Panel (b): aggregate probability of sourcing (extensive margin).
-# Per CdGM p. 12: "probability of sourcing from a given supplier (i.e., the
-# extensive margin)". For each (year, group): fraction of (firm x cn8 x partner)
-# triplets IN THAT GROUP'S balanced panel that have value > 0. Each group has
-# its own denominator (count of triplets in that group), so no rescaling
-# issue arises when adding the third line.
-# -------------------------------------------------------------------------
-prob_dt <- d[!is.na(group), .(active = mean(value > 0)),
-             by = .(year, group)]
-if (length(prob_dt_filter_years) > 0) {
-  prob_dt <- prob_dt[!year %in% prob_dt_filter_years]
-}
-
-cat("\nProbability of sourcing by group/year:\n")
-print(dcast(prob_dt, year ~ group, value.var = "active"))
-
-p_b <- ggplot(prob_dt, aes(x = year, y = active, color = group)) +
-  geom_vline(xintercept = 2004.5, linetype = "dashed", color = "grey40") +
-  geom_line(linewidth = 0.9) + geom_point(size = 1.6) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
-  scale_color_manual(values = c("grey40", "steelblue", "firebrick")) +
-  labs(title = "(b) Probability of sourcing (extensive margin)",
-       x = NULL, y = "P(value > 0 | triplet, year)", color = NULL) +
-  theme_minimal(base_size = 11) +
-  theme(legend.position = "bottom")
-
-# -------------------------------------------------------------------------
-# Combine panels and save.
-# -------------------------------------------------------------------------
-p_combined <- (p_a / p_b) +
-  plot_annotation(
-    title = "CdGM Figure 2 replication: Aggregate import shares and probability of sourcing",
-    subtitle = sprintf("Belgium customs panel%s, 2000-2019",
-                       ifelse(USE_MOCK, " (MOCK DATA)", "")),
-    caption = paste("Control: unregulated x non-ETS source country.",
-                    "Treated: regulated x non-ETS.",
-                    "Added line: regulated x ETS source country.",
-                    "Panel (a) denominator: total Belgian imports.",
-                    sep = " ")
-  ) &
-  theme(plot.title = element_text(size = 12),
-        legend.position = "bottom")
-
-fig_dir <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "figures")
-tab_dir <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "tables")
-dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(tab_dir, recursive = TRUE, showWarnings = FALSE)
-
-out_fig <- file.path(fig_dir,
-                     ifelse(USE_MOCK, "phase2_cdgm_figure2_MOCK.png",
-                                       "phase2_cdgm_figure2.png"))
-ggsave(out_fig, p_combined, width = 9, height = 8, dpi = 200)
-cat("\nFigure saved:", out_fig, "\n")
-
-# Save raw aggregates
-out_tab <- file.path(tab_dir,
-                     ifelse(USE_MOCK, "phase2_cdgm_figure2_MOCK.csv",
-                                       "phase2_cdgm_figure2.csv"))
-agg <- merge(share_dt[, .(year, group, share)],
-             prob_dt[, .(year, group, prob_active = active)],
-             by = c("year", "group"))
-fwrite(agg, out_tab)
-cat("Table saved:", out_tab, "\n")
+cat("\n=== Done ===\n")
