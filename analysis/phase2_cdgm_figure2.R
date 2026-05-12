@@ -26,9 +26,16 @@
 #   Regulated x ETS:        is_regulated_product == 1 AND is_ets_country_ever == TRUE
 #   Unregulated x ETS:      is_regulated_product == 0 AND is_ets_country_ever == TRUE
 #
-# Denominator for panel (a): total Belgian imports across ALL cells per year
-# (within the working sample — i.e. after the same filters apply to all four
-# groups). All four lines sum to ~1 in each panel (a).
+# Denominator for panel (a): within-regulation-status total. The two
+# "Regulated" lines (Red + Blue) sum to 1; the two "Unregulated" lines
+# (Orange + Grey) sum to 1. This matches CdGM's interpretation of Figure 2
+# ("share of regulated products from non-ETS rose 4.3 pp") and gives the
+# cleanest visual reading of the leakage hypothesis:
+#   - if leakage: Blue (reg × non-ETS share within regulated) rises and
+#     Red (reg × ETS share within regulated) falls — they're mirror images.
+#   - if globalization rather than ETS-specific leakage: the Unregulated
+#     pair (Orange/Grey) diverges the same way as the Regulated pair, so
+#     the difference between the pairs (the DID signal) is null.
 #
 # Two output figures per run:
 #   * phase2_cdgm_figure2.png            — full sample.
@@ -137,12 +144,19 @@ make_figure <- function(d_in, sample_label, fname_suffix) {
     cat("All four groups span the full panel window.\n")
   }
 
-  # --- Panel (a): share of total imports ------------------------------
-  total_imports <- d_in[, .(total = sum(value)), by = year]
-  share_dt <- d_in[!is.na(group), .(value = sum(value)),
-                    by = .(year, group)]
-  share_dt <- merge(share_dt, total_imports, by = "year")
-  share_dt[, share := value / total]
+  # --- Panel (a): share within regulation-status total ----------------
+  # Denominator = within-regulation-status total per year. So the
+  # regulated pair (Red + Blue) sums to 1; the unregulated pair
+  # (Orange + Grey) sums to 1.
+  regstatus_totals <- d_in[!is.na(group),
+                            .(regstatus_total = sum(value)),
+                            by = .(year, is_regulated_product)]
+  share_dt <- d_in[!is.na(group),
+                    .(value = sum(value)),
+                    by = .(year, group, is_regulated_product)]
+  share_dt <- merge(share_dt, regstatus_totals,
+                    by = c("year", "is_regulated_product"))
+  share_dt[, share := value / regstatus_total]
 
   # --- Panel-completeness guard ---------------------------------------
   annual_total <- d_in[!is.na(group), .(annual_value = sum(value)),
@@ -170,8 +184,9 @@ make_figure <- function(d_in, sample_label, fname_suffix) {
              label = "Pre-ETS", size = 3, color = "grey40") +
     annotate("text", x = 2012, y = max(share_dt$share, na.rm = TRUE),
              label = "Post-2005 (ETS)", size = 3, color = "grey40") +
-    labs(title = sprintf("(a) Aggregate import share, %s", sample_label),
-         x = NULL, y = "Share of total Belgian imports", color = NULL) +
+    labs(title = sprintf("(a) Source split within product type, %s", sample_label),
+         subtitle = "Regulated pair (Red+Blue) sums to 1; Unregulated pair (Orange+Grey) sums to 1.",
+         x = NULL, y = "Share within product type", color = NULL) +
     theme_minimal(base_size = 11) +
     theme(legend.position = "bottom")
 
@@ -203,8 +218,9 @@ make_figure <- function(d_in, sample_label, fname_suffix) {
                          ifelse(USE_MOCK, " (MOCK DATA)", "")),
       caption = paste("Four lines:",
                       paste(GROUP_LEVELS, collapse = "; "),
-                      ".  Panel (a) denominator: total Belgian imports",
-                      "(within this sample).",
+                      ".  Panel (a) denominator: within-regulation-status",
+                      "totals (regulated pair sums to 1; unregulated pair sums to 1).",
+                      "Panel (b) denominator: per-group triplet pool.",
                       sep = " ")
     ) &
     theme(plot.title = element_text(size = 12),
