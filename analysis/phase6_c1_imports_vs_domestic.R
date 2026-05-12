@@ -137,47 +137,160 @@ panel_c1 <- merge(panel_c1, nace_exp[, .(seller_nace4d, nace_exposure)],
 panel_c1[is.na(nace_exposure), nace_exposure := 0]
 panel_c1[, regulated_n := as.integer(nace_exposure > 0)]
 panel_c1[, post := as.integer(year >= 2015L)]
+panel_c1[, post_msr := as.integer(year >= 2018L)]   # Phase D: post-MSR cut
+panel_c1[, pair := paste(buyer, seller_nace4d, sep = "_")]
 
 # ---------------------------------------------------------------------------
-# 5. C1 main spec
+# 5. Cell-density diagnostics
+#    Spec `... | buyer^seller_nace4d + buyer^year` is identified only when
+#    (buyer, year) cells contain MULTIPLE seller_nace4d (so within-buyer-year
+#    variation in seller_nace4d treatment status can identify the
+#    regulated_n × post interaction). Local-1 downsample fails this; RMD
+#    should not. Report the relevant cell counts up front.
 # ---------------------------------------------------------------------------
-m_c1 <- tryCatch(
-  feols(import_share ~ regulated_n:post | buyer^seller_nace4d + buyer^year,
-        data = panel_c1, cluster = c("buyer", "seller_nace4d"), notes = FALSE),
-  error = function(e) { cat("ERROR:", conditionMessage(e), "\n"); NULL })
-if (!is.null(m_c1)) {
-  ct <- as.data.table(coeftable(m_c1), keep.rownames = "term")
+cat("\n=== C1 cell-density diagnostics ===\n")
+by_y <- panel_c1[, .(n_pairs = .N, n_nace4d = uniqueN(seller_nace4d)),
+                  by = .(buyer, year)]
+cat(sprintf("  N (buyer, year) cells:      %d\n", nrow(by_y)))
+cat(sprintf("  N w/ >=2 seller_nace4d:     %d  (%.1f%%)\n",
+            by_y[n_nace4d >= 2, .N],
+            100 * by_y[n_nace4d >= 2, .N] / nrow(by_y)))
+cat(sprintf("  Median seller_nace4d/buyer/year: %d\n",
+            median(by_y$n_nace4d)))
+cat(sprintf("  N unique buyers:            %d\n", uniqueN(panel_c1$buyer)))
+cat(sprintf("  N unique seller_nace4d:     %d\n",
+            uniqueN(panel_c1$seller_nace4d)))
+cat(sprintf("  N unique pairs (b x n4d):   %d\n", uniqueN(panel_c1$pair)))
+cat(sprintf("  N regulated cells (any yr): %d  (%.1f%% of pairs)\n",
+            uniqueN(panel_c1[regulated_n == 1, pair]),
+            100 * uniqueN(panel_c1[regulated_n == 1, pair]) /
+              uniqueN(panel_c1$pair)))
+
+# ---------------------------------------------------------------------------
+# 6. C1 main spec — FE ladder
+#    Preferred FE (matches B1): pair + buyer^year. If `regulated_n:post`
+#    is collinear (likely on local-1 downsample), fall back to less
+#    demanding FE structures. Report whichever specs converge so we can
+#    see what identifies the result.
+# ---------------------------------------------------------------------------
+fe_ladder <- list(
+  preferred   = "pair + buyer^year",          # pair FE + buyer-year trends
+  buyer_year  = "buyer^year",                 # drop pair FE
+  pair_year   = "pair + year",                # 2-way additive pair + year
+  nace_year   = "seller_nace4d + year",       # cross-pair identification
+  year_only   = "year"                        # most permissive
+)
+
+run_one <- function(rhs, fe, sample = panel_c1, label = "") {
+  f <- as.formula(paste("import_share ~", rhs, "|", fe))
+  m <- tryCatch(
+    feols(f, data = sample, cluster = c("buyer", "seller_nace4d"),
+          notes = FALSE),
+    error = function(e) {
+      cat(sprintf("    [%s] FE='%s' rhs='%s': %s\n",
+                  label, fe, rhs, conditionMessage(e)))
+      NULL
+    })
+  if (is.null(m)) return(NULL)
+  ct <- as.data.table(coeftable(m), keep.rownames = "term")
   setnames(ct, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
            c("est", "se", "tval", "pval"))
-  fwrite(ct, file.path(OUT_TAB, "phase6_c1_imports_vs_domestic.csv"))
-  cat("C1 binary spec:\n"); print(ct[, .(est, se, pval)])
+  ct[, fe_spec := fe]
+  ct[, sample_label := label]
+  ct[, n_obs := nobs(m)]
+  ct
 }
 
-# Continuous treatment.
-m_c1c <- tryCatch(
-  feols(import_share ~ nace_exposure:post | buyer^seller_nace4d + buyer^year,
-        data = panel_c1, cluster = c("buyer", "seller_nace4d"), notes = FALSE),
-  error = function(e) NULL)
-if (!is.null(m_c1c)) {
-  ct2 <- as.data.table(coeftable(m_c1c), keep.rownames = "term")
-  setnames(ct2, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
-           c("est", "se", "tval", "pval"))
-  cat("\nC1 continuous spec:\n"); print(ct2[, .(est, se, pval)])
+cat("\n=== C1 main spec ladder (regulated_n x post) ===\n")
+res_main <- rbindlist(
+  lapply(names(fe_ladder),
+         function(nm) run_one("regulated_n:post", fe_ladder[[nm]],
+                              label = paste0("binary_", nm))),
+  fill = TRUE)
+if (nrow(res_main)) {
+  print(res_main[, .(sample_label, est, se, pval, n_obs)])
 }
 
-# Event study.
+cat("\n=== C1 continuous spec ladder (nace_exposure x post) ===\n")
+res_cont <- rbindlist(
+  lapply(names(fe_ladder),
+         function(nm) run_one("nace_exposure:post", fe_ladder[[nm]],
+                              label = paste0("continuous_", nm))),
+  fill = TRUE)
+if (nrow(res_cont)) {
+  print(res_cont[, .(sample_label, est, se, pval, n_obs)])
+}
+
+# ---------------------------------------------------------------------------
+# 7. Phase D — pre-MSR vs post-MSR cut
+#    Re-run the FE ladder with `post_msr = 1(year >= 2018)` instead of
+#    `post = 1(year >= 2015)`. If leakage is price-driven, the 2018+
+#    EUA-spike subperiod should carry the action.
+# ---------------------------------------------------------------------------
+cat("\n=== C1 spec ladder, POST-MSR cut (year >= 2018) ===\n")
+res_postmsr <- rbindlist(
+  lapply(names(fe_ladder),
+         function(nm) run_one("regulated_n:post_msr", fe_ladder[[nm]],
+                              label = paste0("postmsr_binary_", nm))),
+  fill = TRUE)
+res_postmsr_c <- rbindlist(
+  lapply(names(fe_ladder),
+         function(nm) run_one("nace_exposure:post_msr", fe_ladder[[nm]],
+                              label = paste0("postmsr_cont_", nm))),
+  fill = TRUE)
+if (nrow(res_postmsr)) {
+  cat("\n  Binary:\n");      print(res_postmsr[, .(sample_label, est, se, pval, n_obs)])
+}
+if (nrow(res_postmsr_c)) {
+  cat("\n  Continuous:\n");  print(res_postmsr_c[, .(sample_label, est, se, pval, n_obs)])
+}
+
+# ---------------------------------------------------------------------------
+# 8. Consolidated output
+# ---------------------------------------------------------------------------
+res_all <- rbindlist(list(res_main, res_cont, res_postmsr, res_postmsr_c),
+                     fill = TRUE)
+if (nrow(res_all)) {
+  fwrite(res_all, file.path(OUT_TAB, "phase6_c1_imports_vs_domestic.csv"))
+}
+
+# ---------------------------------------------------------------------------
+# 9. Event study — anchor 2014, h=-9..+7
+#    Same FE ladder, take the most demanding spec that converges.
+# ---------------------------------------------------------------------------
 panel_c1[, year_f := factor(year, levels = (ANCHOR + H_LO):(ANCHOR + H_HI))]
-m_c1_es <- tryCatch(
-  feols(import_share ~ i(year_f, regulated_n, ref = as.character(ANCHOR - 1L)) |
-                        buyer^seller_nace4d + buyer^year,
-        data = panel_c1, cluster = c("buyer", "seller_nace4d"), notes = FALSE),
-  error = function(e) NULL)
-if (!is.null(m_c1_es)) {
-  ct3 <- as.data.table(coeftable(m_c1_es), keep.rownames = "term")
-  ct3[, year := suppressWarnings(as.integer(sub("^year_f::([0-9]+):.*$", "\\1", term)))]
-  ct3[, h := year - ANCHOR]
-  setnames(ct3, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
+
+run_es <- function(fe, label) {
+  f <- as.formula(sprintf(
+    "import_share ~ i(year_f, regulated_n, ref = as.character(%dL)) | %s",
+    ANCHOR - 1L, fe))
+  m <- tryCatch(
+    feols(f, data = panel_c1, cluster = c("buyer", "seller_nace4d"),
+          notes = FALSE),
+    error = function(e) {
+      cat(sprintf("    ES FE='%s': %s\n", fe, conditionMessage(e)))
+      NULL
+    })
+  if (is.null(m)) return(NULL)
+  ct <- as.data.table(coeftable(m), keep.rownames = "term")
+  ct[, year := suppressWarnings(as.integer(sub("^year_f::([0-9]+):.*$",
+                                                "\\1", term)))]
+  ct[, h := year - ANCHOR]
+  setnames(ct, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
            c("est", "se", "tval", "pval"))
-  fwrite(ct3[!is.na(h), .(h, est, se, tval, pval)],
+  ct[, fe_spec := fe]
+  ct[, sample_label := label]
+  ct[!is.na(h), .(h, est, se, tval, pval, fe_spec, sample_label)]
+}
+
+cat("\n=== C1 event study, full FE ladder ===\n")
+es_all <- rbindlist(
+  lapply(names(fe_ladder),
+         function(nm) run_es(fe_ladder[[nm]], paste0("es_", nm))),
+  fill = TRUE)
+if (nrow(es_all)) {
+  fwrite(es_all,
          file.path(OUT_TAB, "phase6_c1_imports_vs_domestic_eventstudy.csv"))
+  cat(sprintf("  Saved %d event-study coefficients across %d FE specs.\n",
+              nrow(es_all), uniqueN(es_all$sample_label)))
 }
