@@ -5,6 +5,8 @@ Open analyses that are deferred until headline results land. Add dated entries w
 ### Quick follow-ups
 - [x] ~~**(added 2026-05-11)** Look carefully at the across-NACE4d RMD results — eight figures across intensive + extensive batches plus `phase4_across_nace4d_intensive_margin` and `phase4_across_nace4d_extensive_margin`. Specifically: (a) confirm whether the 2015–2016 step in `_by_shortage_share` is a real B2B-reporting threshold change (it survived full-sample, ruling out downsampling), (b) the Q3 high-exposure −3pp 2012→2022 decline in `_intensive_by_buyer_exposure` is the cleanest across-NACE4d leakage signal — formalize with a DiD around 2013, (c) reconcile the local-1 "Q4 high-exposure drift" finding with RMD where it appears milder.~~ **Closed 2026-05-12** — across-NACE4d documented in REALLOCATION_FINDINGS.md as a well-supported null (commit `2f1ea6f`). (a) 2015–16 step confirmed as a real B2B reporting discontinuity (origin still to be checked with NBB); contamination acknowledged in the writeup. (b) Q3 decline starts 2011 with no corresponding ETS event; mechanism not pursued, flagged as plausibly compositional / structural-sectoral rather than policy-related. (c) Q4 size-within-exposure drift attributed to ceiling effect + size-omega confound; not pursued.
 
+- [ ] **(added 2026-05-12)** International margin — sharpened second-cut analysis. Headline so far: aggregate CdGM-style replication is null/negative ([IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md), [INTERNATIONAL_MARGIN_FINDINGS.md](INTERNATIONAL_MARGIN_FINDINGS.md)); within-product-type framing on [output_rmd/figures/phase2_cdgm_figure2.png](output_rmd/figures/phase2_cdgm_figure2.png) shows regulated × ETS basically flat while unregulated diverges — wrong-signed for ETS-policy leakage, consistent with generic globalization. Three sharpened tests parallel the carbon-policy-as-cost-shifter mechanism we used domestically. All share one data dependency. **See §7 below for the detailed plan.**
+
 Five active workstreams:
 
 0. **New exposure measure (high priority, added 2026-05-07)** — rebuild the firm-level treatment intensity as `emissions_pre × (1 − expected_allocation_share_post)` with both pieces predetermined / exogenous to MSR. See §0 below.
@@ -409,3 +411,105 @@ Compare to matched low-shortage ETS controls. If abatement is fast (>5% YoY with
 - Task 1 histograms show the shock is genuinely small through Phase III → both 3.5 and 3.6 become essential to quantify "how small".
 - Task 2 pass-through not statistically significant → 3.5 becomes the explanation of last resort.
 - Task 2 pass-through IS significant → 3.6 becomes a follow-up on timing/lag structure.
+
+---
+
+## 7. International margin — sharpened second-cut analysis (added 2026-05-12)
+
+### Context
+
+Domestic margin findings:
+- Within-NACE4d reallocation: well-supported null ([REALLOCATION_FINDINGS.md](REALLOCATION_FINDINGS.md), commit `a224e75`).
+- Across-NACE4d reallocation: well-supported null (commit `2f1ea6f`).
+
+International margin status (current):
+- Aggregate CdGM-style replication: null/negative ([IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md), Table 1 col(5) Phase 3 share β = −0.0024 **).
+- B1 buyer-supplier customs (firm-pair design): substitution signal in trend-corrected version (β = −0.560 ***), but heterogeneity cuts on local-1 didn't show a monotone HS6-CI gradient.
+- Within-product-type figure ([output_rmd/figures/phase2_cdgm_figure2.png](output_rmd/figures/phase2_cdgm_figure2.png), commit `1fb989b`): Regulated × ETS share is basically flat 2000-2022; Unregulated × ETS share falls and Unregulated × non-ETS rises. Wrong-signed for ETS-policy leakage — pattern is consistent with generic globalization of unregulated/commoditized imports, not with carbon-cost-driven substitution out of EU regulated production.
+
+**Current headline: no reallocation on the international margin under the framings we've tested.** Settling for this null while planning the three sharpened tests below.
+
+### Mechanism we're testing
+
+Carbon policy raises the cost of producing high-emission products in ETS countries. Belgian buyers facing this cost asymmetry should substitute toward cheaper alternatives along three margins:
+
+| Test | What | Margin |
+|---|---|---|
+| **(a)** | ETS vs non-ETS suppliers (any HS6) | Cross-bloc, all products |
+| **(b)** | High-CI ETS-country × HS6 pairs vs non-ETS | Cross-bloc, top-CI products only |
+| **(c)** | High-CI ETS country vs low-CI ETS country, within HS6 | Within-bloc, across-country |
+| **(d)** | Differential price response of high-CI vs low-CI imports | Price (complementary) |
+
+(a) is what we've tested. (b), (c), (d) are open.
+
+### Data dependency (shared by b, c, d)
+
+All three tests need **country × HS6 emission intensity**. We have:
+- [phase6_build_hs6_carbon_intensity.R](analysis/phase6_build_hs6_carbon_intensity.R) — HS6-level CI from Belgian ETS firms only (country-agnostic). OK for (b) as the HS6-CI proxy; doesn't help (c).
+- [phase6_build_eu_emission_intensity.R](analysis/phase6_build_eu_emission_intensity.R) — supposed to produce country × NACE-2d emission intensity from Eurostat air emissions. **BLOCKED** on `TIME_PERIOD` column rename in the `eurostat` R package (per [PAPER_STATUS.md](PAPER_STATUS.md) §5.2.8).
+
+### Step 1 — Unblock the Eurostat EU emission intensity builder
+
+- [ ] Fix the `TIME_PERIOD` column rename in `phase6_build_eu_emission_intensity.R`. Likely a one-line fix (rename to `time` after the `eurostat::get_eurostat()` call).
+- [ ] Verify the dataset comes out clean: country × NACE-2d × year emissions per €, 2008+ coverage minimum.
+- [ ] Join to HS6 via `data/concordances/cn8_to_nace4d.csv` (already used in B4 + B5). Output: `data/processed/eu_country_hs6_carbon_intensity.csv`.
+- [ ] Sanity check: Polish steel CI should be > German steel CI (coal-heavy vs gas-heavy grid).
+- Estimated: 1 hour on local-1 with internet.
+
+### Step 2 — Test (d): import price pass-through, country × HS6 × CI gradient
+
+**This is the gating test.** If import unit prices don't show differential movement across ETS source countries by emission intensity, then there's no cost asymmetry for Belgian buyers to substitute against — that fully explains the null leakage from (a), and (b)/(c) become foregone nulls.
+
+- [ ] New script: `analysis/phase7_d_import_prices_by_ci.R`.
+- [ ] Build a customs unit-price panel from the extended panel: `unit_value_{firm,hs6,partner,t} = value / quantity`. Aggregate to (partner_iso2, hs6, year) — sum value, sum quantity, divide.
+- [ ] Restrict to ETS-source-country imports (`is_ets_country == 1` in the year-varying flag).
+- [ ] Spec:
+  ```
+  log(unit_value)_{partner, hs6, t} = β · emission_intensity_{partner, hs6} × 1(t ≥ 2015)
+                                    + α_{partner, hs6} + δ_{hs6, t} + ε
+  ```
+  Two-way cluster on partner + hs6.
+- [ ] Variant: split at 2018 (post-MSR) — the EUA-price-binding window.
+- [ ] Robustness: weighted by import value; restrict to top-N partners; drop UK around Brexit.
+- [ ] **Decision rule:** if β > 0 *** in the post-MSR window, run (c) next. If β ≈ 0, stop here and treat (b)/(c) as not worth running.
+
+### Step 3 — Test (c): within-ETS substitution to cleaner sources
+
+Conditional on (d) showing differential price movement. Cleanest substitution test: same HS6, same ETS regime, different production CI.
+
+- [ ] New script: `analysis/phase7_c_within_ets_substitution.R`.
+- [ ] Build buyer × HS6 × ETS-partner panel from the extended customs panel.
+- [ ] Within each HS6, rank partner countries by `emission_intensity_{partner, hs6}`. Define "high-CI partner" = above median per HS6 (could also use top quartile).
+- [ ] Spec:
+  ```
+  log(import_value)_{firm, hs6, partner, t} = β · high_CI_partner × 1(t ≥ 2015)
+                                            + α_{firm, hs6, partner} + δ_{firm, hs6, t} + ε
+  ```
+  The `firm × hs6 × year` FE absorbs everything except within-(firm × hs6 × year) variation across partner countries, which is exactly the within-ETS substitution margin.
+- [ ] Two-way cluster on firm + (hs6 × partner).
+- [ ] Variants: continuous CI as regressor; top-quartile vs bottom-quartile (drop middle); pre-MSR vs post-MSR.
+
+### Step 4 — Test (b): cross-bloc substitution focused on high-CI cells
+
+Run last; confirmation of (c) more than independent discovery.
+
+- [ ] Modify the existing CdGM Table 1 spec to restrict the regulated × non-ETS treatment to the top quartile of HS6 carbon intensity. Compare the coefficient to the full-regulated baseline.
+- [ ] Alternative: triple interaction `1(regulated) × 1(non-ETS) × hs6_ci_quartile × phase`. Test whether leakage is concentrated in the high-CI quartile.
+
+### Verification gates
+
+- After Step 1: country × HS6 CI dataset passes the Polish-steel-more-polluting-than-German-steel sanity check.
+- After Step 2: clear answer (β > 0 *** or β ≈ 0) on whether prices respond differentially.
+- If (d) is null: write up as a clean three-pronged null with mechanism explanation, no need to do (b)/(c).
+- If (d) is positive: at least one of (b)/(c) should show substitution. If both null, that's the puzzling case worth its own writeup.
+
+### Estimated effort
+
+| Step | Venue | Time |
+|---|---|---|
+| 1. Unblock Eurostat builder | local-1 | 1 hour |
+| 2. (d) prices analysis | local-1 build + RMD run | 0.5 day |
+| 3. (c) within-ETS substitution | RMD | 0.5 day |
+| 4. (b) cross-bloc high-CI restriction | RMD | 0.5 day |
+
+**Total: ~2 days of work, contingent on (d) showing differential prices.** If (d) is null, total drops to ~0.5 days.
