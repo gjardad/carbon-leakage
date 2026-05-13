@@ -62,27 +62,19 @@ INTERVALS <- list(
 DIST_VERSION <- "treat_2017"  # for distribution + savings figures
 RHO_GRID     <- c(0.25, 0.5, 0.75, 1.0)
 
-# EUA annual mean prices used to convert omega (= shortage/total_cost,
-# units tCO2 per euro of total cost) into a euro savings rate at a given
-# point in time. Sourced from data/processed/phase3_eua_prices.RData.
-EUA_SCENARIOS <- list(
-  "2017" = list(eua = 5.76,  label = "EUA = 5.76 EUR/tCO2 (2017 annual mean, pre-MSR price)"),
-  "2022" = list(eua = 80.24, label = "EUA = 80.24 EUR/tCO2 (2022 annual mean, post-MSR peak)")
-)
-
 # Eurostat HICP (prc_hicp_aind), EA changing composition, all items
 # (CP00), base 2015 = 100. Used to deflate end-of-year EUA prices into
-# 2016 base euros so the cost-shock distribution is on a real-euro
-# scale that matches the buyer-total-cost denominator (built from
-# 2015-16 accounts).
+# 2016 base euros so the cost-shock distribution and savings figures
+# are on a real-euro scale that matches the buyer-total-cost
+# denominator (built from 2015-16 accounts).
 HICP_BASE <- list("2016" = 100.23,
                   "2017" = 101.78,
                   "2022" = 117.04)
 HICP_BASE_YEAR <- 2016L
 
-# Cost-shock cell formatter uses end-of-year EUA prices, deflated to
-# 2016 euros, to convert shock_buyertotal (tCO2 per euro of total cost)
-# into a fraction of buyer total cost in real terms.
+# End-of-year EUA prices come from the daily settlement CSV; they are
+# deflated to 2016 euros using HICP and used to scale the cost shock
+# and savings distributions.
 EUA_EOY_YEARS <- c(2017L, 2022L)
 
 # ---------------------------------------------------------------------------
@@ -455,10 +447,20 @@ for (yr_target in EUA_EOY_YEARS) {
               yr_target, nom, eua_real[[as.character(yr_target)]]))
 }
 
-# Cost-shock distribution: shock_buyertotal x real EUA -> fraction of
-# buyer total cost (real, base 2016). Plotted as a percent.
-plot_cost_shock <- function(shock_vals, eua_real_price) {
-  d <- data.table(val = shock_vals * eua_real_price)
+# Shared theme for the clean histograms (cost shock, NACE4d input share).
+clean_hist_theme <- theme_classic(base_size = 13) +
+  theme(panel.grid       = element_blank(),
+        axis.title.x     = element_text(margin = margin(t = 14), size = 15),
+        axis.title.y     = element_text(margin = margin(r = 14), size = 15),
+        axis.text        = element_text(size = 13),
+        plot.title       = element_blank(),
+        plot.subtitle    = element_blank())
+
+# Generic clean histogram on a log-scale x-axis displayed in %, with a
+# dashed line at p75. `vals` is a vector of positive fractions (e.g.
+# 0.001 displays as 0.1%).
+plot_dist_pct_log <- function(vals, xlab) {
+  d <- data.table(val = vals)
   d <- d[is.finite(val) & val > 0]
   if (nrow(d) == 0L) return(NULL)
   qs <- quantile(d$val, c(0.50, 0.75, 0.90, 0.99), na.rm = TRUE)
@@ -474,19 +476,16 @@ plot_cost_shock <- function(shock_vals, eua_real_price) {
     annotate("text", x = qs[2], y = Inf, label = " p75",
              vjust = 1.5, hjust = 0, color = "firebrick", size = 4.5) +
     scale_x_log10(breaks = pct_breaks, labels = pct_labels) +
-    labs(x = "Cost shock", y = "Number of cells") +
-    theme_classic(base_size = 13) +
-    theme(panel.grid       = element_blank(),
-          axis.title.x     = element_text(margin = margin(t = 14), size = 15),
-          axis.title.y     = element_text(margin = margin(r = 14), size = 15),
-          axis.text        = element_text(size = 13),
-          plot.title       = element_blank(),
-          plot.subtitle    = element_blank())
+    labs(x = xlab, y = "Number of cells") +
+    clean_hist_theme
 }
 
+# Cost shock distribution: shock_buyertotal * deflated EUA, per EUA year.
 for (yr_target in EUA_EOY_YEARS) {
-  p_cs <- plot_cost_shock(cells_dist$shock_buyertotal,
-                          eua_real[[as.character(yr_target)]])
+  p_cs <- plot_dist_pct_log(
+    cells_dist$shock_buyertotal * eua_real[[as.character(yr_target)]],
+    "Cost shock"
+  )
   fig_base <- sprintf("phase4_within_nace4d_intensive_dist_shock_buyertotal_eua%d",
                       yr_target)
   ggsave(file.path(OUTPUT_FIG, paste0(fig_base, ".png")), p_cs,
@@ -496,8 +495,21 @@ for (yr_target in EUA_EOY_YEARS) {
   cat(sprintf("  Cost-shock distribution (EUA %d) written.\n", yr_target))
 }
 
-# NACE4d input share + omega gap distributions retain the prior styling
-# for now (user may revisit them separately).
+# NACE4d input share: same clean styling, displayed as a percent on a
+# log-scale x-axis.
+p_nshare <- plot_dist_pct_log(
+  cells_dist$nace4d_input_share,
+  "Cost share of expenditure on supplier's sector"
+)
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_nace4d_intensive_dist_nace4d_share.png"),
+       p_nshare, width = 8, height = 5, dpi = 200)
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_nace4d_intensive_dist_nace4d_share.pdf"),
+       p_nshare, width = 8, height = 5)
+cat("  NACE4d input share distribution written.\n")
+
+# Omega gap distribution keeps the older title/subtitle styling for now.
 base_theme <- theme_minimal(base_size = 11) +
   theme(panel.grid.minor = element_blank(),
         plot.title    = element_text(face = "bold", size = 12),
@@ -530,14 +542,6 @@ plot_dist <- function(x, xlab, title, subtitle, log_x = FALSE) {
   p
 }
 
-p_nshare <- plot_dist(
-  cells_dist$nace4d_input_share,
-  "Cell spend on NACE4d / buyer total cost",
-  "Distribution of NACE4d inputs as share of buyer's total input cost",
-  sprintf("Across (buyer, NACE4d) cells with >=2 ETS-relevant suppliers in %s pre-period.",
-          DIST_VERSION),
-  log_x = TRUE
-)
 p_gap <- plot_dist(
   cells_dist$omega_gap,
   expression(omega[top] - omega[bot]),
@@ -546,13 +550,6 @@ p_gap <- plot_dist(
           DIST_VERSION),
   log_x = TRUE
 )
-
-ggsave(file.path(OUTPUT_FIG,
-       "phase4_within_nace4d_intensive_dist_nace4d_share.png"),
-       p_nshare, width = 8, height = 5, dpi = 200)
-ggsave(file.path(OUTPUT_FIG,
-       "phase4_within_nace4d_intensive_dist_nace4d_share.pdf"),
-       p_nshare, width = 8, height = 5)
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_intensive_dist_omega_gap.png"),
        p_gap, width = 8, height = 5, dpi = 200)
@@ -563,60 +560,67 @@ cat("All distribution figures written.\n")
 
 # ---------------------------------------------------------------------------
 # 6. Counterfactual savings figures: TWO versions, one per EUA scenario
-#    savings(b,n,rho,EUA) = rho * EUA * (omega_top - omega_bot)
+#    savings(b,n,rho,EUA) = rho * EUA_real * (omega_top - omega_bot)
 #                                * (cell spend / buyer total cost)
-#    omega here is shortage/total_cost (tCO2 per euro of total cost), so the
-#    EUA multiplier converts the savings into a euro rate.
+#    EUA_real is the deflated end-of-year EUA price (2016 base), so the
+#    numerator and denominator are in consistent units.
 # ---------------------------------------------------------------------------
 cat("Building counterfactual savings figures (two EUA scenarios)...\n")
 sv <- cells_dist[, .(buyer, seller_nace4d, omega_gap, nace4d_input_share)]
 sv <- sv[!is.na(omega_gap) & !is.na(nace4d_input_share) &
            omega_gap > 0 & nace4d_input_share > 0]
 
+savings_x_breaks <- c(0, 0.005, 0.01, 0.05, 0.10)
+savings_x_labels <- c("0%", "0.5%", "1%", "5%", "10%")
+savings_x_limits <- c(0, 0.10)
+
 summary_rows <- list()
-for (sc_name in names(EUA_SCENARIOS)) {
-  sc <- EUA_SCENARIOS[[sc_name]]
-  eua_p <- sc$eua
+for (yr_target in EUA_EOY_YEARS) {
+  eua_p_real <- eua_real[[as.character(yr_target)]]
 
   sv_panels <- rbindlist(lapply(RHO_GRID, function(rho) {
     data.table(rho     = rho,
-               savings = rho * eua_p * sv$omega_gap * sv$nace4d_input_share)
+               savings = rho * eua_p_real * sv$omega_gap * sv$nace4d_input_share)
   }))
 
-  # Percentile summary
   sv_summary <- sv_panels[, .(
-    eua_scenario = sc_name,
-    eua_price    = eua_p,
+    eua_year   = yr_target,
+    eua_price_real = eua_p_real,
     median = quantile(savings, 0.50, na.rm = TRUE),
     p75    = quantile(savings, 0.75, na.rm = TRUE),
     p90    = quantile(savings, 0.90, na.rm = TRUE),
     p99    = quantile(savings, 0.99, na.rm = TRUE),
     n      = .N
   ), by = rho]
-  summary_rows[[sc_name]] <- sv_summary
+  summary_rows[[as.character(yr_target)]] <- sv_summary
 
-  p_sv <- ggplot(sv_panels[savings > 0],
+  p_sv <- ggplot(sv_panels[savings >= 0],
                  aes(x = savings, fill = factor(rho), color = factor(rho))) +
     stat_ecdf(geom = "step", linewidth = 0.9, alpha = 0.9) +
-    scale_x_log10(labels = scales::percent_format(accuracy = 0.0001),
-                  breaks = c(1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1)) +
+    scale_x_continuous(limits = savings_x_limits,
+                       breaks = savings_x_breaks,
+                       labels = savings_x_labels,
+                       oob    = scales::squish) +
     scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-    scale_color_brewer(palette = "Set1", name = expression("Pass-through " * rho)) +
-    scale_fill_brewer(palette = "Set1", name = expression("Pass-through " * rho)) +
-    labs(
-      title = sprintf("Potential euro savings from substituting away from the top-omega supplier (EUA %s)",
-                      sc_name),
-      subtitle = sprintf(
-        "Savings = rho x EUA x (omega_top - omega_bot) x (cell spend / buyer total cost).\n%s. ECDF across (buyer, NACE4d) cells, version = %s.",
-        sc$label, DIST_VERSION),
-      x = "Savings as % of buyer total input cost (log scale)",
-      y = "Cumulative share of cells"
-    ) +
-    base_theme +
-    theme(legend.position = "bottom")
+    scale_color_brewer(palette = "Set1",
+                       name = expression("Pass-through " * rho)) +
+    scale_fill_brewer(palette = "Set1",
+                      name = expression("Pass-through " * rho)) +
+    labs(x = "Savings as % of buyer total input cost",
+         y = "Cumulative share of cells") +
+    theme_classic(base_size = 13) +
+    theme(panel.grid       = element_blank(),
+          axis.title.x     = element_text(margin = margin(t = 14), size = 15),
+          axis.title.y     = element_text(margin = margin(r = 14), size = 15),
+          axis.text        = element_text(size = 13),
+          plot.title       = element_blank(),
+          plot.subtitle    = element_blank(),
+          legend.position  = "bottom",
+          legend.title     = element_text(size = 13),
+          legend.text      = element_text(size = 12))
 
-  fig_base <- sprintf("phase4_within_nace4d_intensive_savings_by_passthrough_eua%s",
-                      sc_name)
+  fig_base <- sprintf("phase4_within_nace4d_intensive_savings_by_passthrough_eua%d",
+                      yr_target)
   ggsave(file.path(OUTPUT_FIG, paste0(fig_base, ".png")), p_sv,
          width = 8, height = 5.5, dpi = 200)
   ggsave(file.path(OUTPUT_FIG, paste0(fig_base, ".pdf")), p_sv,
