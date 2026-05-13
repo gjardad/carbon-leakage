@@ -67,9 +67,8 @@ YEAR_HI <- 2022L
 N_BOOT  <- 1000L
 
 INTERVALS <- list(
-  "treat_2008" = list(years = c(2006L, 2007L), treat_year = 2008L),
-  "treat_2013" = list(years = c(2011L, 2012L), treat_year = 2013L),
-  "treat_2017" = list(years = c(2015L, 2016L), treat_year = 2017L)
+  "treat_2005" = list(years = c(2005L),         treat_year = 2006L),
+  "treat_2017" = list(years = c(2015L, 2016L),  treat_year = 2017L)
 )
 
 # ---------------------------------------------------------------------------
@@ -315,9 +314,8 @@ fwrite(pooled,
 # 6. Plots
 # ---------------------------------------------------------------------------
 version_labels <- c(
-  "treat_2008" = "Treatment 2008 (omega from 2006-07)",
-  "treat_2013" = "Treatment 2013 (omega from 2011-12)",
-  "treat_2017" = "Treatment 2017 (omega from 2015-16)"
+  "treat_2005" = "EU ETS start, 2005 (omega from 2005)",
+  "treat_2017" = "MSR, 2017 (omega from 2015-16)"
 )
 
 base_theme <- theme_minimal(base_size = 11) +

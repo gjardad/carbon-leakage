@@ -64,9 +64,8 @@ YEAR_LO <- 2005L
 YEAR_HI <- 2022L
 
 INTERVALS <- list(
-  "treat_2008" = list(years = c(2006L, 2007L), treat_year = 2008L),
-  "treat_2013" = list(years = c(2011L, 2012L), treat_year = 2013L),
-  "treat_2017" = list(years = c(2015L, 2016L), treat_year = 2017L)
+  "treat_2005" = list(years = c(2005L),         treat_year = 2006L),
+  "treat_2017" = list(years = c(2015L, 2016L),  treat_year = 2017L)
 )
 
 # ---------------------------------------------------------------------------

@@ -53,10 +53,17 @@ set.seed(20260513)
 YEAR_LO <- 2005L
 YEAR_HI <- 2022L
 
+# Two treatment periods we report on:
+#   "treat_2005" = EU ETS start. omega computed from 2005 alone (the
+#     first year of the panel) under the assumption that one year is too
+#     short for firms to adjust, so 2005 cost shares are a valid proxy
+#     for pre-policy exposure. The cutoff in the post indicator is 2006
+#     (post = 1 from 2006 onwards; pre = {2005} only).
+#   "treat_2017" = MSR reform. omega computed from 2015-16. Post = 1
+#     from 2017 onwards; pre = {2015, 2016}.
 INTERVALS <- list(
-  "treat_2008" = list(years = c(2006L, 2007L), treat_year = 2008L),
-  "treat_2013" = list(years = c(2011L, 2012L), treat_year = 2013L),
-  "treat_2017" = list(years = c(2015L, 2016L), treat_year = 2017L)
+  "treat_2005" = list(years = c(2005L),         treat_year = 2006L),
+  "treat_2017" = list(years = c(2015L, 2016L),  treat_year = 2017L)
 )
 
 DIST_VERSION <- "treat_2017"  # for distribution + savings figures
@@ -142,7 +149,8 @@ b2b[, total_buyer_nace4d_spend := sum(sales),
 # 2. Build cells per interval with all three heterogeneity scores
 # ---------------------------------------------------------------------------
 build_cells_interval <- function(version_label, years, treat_year) {
-  yrs <- seq(years[1], years[2])
+  # `years` is the vector of pre-event years used to compute omega.
+  yrs <- years
 
   # Interval-period seller-level aggregates within (buyer, seller_nace4d)
   seller_int <- b2b[year %in% yrs,
@@ -238,30 +246,36 @@ fwrite(cells_all, file.path(OUTPUT_TAB,
        "phase4_within_nace4d_intensive_cells_all_scores.csv"))
 
 # ---------------------------------------------------------------------------
-# 3. Build long panel for the topQ_buyertotal subset, then run DiD
+# 3. Build long panels (one per cut) and run DiDs internally.
+#    Self-contained: does not read from any other script's CSVs.
 # ---------------------------------------------------------------------------
-build_long_for_topQ <- function(flag_col, cells_dt) {
-  sub <- cells_dt[get(flag_col) == TRUE,
-                  .(buyer, seller_nace4d, version, treat_year,
-                    top_supplier, bot_supplier)]
+yr_denom <- unique(b2b[, .(buyer, seller_nace4d, year,
+                           total_buyer_nace4d_spend)])
+yr_sales <- b2b[, .(buyer, seller_nace4d, seller, year, sales)]
+
+build_long_for_cut <- function(cut_label) {
+  if (cut_label == "pooled") {
+    sub <- cells_all[, .(buyer, seller_nace4d, version, treat_year,
+                         top_supplier, bot_supplier)]
+  } else {
+    flag_col <- switch(cut_label,
+                       "cost_shock"   = "topQ_buyertotal",
+                       "input_share"  = "topQ_nace4dshare",
+                       "exposure_gap" = "topQ_omegagap")
+    sub <- cells_all[get(flag_col) == TRUE,
+                     .(buyer, seller_nace4d, version, treat_year,
+                       top_supplier, bot_supplier)]
+  }
   if (nrow(sub) == 0L) return(data.table())
-
-  long_top <- sub[, .(buyer, seller_nace4d, version, treat_year,
-                      seller = top_supplier,
-                      supplier_role = "top")]
-  long_bot <- sub[, .(buyer, seller_nace4d, version, treat_year,
-                      seller = bot_supplier,
-                      supplier_role = "bot")]
-  long <- rbind(long_top, long_bot)
-
+  long <- rbind(
+    sub[, .(buyer, seller_nace4d, version, treat_year,
+            seller = top_supplier, supplier_role = "top")],
+    sub[, .(buyer, seller_nace4d, version, treat_year,
+            seller = bot_supplier, supplier_role = "bot")]
+  )
   panel <- long[, .(year = YEAR_LO:YEAR_HI),
                 by = .(buyer, seller_nace4d, version, treat_year,
                        seller, supplier_role)]
-
-  yr_denom <- unique(b2b[, .(buyer, seller_nace4d, year,
-                             total_buyer_nace4d_spend)])
-  yr_sales <- b2b[, .(buyer, seller_nace4d, seller, year, sales)]
-
   panel <- merge(panel, yr_denom,
                  by = c("buyer", "seller_nace4d", "year"), all.x = TRUE)
   panel <- merge(panel, yr_sales,
@@ -272,58 +286,71 @@ build_long_for_topQ <- function(flag_col, cells_dt) {
                             total_buyer_nace4d_spend <= 0,
                           NA_real_,
                           sales / total_buyer_nace4d_spend)]
-  panel
+  panel[, top  := as.integer(supplier_role == "top")]
+  panel[, post := as.integer(year >= treat_year)]
+  panel[]
 }
 
-cat("Building long panel for topQ_buyertotal...\n")
-panel_buyer <- build_long_for_topQ("topQ_buyertotal", cells_all)
-
-run_did_per_version <- function(panel_dt, cut_label) {
-  out <- list()
-  for (label in names(INTERVALS)) {
-    d <- panel_dt[version == label & !is.na(share)]
-    if (nrow(d) == 0L) next
-    d[, top  := as.integer(supplier_role == "top")]
-    d[, post := as.integer(year >= treat_year)]
-    d[, cell_role_id := paste(buyer, seller_nace4d, supplier_role, sep = "::")]
-    d[, cell_id      := paste(buyer, seller_nace4d, sep = "::")]
-    fit <- feols(share ~ i(post, top, ref = 0) | cell_role_id + year,
-                 data = d, cluster = ~ cell_id)
-    ct <- as.data.table(coeftable(fit), keep.rownames = "term")
-    setnames(ct, old = c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
-                 new = c("estimate", "std_error", "t_stat", "p_value"),
-                 skip_absent = TRUE)
-    out[[label]] <- cbind(cut = cut_label, version = label,
-                          n_obs = nobs(fit),
-                          n_treated_cells = uniqueN(d$cell_id), ct)
-  }
-  rbindlist(out, use.names = TRUE, fill = TRUE)
-}
-
-did_buyer <- run_did_per_version(panel_buyer, "Top quartile by buyer-total shock")
-fwrite(did_buyer, file.path(OUTPUT_TAB,
-       "phase4_within_nace4d_reallocation_topQ_buyertotal_did_coefs.csv"))
-cat("topQ_buyertotal DiD done.\n")
-
-# ---------------------------------------------------------------------------
-# 4. Combine all four DiD specifications into one table
-# ---------------------------------------------------------------------------
-pooled <- fread(file.path(OUTPUT_TAB,
-                          "phase4_within_nace4d_reallocation_did_coefs.csv"))
-pooled[, cut := "Pooled (no heterogeneity)"]
-
-het <- fread(file.path(OUTPUT_TAB,
-             "phase4_within_nace4d_reallocation_topQ_heterogeneity_did_coefs.csv"))
-
-did_all <- rbind(
-  pooled[, .(cut, version, n_obs, n_treated_cells, term,
-             estimate, std_error, t_stat, p_value)],
-  did_buyer[, .(cut, version, n_obs, n_treated_cells, term,
-                estimate, std_error, t_stat, p_value)],
-  het[, .(cut, version, n_obs, n_treated_cells, term,
-          estimate, std_error, t_stat, p_value)],
-  use.names = TRUE, fill = TRUE
+CUT_LABELS <- c("pooled", "cost_shock", "input_share", "exposure_gap")
+CUT_DISPLAY <- c(
+  "pooled"       = "Pooled (no heterogeneity)",
+  "cost_shock"   = "Top quartile by buyer-total shock",
+  "input_share"  = "Top quartile by NACE4d input share",
+  "exposure_gap" = "Top quartile by omega gap"
 )
+
+cat("Building long panels for the 4 cuts...\n")
+panels <- list()
+for (cut_lab in CUT_LABELS) {
+  panels[[cut_lab]] <- build_long_for_cut(cut_lab)
+  cat(sprintf("  %-13s %s rows\n", cut_lab,
+              format(nrow(panels[[cut_lab]]), big.mark = ",")))
+}
+
+run_did_one <- function(panel_dt) {
+  d <- panel_dt[!is.na(share)]
+  if (nrow(d) == 0L || uniqueN(d$post) < 2L || uniqueN(d$top) < 2L) {
+    return(list(beta = NA_real_, se = NA_real_, t = NA_real_,
+                p = NA_real_, n_obs = 0L, n_cells = 0L))
+  }
+  d[, cell_id      := paste(buyer, seller_nace4d, sep = "::")]
+  d[, cell_role_id := paste(cell_id, supplier_role, sep = "::")]
+  fit <- tryCatch(
+    feols(share ~ i(post, top, ref = 0) | cell_role_id + year,
+          data = d, cluster = ~ cell_id, notes = FALSE),
+    error = function(e) NULL
+  )
+  if (is.null(fit)) return(list(beta = NA_real_, se = NA_real_, t = NA_real_,
+                                 p = NA_real_, n_obs = 0L, n_cells = 0L))
+  ct <- coeftable(fit)
+  list(beta    = as.numeric(ct[1, "Estimate"]),
+       se      = as.numeric(ct[1, "Std. Error"]),
+       t       = as.numeric(ct[1, "t value"]),
+       p       = as.numeric(ct[1, "Pr(>|t|)"]),
+       n_obs   = as.integer(nobs(fit)),
+       n_cells = uniqueN(d$cell_id))
+}
+
+cat("Running baseline DiDs (4 cuts x 2 treatment periods)...\n")
+did_rows <- list()
+for (cut_lab in CUT_LABELS) {
+  for (ver in names(INTERVALS)) {
+    d <- panels[[cut_lab]][version == ver]
+    est <- run_did_one(d)
+    did_rows[[length(did_rows) + 1L]] <- data.table(
+      cut             = CUT_DISPLAY[[cut_lab]],
+      version         = ver,
+      n_obs           = est$n_obs,
+      n_treated_cells = est$n_cells,
+      term            = "post::1:top",
+      estimate        = est$beta,
+      std_error       = est$se,
+      t_stat          = est$t,
+      p_value         = est$p
+    )
+  }
+}
+did_all <- rbindlist(did_rows, use.names = TRUE)
 
 cut_order <- c("Pooled (no heterogeneity)",
                "Top quartile by buyer-total shock",
@@ -359,9 +386,8 @@ combined_long <- rbindlist(wide_rows, use.names = TRUE)
 
 # Build the LaTeX table by hand: rows = event years, columns = 4 cuts.
 build_latex_4col <- function(did_all) {
-  versions <- c("treat_2008", "treat_2013", "treat_2017")
-  event_years <- c("Phase II onset (2008)",
-                   "Phase III onset (2013)",
+  versions <- c("treat_2005", "treat_2017")
+  event_years <- c("EU ETS start (2005)",
                    "MSR (2017)")
   cuts <- cut_order
 
