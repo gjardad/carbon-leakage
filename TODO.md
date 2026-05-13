@@ -7,6 +7,22 @@ Open analyses that are deferred until headline results land. Add dated entries w
 
 - [ ] **(added 2026-05-12)** International margin — sharpened second-cut analysis. Headline so far: aggregate CdGM-style replication is null/negative ([IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md), [INTERNATIONAL_MARGIN_FINDINGS.md](INTERNATIONAL_MARGIN_FINDINGS.md)); within-product-type framing on [output_rmd/figures/phase2_cdgm_figure2.png](output_rmd/figures/phase2_cdgm_figure2.png) shows regulated × ETS basically flat while unregulated diverges — wrong-signed for ETS-policy leakage, consistent with generic globalization. Three sharpened tests parallel the carbon-policy-as-cost-shifter mechanism we used domestically. All share one data dependency. **See §7 below for the detailed plan.**
 
+- [ ] **(added 2026-05-13)** Multiple hypothesis testing on the within-NACE4d intensive-margin DiD (Table `phase4_within_nace4d_reallocation_did_table_combined.tex`). The 12 cells (4 cuts × 3 event years) produce 3 leakage-direction-significant coefficients at p<0.05 (2008 buyer-total β=−0.069 ***, 2013 buyer-total β=−0.073 *, 2013 ω-gap β=−0.103 **). The 2013-active / 2017-null pattern is theoretically inverted (higher EUA prices at 2017 should give stronger leakage, not weaker), and the count is barely above the 0.6 false-positive expectation under a global null. The §5.1.1 prose currently argues this away on (i) multiple-testing arithmetic and (ii) the 2013-vs-2017 asymmetry. To make (i) airtight, run:
+  - [ ] **Bonferroni** correction across the 12 cells: threshold p < 0.05/12 = 0.0042. Report which cells survive. (Inspection: only the 2008 buyer-total ***, p ≈ 9e-9, clears; 2013 ω-gap at p ≈ 0.008 sits just above the threshold.)
+  - [ ] **Benjamini-Hochberg** FDR at q = 0.05 across the 12 p-values. Report adjusted q-values.
+  - [ ] **Holm-Sidak** step-down across the 12 cells. Report which survive.
+  - [ ] **Romano-Wolf** step-down with cluster-bootstrap (cluster on buyer) — stronger than Bonferroni when test statistics are correlated. Likely closest to the right inference here since the same cells appear across cuts.
+  - [ ] **Joint Wald** test: do all 12 coefficients jointly equal zero? Report joint p-value.
+  - [ ] **Average effect**: stack the 12 (cut × event-year) cells and test whether the average β across the four heterogeneity-cut cells at the 3 event years differs from zero; cluster-bootstrap inference.
+  - [ ] **Placebo permutation**: re-run the four heterogeneity-cut DiDs on the unregulated-NACE4d placebo cells with random fake event years. Compare the empirical p-value of the 2013 ω-gap statistic against the placebo distribution.
+
+  If any 2013 result still survives these corrections, build a substantive story for 2013-active / 2017-null before reading it as leakage:
+  - [ ] **Pre-period anomaly**: were top-omega suppliers anomalously high-share in 2011–12 (the 2013 pre-period) vs other pre-periods? Plot mean top-omega share at $\tau-1$ by event year.
+  - [ ] **Lock-in / one-shot reorganization**: do buyers who reduced top-omega share between 2013 and 2015 keep that lower share through 2022, even though the top-omega exposure rose with EUA prices post-2017? Long-difference 2017→2022 on the 2013-treated cells.
+  - [ ] **Size–omega confound across event years**: build a within-cell decomposition of the DiD coefficient into size-driven and omega-driven components. Test whether the decomposition differs in 2013 from 2008/2017.
+
+  If none of the above produces a credible story, lock the read of the 2013 results as "consistent with multiple-testing noise; no robust leakage signal."
+
 Five active workstreams:
 
 0. **New exposure measure (high priority, added 2026-05-07)** — rebuild the firm-level treatment intensity as `emissions_pre × (1 − expected_allocation_share_post)` with both pieces predetermined / exogenous to MSR. See §0 below.
