@@ -215,7 +215,7 @@ build_cells_interval <- function(version_label, years, treat_year) {
   )]
   cells_top_bot[, shock_buyertotal := omega_top * top_supplier_share_of_buyer]
 
-  # Top-quartile flags per cut (within version)
+  # Top-quartile flags (>= 75th percentile) per cut (within version)
   qtl_share <- quantile(cells_top_bot$nace4d_input_share, 0.75, na.rm = TRUE)
   qtl_gap   <- quantile(cells_top_bot$omega_gap,           0.75, na.rm = TRUE)
   qtl_buy   <- quantile(cells_top_bot$shock_buyertotal,    0.75, na.rm = TRUE)
@@ -224,6 +224,16 @@ build_cells_interval <- function(version_label, years, treat_year) {
   cells_top_bot[, topQ_omegagap    := omega_gap           >= qtl_gap   &
                                        !is.na(omega_gap)]
   cells_top_bot[, topQ_buyertotal  := shock_buyertotal    >= qtl_buy   &
+                                       !is.na(shock_buyertotal)]
+  # Top-decile flags (>= 90th percentile) per cut (within version)
+  dec_share <- quantile(cells_top_bot$nace4d_input_share, 0.90, na.rm = TRUE)
+  dec_gap   <- quantile(cells_top_bot$omega_gap,           0.90, na.rm = TRUE)
+  dec_buy   <- quantile(cells_top_bot$shock_buyertotal,    0.90, na.rm = TRUE)
+  cells_top_bot[, topD_nace4dshare := nace4d_input_share >= dec_share &
+                                       !is.na(nace4d_input_share)]
+  cells_top_bot[, topD_omegagap    := omega_gap           >= dec_gap   &
+                                       !is.na(omega_gap)]
+  cells_top_bot[, topD_buyertotal  := shock_buyertotal    >= dec_buy   &
                                        !is.na(shock_buyertotal)]
 
   cells_top_bot[, version    := version_label]
@@ -259,9 +269,12 @@ build_long_for_cut <- function(cut_label) {
                          top_supplier, bot_supplier)]
   } else {
     flag_col <- switch(cut_label,
-                       "cost_shock"   = "topQ_buyertotal",
-                       "input_share"  = "topQ_nace4dshare",
-                       "exposure_gap" = "topQ_omegagap")
+                       "cost_shock_q"   = "topQ_buyertotal",
+                       "cost_shock_d"   = "topD_buyertotal",
+                       "input_share_q"  = "topQ_nace4dshare",
+                       "input_share_d"  = "topD_nace4dshare",
+                       "exposure_gap_q" = "topQ_omegagap",
+                       "exposure_gap_d" = "topD_omegagap")
     sub <- cells_all[get(flag_col) == TRUE,
                      .(buyer, seller_nace4d, version, treat_year,
                        top_supplier, bot_supplier)]
@@ -291,12 +304,18 @@ build_long_for_cut <- function(cut_label) {
   panel[]
 }
 
-CUT_LABELS <- c("pooled", "cost_shock", "input_share", "exposure_gap")
+CUT_LABELS <- c("pooled",
+                "cost_shock_q",   "cost_shock_d",
+                "input_share_q",  "input_share_d",
+                "exposure_gap_q", "exposure_gap_d")
 CUT_DISPLAY <- c(
-  "pooled"       = "Pooled (no heterogeneity)",
-  "cost_shock"   = "Top quartile by buyer-total shock",
-  "input_share"  = "Top quartile by NACE4d input share",
-  "exposure_gap" = "Top quartile by omega gap"
+  "pooled"         = "Pooled (no heterogeneity)",
+  "cost_shock_q"   = "Top quartile by buyer-total shock",
+  "cost_shock_d"   = "Top decile by buyer-total shock",
+  "input_share_q"  = "Top quartile by NACE4d input share",
+  "input_share_d"  = "Top decile by NACE4d input share",
+  "exposure_gap_q" = "Top quartile by omega gap",
+  "exposure_gap_d" = "Top decile by omega gap"
 )
 
 cat("Building long panels for the 4 cuts...\n")
@@ -354,8 +373,11 @@ did_all <- rbindlist(did_rows, use.names = TRUE)
 
 cut_order <- c("Pooled (no heterogeneity)",
                "Top quartile by buyer-total shock",
+               "Top decile by buyer-total shock",
                "Top quartile by NACE4d input share",
-               "Top quartile by omega gap")
+               "Top decile by NACE4d input share",
+               "Top quartile by omega gap",
+               "Top decile by omega gap")
 did_all[, cut := factor(cut, levels = cut_order)]
 setorder(did_all, version, cut)
 fwrite(did_all, file.path(OUTPUT_TAB,
@@ -389,7 +411,7 @@ build_latex_4col <- function(did_all) {
   versions <- c("treat_2005", "treat_2017")
   event_years <- c("EU ETS start (2005)",
                    "MSR (2017)")
-  cuts <- cut_order
+  cuts <- cut_order  # 7 cuts: pooled + 3 metrics x {Q, D}
 
   cell_fmt <- function(beta, se, pv, n) {
     if (length(beta) == 0L || is.na(beta)) return("---")
@@ -416,11 +438,11 @@ build_latex_4col <- function(did_all) {
 
   header <- paste0(
     "% Requires \\usepackage{makecell,booktabs} in main.tex\n",
-    "\\begin{tabular}{lcccc}\n",
+    "\\begin{tabular}{lccccccc}\n",
     "\\toprule\n",
-    " & & \\multicolumn{3}{c}{Top quartile by} \\\\\n",
-    "\\cmidrule(lr){3-5}\n",
-    "Treatment period & Pooled & Cost shock & Input share & Exposure gap \\\\\n",
+    " & & \\multicolumn{2}{c}{Cost shock} & \\multicolumn{2}{c}{Input share} & \\multicolumn{2}{c}{Exposure gap} \\\\\n",
+    "\\cmidrule(lr){3-4}\\cmidrule(lr){5-6}\\cmidrule(lr){7-8}\n",
+    "Treatment period & Pooled & Top 25\\% & Top 10\\% & Top 25\\% & Top 10\\% & Top 25\\% & Top 10\\% \\\\\n",
     "\\midrule"
   )
   footer <- paste0(

@@ -3,19 +3,20 @@
 #
 # PURPOSE
 #   Multiple-hypothesis-testing correction on the within-NACE4d / intensive-
-#   margin DiD table (4 cuts x 2 treatment periods = 8 cells).
+#   margin DiD table (7 cuts x 2 treatment periods = 14 cells).
 #
-#   The table has 8 cells: {Pooled, top-Q cost shock, top-Q input share,
-#   top-Q exposure gap} x {EU ETS start (2005), MSR (2017)}. Cells share
-#   data (same buyers / suppliers across cuts and treatment periods), so
-#   the tests are positively dependent and a Bonferroni-style correction
-#   over-corrects.
+#   The table has 14 cells: {Pooled, top-Q/top-D cost shock, top-Q/top-D
+#   input share, top-Q/top-D exposure gap} x {EU ETS start (2005),
+#   MSR (2017)}. Top-Q = top quartile (>= 75th percentile); Top-D = top
+#   decile (>= 90th percentile). Cells share data (same buyers /
+#   suppliers across cuts and treatment periods), so the tests are
+#   positively dependent and a Bonferroni-style correction over-corrects.
 #
 #   Two corrections are appropriate:
 #   1. Romano-Wolf step-down with cluster-bootstrap (cluster on buyer).
 #      Controls family-wise error rate while estimating the dependence
-#      structure across the 8 tests from the data.
-#   2. Bootstrap Wald test of the global null that all 8 coefficients
+#      structure across the 14 tests from the data.
+#   2. Bootstrap Wald test of the global null that all 14 coefficients
 #      equal zero. Single p-value for "any leakage anywhere in the table".
 #
 #   Also reports Bonferroni, Holm-Bonferroni, and Benjamini-Hochberg
@@ -29,7 +30,7 @@
 #
 # OUTPUTS (output_<machine>/tables/)
 #   - phase4_within_nace4d_intensive_mht_results.csv
-#       8-row CSV: cut, version, beta, se, t_stat, p_unadj, p_bonf,
+#       14-row CSV: cut, version, beta, se, t_stat, p_unadj, p_bonf,
 #       p_holm, p_bh, p_rw
 #   - phase4_within_nace4d_intensive_mht_wald.txt
 #       Joint Wald W statistic and p-value
@@ -69,7 +70,10 @@ INTERVALS <- list(
   "treat_2005" = list(years = c(2005L),         treat_year = 2006L),
   "treat_2017" = list(years = c(2015L, 2016L),  treat_year = 2017L)
 )
-CUT_LABELS <- c("pooled", "cost_shock", "input_share", "exposure_gap")
+CUT_LABELS <- c("pooled",
+                "cost_shock_q",   "cost_shock_d",
+                "input_share_q",  "input_share_d",
+                "exposure_gap_q", "exposure_gap_d")
 
 # ---------------------------------------------------------------------------
 # 1. Load data (mirror phase4_within_intensive_table_and_distributions.R)
@@ -188,6 +192,16 @@ build_cells_interval <- function(version_label, years, treat_year) {
                                        !is.na(omega_gap)]
   cells_top_bot[, topQ_buyertotal  := shock_buyertotal    >= qtl_buy &
                                        !is.na(shock_buyertotal)]
+  # Top-decile flags (>= 90th percentile)
+  dec_share <- quantile(cells_top_bot$nace4d_input_share, 0.90, na.rm = TRUE)
+  dec_gap   <- quantile(cells_top_bot$omega_gap,           0.90, na.rm = TRUE)
+  dec_buy   <- quantile(cells_top_bot$shock_buyertotal,    0.90, na.rm = TRUE)
+  cells_top_bot[, topD_nace4dshare := nace4d_input_share >= dec_share &
+                                       !is.na(nace4d_input_share)]
+  cells_top_bot[, topD_omegagap    := omega_gap           >= dec_gap &
+                                       !is.na(omega_gap)]
+  cells_top_bot[, topD_buyertotal  := shock_buyertotal    >= dec_buy &
+                                       !is.na(shock_buyertotal)]
 
   cells_top_bot[, version    := version_label]
   cells_top_bot[, treat_year := treat_year]
@@ -216,9 +230,12 @@ build_long_for_cut <- function(cut_label) {
                          top_supplier, bot_supplier)]
   } else {
     flag_col <- switch(cut_label,
-                       "cost_shock"   = "topQ_buyertotal",
-                       "input_share"  = "topQ_nace4dshare",
-                       "exposure_gap" = "topQ_omegagap")
+                       "cost_shock_q"   = "topQ_buyertotal",
+                       "cost_shock_d"   = "topD_buyertotal",
+                       "input_share_q"  = "topQ_nace4dshare",
+                       "input_share_d"  = "topD_nace4dshare",
+                       "exposure_gap_q" = "topQ_omegagap",
+                       "exposure_gap_d" = "topD_omegagap")
     sub <- cells_all[get(flag_col) == TRUE,
                      .(buyer, seller_nace4d, version, treat_year,
                        top_supplier, bot_supplier)]
@@ -258,7 +275,7 @@ for (cut_lab in CUT_LABELS) {
 }
 
 # ---------------------------------------------------------------------------
-# 4. Baseline DiD: 8 coefficients
+# 4. Baseline DiD: 14 coefficients
 # ---------------------------------------------------------------------------
 run_did <- function(dt) {
   d <- dt[!is.na(share)]
@@ -278,7 +295,7 @@ run_did <- function(dt) {
     se   = as.numeric(ct[1, "Std. Error"]))
 }
 
-cat("Baseline DiDs (8 cells)...\n")
+cat("Baseline DiDs (14 cells)...\n")
 baseline <- data.table(
   cut     = rep(CUT_LABELS, each = length(INTERVALS)),
   version = rep(names(INTERVALS), times = length(CUT_LABELS))
@@ -396,7 +413,7 @@ fwrite(out, file.path(OUTPUT_TAB,
        "phase4_within_nace4d_intensive_mht_results.csv"))
 
 writeLines(c(
-  sprintf("Joint Wald test of the global null (all 8 coefficients = 0)"),
+  sprintf("Joint Wald test of the global null (all 14 coefficients = 0)"),
   sprintf("  W_obs       = %.4f", W_obs),
   sprintf("  bootstrap p = %.4f", p_wald),
   sprintf("  chi-sq(%d) 95%% critical value = %.2f", n_tests, qchisq(0.95, n_tests)),
@@ -417,7 +434,7 @@ rw_lines <- sig_rows[, sprintf(
   p_rw)]
 writeLines(c(
   "% MHT notes (auto-generated by phase4_within_intensive_did_mht.R)",
-  sprintf("\\textit{Multiple-testing correction.} Joint Wald test of the global null (all 8 coefficients $=0$): $W = %.2f$, bootstrap $p = %.3f$ (cluster-bootstrap on buyer, $B = %d$). Romano-Wolf step-down adjusted $p$-values for cells significant at $p < 0.05$ before correction:",
+  sprintf("\\textit{Multiple-testing correction.} Joint Wald test of the global null (all 14 coefficients $=0$): $W = %.2f$, bootstrap $p = %.3f$ (cluster-bootstrap on buyer, $B = %d$). Romano-Wolf step-down adjusted $p$-values for cells significant at $p < 0.05$ before correction:",
           W_obs, p_wald, B),
   paste(rw_lines, collapse = "; "),
   "."
