@@ -1,0 +1,13 @@
+% Requires \usepackage{makecell,booktabs} in main.tex
+\begin{tabular}{l|cccc}
+\toprule
+ & & \multicolumn{3}{c}{Heterogeneity restriction (top quartile)} \\
+\cmidrule(lr){3-5}
+Event year & Pooled & Buyer-total shock & NACE4d input share & $\omega$ gap \\
+\midrule
+2008 (Phase II onset) & \makecell{0.086$^{***}$ \\ \footnotesize{(0.008)} \\ \footnotesize{N=4,515}} & \makecell{-0.069$^{***}$ \\ \footnotesize{(0.012)} \\ \footnotesize{N=1,128}} & \makecell{0.160$^{***}$ \\ \footnotesize{(0.011)} \\ \footnotesize{N=1,128}} & \makecell{0.234$^{***}$ \\ \footnotesize{(0.012)} \\ \footnotesize{N=1,130}} \\\addlinespace
+2013 (Phase III auctioning) & \makecell{-0.003 \\ \footnotesize{(0.020)} \\ \footnotesize{N=813}} & \makecell{-0.073$^{*}$ \\ \footnotesize{(0.030)} \\ \footnotesize{N=286}} & \makecell{-0.024 \\ \footnotesize{(0.032)} \\ \footnotesize{N=204}} & \makecell{-0.103$^{**}$ \\ \footnotesize{(0.039)} \\ \footnotesize{N=214}} \\\addlinespace
+2017 (post-MSR) & \makecell{0.145$^{***}$ \\ \footnotesize{(0.007)} \\ \footnotesize{N=8,275}} & \makecell{0.171$^{***}$ \\ \footnotesize{(0.012)} \\ \footnotesize{N=2,327}} & \makecell{0.067$^{***}$ \\ \footnotesize{(0.010)} \\ \footnotesize{N=2,065}} & \makecell{0.289$^{***}$ \\ \footnotesize{(0.011)} \\ \footnotesize{N=3,967}} \\\addlinespace
+\bottomrule
+\end{tabular}
+% Notes: Cells report $\hat{\beta}$ on (post $\times$ top-omega) in the within-cell DiD, two-way clustered SE in parentheses, and the number of treated cells. Significance: $^{\dagger}\,p<0.10$, $^{*}\,p<0.05$, $^{**}\,p<0.01$, $^{***}\,p<0.001$.
