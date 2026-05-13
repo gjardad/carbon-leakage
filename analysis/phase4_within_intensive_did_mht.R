@@ -61,7 +61,7 @@ set.seed(20260513)
 
 YEAR_LO <- 2005L
 YEAR_HI <- 2022L
-B       <- 200L  # bootstrap replicates; bump for production runs
+B       <- 500L  # bootstrap replicates; bump for production runs
 
 INTERVALS <- list(
   "treat_2008" = list(years = c(2006L, 2007L), treat_year = 2008L),
