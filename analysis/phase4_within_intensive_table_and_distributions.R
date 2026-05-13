@@ -353,9 +353,9 @@ combined_long <- rbindlist(wide_rows, use.names = TRUE)
 # Build the LaTeX table by hand: rows = event years, columns = 4 cuts.
 build_latex_4col <- function(did_all) {
   versions <- c("treat_2008", "treat_2013", "treat_2017")
-  event_years <- c("2008 (Phase II onset)",
-                   "2013 (Phase III auctioning)",
-                   "2017 (post-MSR)")
+  event_years <- c("Phase II onset (2008)",
+                   "Phase III onset (2013)",
+                   "MSR (2017)")
   cuts <- cut_order
 
   cell_fmt <- function(beta, se, pv, n) {
@@ -383,11 +383,11 @@ build_latex_4col <- function(did_all) {
 
   header <- paste0(
     "% Requires \\usepackage{makecell,booktabs} in main.tex\n",
-    "\\begin{tabular}{l|cccc}\n",
+    "\\begin{tabular}{lcccc}\n",
     "\\toprule\n",
-    " & & \\multicolumn{3}{c}{Heterogeneity restriction (top quartile)} \\\\\n",
+    " & & \\multicolumn{3}{c}{Top quartile by} \\\\\n",
     "\\cmidrule(lr){3-5}\n",
-    "Event year & Pooled & Buyer-total shock & NACE4d input share & $\\omega$ gap \\\\\n",
+    "Treatment period & Pooled & Cost shock & Input share & Exposure gap \\\\\n",
     "\\midrule"
   )
   footer <- paste0(
