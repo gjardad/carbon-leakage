@@ -70,6 +70,21 @@ EUA_SCENARIOS <- list(
   "2022" = list(eua = 80.24, label = "EUA = 80.24 EUR/tCO2 (2022 annual mean, post-MSR peak)")
 )
 
+# Eurostat HICP (prc_hicp_aind), EA changing composition, all items
+# (CP00), base 2015 = 100. Used to deflate end-of-year EUA prices into
+# 2016 base euros so the cost-shock distribution is on a real-euro
+# scale that matches the buyer-total-cost denominator (built from
+# 2015-16 accounts).
+HICP_BASE <- list("2016" = 100.23,
+                  "2017" = 101.78,
+                  "2022" = 117.04)
+HICP_BASE_YEAR <- 2016L
+
+# Cost-shock cell formatter uses end-of-year EUA prices, deflated to
+# 2016 euros, to convert shock_buyertotal (tCO2 per euro of total cost)
+# into a fraction of buyer total cost in real terms.
+EUA_EOY_YEARS <- c(2017L, 2022L)
+
 # ---------------------------------------------------------------------------
 # 1. Load data
 # ---------------------------------------------------------------------------
@@ -408,7 +423,7 @@ writeLines(tex_table,
 cat("Combined 4-col DiD table written.\n")
 
 # ---------------------------------------------------------------------------
-# 5. Three distribution figures (using DIST_VERSION cells)
+# 5. Distribution figures (using DIST_VERSION cells)
 # ---------------------------------------------------------------------------
 cat(sprintf("Building distribution figures using version %s...\n",
             DIST_VERSION))
@@ -417,6 +432,72 @@ cells_dist <- cells_all[version == DIST_VERSION &
                           !is.na(nace4d_input_share) &
                           !is.na(omega_gap)]
 
+# Read daily EUA settlement prices to extract end-of-year values.
+cat("Reading daily EUA settlement prices for end-of-year EUA...\n")
+eua_daily <- fread(file.path(RAW_DATA,
+                "European Union Carbon Permits Allowance (EUA) Yearly Futures Historical Data.csv"))
+eua_daily[, date := as.Date(Date, format = "%m/%d/%Y")]
+eua_daily <- eua_daily[!is.na(date)]
+eua_daily[, yr := as.integer(format(date, "%Y"))]
+setorder(eua_daily, date)
+eua_eoy <- eua_daily[, .(eua_nominal = last(Price)), by = yr]
+
+deflate_to_base <- function(yr) {
+  HICP_BASE[[as.character(yr)]] / HICP_BASE[[as.character(HICP_BASE_YEAR)]]
+}
+
+eua_real <- list()
+for (yr_target in EUA_EOY_YEARS) {
+  nom <- eua_eoy[yr == yr_target, eua_nominal]
+  defl <- deflate_to_base(yr_target)
+  eua_real[[as.character(yr_target)]] <- nom / defl
+  cat(sprintf("  EUA end of %d: nominal = %.2f EUR/tCO2; real (2016 base) = %.2f\n",
+              yr_target, nom, eua_real[[as.character(yr_target)]]))
+}
+
+# Cost-shock distribution: shock_buyertotal x real EUA -> fraction of
+# buyer total cost (real, base 2016). Plotted as a percent.
+plot_cost_shock <- function(shock_vals, eua_real_price) {
+  d <- data.table(val = shock_vals * eua_real_price)
+  d <- d[is.finite(val) & val > 0]
+  if (nrow(d) == 0L) return(NULL)
+  qs <- quantile(d$val, c(0.50, 0.75, 0.90, 0.99), na.rm = TRUE)
+
+  pct_breaks <- c(1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1)
+  pct_labels <- c("0.00001%", "0.0001%", "0.001%", "0.01%",
+                  "0.1%", "1%", "10%", "100%")
+
+  ggplot(d, aes(x = val)) +
+    geom_histogram(bins = 60, fill = "steelblue",
+                   color = "white", alpha = 0.9) +
+    geom_vline(xintercept = qs[2], linetype = "dashed", color = "firebrick") +
+    annotate("text", x = qs[2], y = Inf, label = " p75",
+             vjust = 1.5, hjust = 0, color = "firebrick", size = 4.5) +
+    scale_x_log10(breaks = pct_breaks, labels = pct_labels) +
+    labs(x = "Cost shock", y = "Number of cells") +
+    theme_classic(base_size = 13) +
+    theme(panel.grid       = element_blank(),
+          axis.title.x     = element_text(margin = margin(t = 14), size = 15),
+          axis.title.y     = element_text(margin = margin(r = 14), size = 15),
+          axis.text        = element_text(size = 13),
+          plot.title       = element_blank(),
+          plot.subtitle    = element_blank())
+}
+
+for (yr_target in EUA_EOY_YEARS) {
+  p_cs <- plot_cost_shock(cells_dist$shock_buyertotal,
+                          eua_real[[as.character(yr_target)]])
+  fig_base <- sprintf("phase4_within_nace4d_intensive_dist_shock_buyertotal_eua%d",
+                      yr_target)
+  ggsave(file.path(OUTPUT_FIG, paste0(fig_base, ".png")), p_cs,
+         width = 8, height = 5, dpi = 200)
+  ggsave(file.path(OUTPUT_FIG, paste0(fig_base, ".pdf")), p_cs,
+         width = 8, height = 5)
+  cat(sprintf("  Cost-shock distribution (EUA %d) written.\n", yr_target))
+}
+
+# NACE4d input share + omega gap distributions retain the prior styling
+# for now (user may revisit them separately).
 base_theme <- theme_minimal(base_size = 11) +
   theme(panel.grid.minor = element_blank(),
         plot.title    = element_text(face = "bold", size = 12),
@@ -449,14 +530,6 @@ plot_dist <- function(x, xlab, title, subtitle, log_x = FALSE) {
   p
 }
 
-p_shock <- plot_dist(
-  cells_dist$shock_buyertotal,
-  expression(omega[top] %*% "(top-supplier spend / buyer total cost)"),
-  "Distribution of the dollar shock at the buyer's total cost",
-  sprintf("Across (buyer, NACE4d) cells with >=2 ETS-relevant suppliers in %s pre-period.",
-          DIST_VERSION),
-  log_x = TRUE
-)
 p_nshare <- plot_dist(
   cells_dist$nace4d_input_share,
   "Cell spend on NACE4d / buyer total cost",
@@ -475,12 +548,6 @@ p_gap <- plot_dist(
 )
 
 ggsave(file.path(OUTPUT_FIG,
-       "phase4_within_nace4d_intensive_dist_shock_buyertotal.png"),
-       p_shock, width = 8, height = 5, dpi = 200)
-ggsave(file.path(OUTPUT_FIG,
-       "phase4_within_nace4d_intensive_dist_shock_buyertotal.pdf"),
-       p_shock, width = 8, height = 5)
-ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_intensive_dist_nace4d_share.png"),
        p_nshare, width = 8, height = 5, dpi = 200)
 ggsave(file.path(OUTPUT_FIG,
@@ -492,7 +559,7 @@ ggsave(file.path(OUTPUT_FIG,
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_intensive_dist_omega_gap.pdf"),
        p_gap, width = 8, height = 5)
-cat("Three distribution figures written.\n")
+cat("All distribution figures written.\n")
 
 # ---------------------------------------------------------------------------
 # 6. Counterfactual savings figures: TWO versions, one per EUA scenario
