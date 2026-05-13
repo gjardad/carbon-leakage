@@ -60,11 +60,11 @@ write_tex_table <- function(dt, file, digits = 4, caption = NULL) {
   invisible(NULL)
 }
 
-YEAR_LO <- 2005L
+YEAR_LO <- 2002L  # B2B panel starts in 2002
 YEAR_HI <- 2022L
 
 INTERVALS <- list(
-  "treat_2005" = list(years = c(2005L),         treat_year = 2006L),
+  "treat_2005" = list(years = c(2005L),         treat_year = 2005L),
   "treat_2017" = list(years = c(2015L, 2016L),  treat_year = 2017L)
 )
 

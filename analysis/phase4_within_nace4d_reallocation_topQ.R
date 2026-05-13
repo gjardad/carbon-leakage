@@ -43,12 +43,12 @@ suppressPackageStartupMessages({
 
 set.seed(20260508)
 
-YEAR_LO <- 2005L
+YEAR_LO <- 2002L  # B2B panel starts in 2002
 YEAR_HI <- 2022L
 N_BOOT  <- 1000L
 
 INTERVALS <- list(
-  "treat_2005" = list(years = c(2005L),         norm_year = 2005L, treat_year = 2006L),
+  "treat_2005" = list(years = c(2005L),         norm_year = 2004L, treat_year = 2005L),
   "treat_2017" = list(years = c(2015L, 2016L),  norm_year = 2016L, treat_year = 2017L)
 )
 

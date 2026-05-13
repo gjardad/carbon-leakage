@@ -59,15 +59,16 @@ suppressPackageStartupMessages({
 # ---------------------------------------------------------------------------
 set.seed(20260513)
 
-YEAR_LO <- 2005L
+YEAR_LO <- 2002L  # B2B panel starts in 2002. Extended below 2005 for the EU ETS-launch pre-period.
 YEAR_HI <- 2022L
 B       <- 500L  # bootstrap replicates; bump for production runs
 
 # Two treatment periods (matching phase4_within_intensive_table_and_distributions.R):
-#   treat_2005: omega from 2005, post = 1 from 2006 onwards
+#   treat_2005: omega from 2005, post = 1 from 2005 onwards
+#               pre-period uses pre-policy 2002-2004 B2B data.
 #   treat_2017: omega from 2015-16, post = 1 from 2017 onwards
 INTERVALS <- list(
-  "treat_2005" = list(years = c(2005L),         treat_year = 2006L),
+  "treat_2005" = list(years = c(2005L),         treat_year = 2005L),
   "treat_2017" = list(years = c(2015L, 2016L),  treat_year = 2017L)
 )
 CUT_LABELS <- c("pooled",

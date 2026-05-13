@@ -50,19 +50,18 @@ suppressPackageStartupMessages({
 
 set.seed(20260513)
 
-YEAR_LO <- 2005L
+YEAR_LO <- 2002L  # B2B panel starts in 2002; AA in 2000. Extended below 2005 to provide a real pre-period for the EU ETS launch (2005).
 YEAR_HI <- 2022L
 
 # Two treatment periods we report on:
-#   "treat_2005" = EU ETS start. omega computed from 2005 alone (the
-#     first year of the panel) under the assumption that one year is too
-#     short for firms to adjust, so 2005 cost shares are a valid proxy
-#     for pre-policy exposure. The cutoff in the post indicator is 2006
-#     (post = 1 from 2006 onwards; pre = {2005} only).
+#   "treat_2005" = EU ETS launch. omega computed from 2005 (the year
+#     the policy starts and the first year of EUTL records); post = 1
+#     from 2005 onwards. Pre-period uses B2B data from 2002-2004
+#     (which extends back to 2002, before the EU ETS existed).
 #   "treat_2017" = MSR reform. omega computed from 2015-16. Post = 1
-#     from 2017 onwards; pre = {2015, 2016}.
+#     from 2017 onwards; pre-period is 2005-2016.
 INTERVALS <- list(
-  "treat_2005" = list(years = c(2005L),         treat_year = 2006L),
+  "treat_2005" = list(years = c(2005L),         treat_year = 2005L),
   "treat_2017" = list(years = c(2015L, 2016L),  treat_year = 2017L)
 )
 
