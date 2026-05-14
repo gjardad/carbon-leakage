@@ -505,8 +505,8 @@ traj <- panels_by_def[["shortage"]][["pooled"]][!is.na(share),
 traj[, lo := mean_share - 1.96 * se_share]
 traj[, hi := mean_share + 1.96 * se_share]
 traj[, version_label := fcase(
-  version == "treat_2005", "EU ETS start (2005)",
-  version == "treat_2017", "MSR (2017)"
+  version == "treat_2005", "2005 Treatment",
+  version == "treat_2017", "2017 Treatment"
 )]
 traj[, role_label := fcase(
   supplier_role == "top", "Top-omega supplier",
@@ -517,7 +517,7 @@ traj[, role_label := factor(role_label,
                                        "Bottom-omega supplier"))]
 
 treat_lines <- data.table(
-  version_label = c("EU ETS start (2005)", "MSR (2017)"),
+  version_label = c("2005 Treatment", "2017 Treatment"),
   treat_year    = c(2005, 2017)
 )
 
@@ -540,13 +540,13 @@ p_traj <- ggplot(traj,
                     name = NULL) +
   labs(x = NULL,
        y = "Mean within-cell expenditure share") +
-  theme_classic(base_size = 13) +
+  theme_classic(base_size = 15) +
   theme(panel.grid       = element_blank(),
-        axis.title.y     = element_text(size = 14, margin = margin(r = 12)),
-        axis.text        = element_text(size = 12),
-        strip.text       = element_text(face = "bold", size = 13),
+        axis.title.y     = element_text(size = 18, margin = margin(r = 18)),
+        axis.text        = element_text(size = 15),
+        strip.text       = element_text(face = "bold", size = 16),
         legend.position  = "bottom",
-        legend.text      = element_text(size = 12))
+        legend.text      = element_text(size = 14))
 
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_intensive_allcells_topbot_trajectory.png"),
@@ -613,12 +613,13 @@ for (yr_target in EUA_EOY_YEARS) {
               yr_target, nom, eua_real[[as.character(yr_target)]]))
 }
 
-# Shared theme for the clean histograms (cost shock, NACE4d input share).
-clean_hist_theme <- theme_classic(base_size = 13) +
+# Shared theme for the clean histograms (cost shock, NACE4d input share,
+# exposure gap). Also reused by the savings ECDF below for consistent fonts.
+clean_hist_theme <- theme_classic(base_size = 15) +
   theme(panel.grid       = element_blank(),
-        axis.title.x     = element_text(margin = margin(t = 14), size = 15),
-        axis.title.y     = element_text(margin = margin(r = 14), size = 15),
-        axis.text        = element_text(size = 13),
+        axis.title.x     = element_text(margin = margin(t = 22), size = 18),
+        axis.title.y     = element_text(margin = margin(r = 18), size = 18),
+        axis.text        = element_text(size = 15),
         plot.title       = element_blank(),
         plot.subtitle    = element_blank())
 
@@ -642,7 +643,9 @@ plot_dist_pct_log <- function(vals, xlab, floor = NULL) {
     bin_breaks <- 10^seq(log_min, log_max, length.out = 61)
     pct_breaks <- 10^seq(log_min, log_max)
     pct_labels <- vapply(pct_breaks, function(b) {
-      lab <- sprintf("%g%%", b * 100)
+      # formatC(..., format = "fg") keeps small values in decimal form
+      # (e.g. 0.0001 stays "0.0001", not "1e-04").
+      lab <- paste0(formatC(b * 100, format = "fg", drop0trailing = TRUE), "%")
       if (abs(b - floor) < 1e-12) paste0("<", lab) else lab
     }, character(1))
     hist_layer <- geom_histogram(breaks = bin_breaks,
@@ -666,8 +669,10 @@ plot_dist_pct_log <- function(vals, xlab, floor = NULL) {
     clean_hist_theme
 }
 
-# Cost shock distribution: shock_buyertotal * deflated EUA, per EUA year.
-for (yr_target in EUA_EOY_YEARS) {
+# Cost shock distribution: shock_buyertotal * deflated EUA, end-of-2017 EUA only.
+# The end-of-2022 figure was dropped from the paper; the savings-figure loop
+# below still uses both scenarios as diagnostics.
+for (yr_target in 2017L) {
   p_cs <- plot_dist_pct_log(
     cells_dist$shock_buyertotal * eua_real[[as.character(yr_target)]],
     "Cost shock",
@@ -698,46 +703,13 @@ ggsave(file.path(OUTPUT_FIG,
        p_nshare, width = 8, height = 5)
 cat("  NACE4d input share distribution written.\n")
 
-# Omega gap distribution keeps the older title/subtitle styling for now.
-base_theme <- theme_minimal(base_size = 11) +
-  theme(panel.grid.minor = element_blank(),
-        plot.title    = element_text(face = "bold", size = 12),
-        plot.subtitle = element_text(size = 10, color = "grey30"))
-
-plot_dist <- function(x, xlab, title, subtitle, log_x = FALSE) {
-  d <- data.table(val = x[is.finite(x) & x > 0])
-  if (nrow(d) == 0L) {
-    cat(sprintf("No positive values for %s\n", title)); return(NULL)
-  }
-  qs <- quantile(d$val, c(0.50, 0.75, 0.90, 0.99), na.rm = TRUE)
-  subtitle_full <- sprintf(
-    "%s\nMedian = %s | p75 = %s | p90 = %s | p99 = %s | N = %s cells",
-    subtitle,
-    formatC(qs[1], format = "g", digits = 3),
-    formatC(qs[2], format = "g", digits = 3),
-    formatC(qs[3], format = "g", digits = 3),
-    formatC(qs[4], format = "g", digits = 3),
-    format(nrow(d), big.mark = ",")
-  )
-  p <- ggplot(d, aes(x = val)) +
-    geom_histogram(bins = 60, fill = "steelblue", color = "white", alpha = 0.85) +
-    geom_vline(xintercept = qs[2], linetype = "dashed", color = "firebrick") +
-    annotate("text", x = qs[2], y = Inf, label = " p75",
-             vjust = 1.5, hjust = 0, color = "firebrick", size = 3) +
-    labs(title = title, subtitle = subtitle_full,
-         x = xlab, y = "Number of cells") +
-    base_theme
-  if (log_x) p <- p + scale_x_log10(labels = scales::comma_format())
-  p
-}
-
-p_gap <- plot_dist(
+# Omega gap distribution: unified clean style. omega_gap is small in
+# absolute terms (median ~6e-5 ~0.006%); floor at 1e-6 keeps the leftmost
+# bin at "<0.0001%" and gives clean log decades up through the data max.
+p_gap <- plot_dist_pct_log(
   cells_dist$omega_gap,
-  expression(omega[top] - omega[bot]),
-  expression("Distribution of " * omega[top] - omega[bot]),
-  sprintf("Across (buyer, NACE4d) cells with >=2 ETS-relevant suppliers in %s pre-period.",
-          DIST_VERSION),
-  log_x = TRUE
+  "Exposure gap",
+  floor = 1e-6
 )
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_intensive_dist_omega_gap.png"),
@@ -762,9 +734,8 @@ sv <- cells_dist[, .(buyer, seller_nace4d, omega_gap,
 sv <- sv[!is.na(omega_gap) & !is.na(top_supplier_share_of_buyer) &
            omega_gap > 0 & top_supplier_share_of_buyer > 0]
 
-savings_x_breaks <- c(0, 0.001, 0.005, 0.01, 0.05)
-savings_x_labels <- c("0%", "0.1%", "0.5%", "1%", "5%")
-savings_x_limits <- c(0, 0.05)
+savings_x_breaks <- c(1e-6, 1e-4, 1e-2, 1)
+savings_x_labels <- c("0.0001%", "0.01%", "1%", "100%")
 
 summary_rows <- list()
 for (yr_target in EUA_EOY_YEARS) {
@@ -787,13 +758,11 @@ for (yr_target in EUA_EOY_YEARS) {
   ), by = rho]
   summary_rows[[as.character(yr_target)]] <- sv_summary
 
-  p_sv <- ggplot(sv_panels[savings >= 0],
+  p_sv <- ggplot(sv_panels[savings > 0],
                  aes(x = savings, fill = factor(rho), color = factor(rho))) +
     stat_ecdf(geom = "step", linewidth = 0.9, alpha = 0.9) +
-    scale_x_continuous(limits = savings_x_limits,
-                       breaks = savings_x_breaks,
-                       labels = savings_x_labels,
-                       oob    = scales::squish) +
+    scale_x_log10(breaks = savings_x_breaks,
+                  labels = savings_x_labels) +
     scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
     scale_color_brewer(palette = "Set1",
                        name = expression("Pass-through " * rho)) +
@@ -801,16 +770,10 @@ for (yr_target in EUA_EOY_YEARS) {
                       name = expression("Pass-through " * rho)) +
     labs(x = "Savings as % of buyer total input cost",
          y = "Cumulative share of cells") +
-    theme_classic(base_size = 13) +
-    theme(panel.grid       = element_blank(),
-          axis.title.x     = element_text(margin = margin(t = 14), size = 15),
-          axis.title.y     = element_text(margin = margin(r = 14), size = 15),
-          axis.text        = element_text(size = 13),
-          plot.title       = element_blank(),
-          plot.subtitle    = element_blank(),
-          legend.position  = "bottom",
-          legend.title     = element_text(size = 13),
-          legend.text      = element_text(size = 12))
+    clean_hist_theme +
+    theme(legend.position  = "bottom",
+          legend.title     = element_text(size = 15),
+          legend.text      = element_text(size = 14))
 
   fig_base <- sprintf("phase4_within_nace4d_intensive_savings_by_passthrough_eua%d",
                       yr_target)
