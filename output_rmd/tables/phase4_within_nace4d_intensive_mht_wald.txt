@@ -1,5 +1,5 @@
-Joint Wald test of the global null (all 14 coefficients = 0)
-  W_obs       = 970.5253
+Joint Wald test of the global null (all 56 coefficients = 0)
+  W_obs       = 1517.6988
   bootstrap p = 0.0000
-  chi-sq(14) 95% critical value = 23.68
+  chi-sq(56) 95% critical value = 74.47
   B = 500 cluster-bootstrap iterations (cluster = buyer)
