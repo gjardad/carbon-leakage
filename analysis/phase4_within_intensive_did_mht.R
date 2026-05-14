@@ -576,6 +576,12 @@ build_latex_size_rw <- function(d14) {
                      cell_fmt(r$beta, r$se, r$p_rw, r$n_treated_cells))
     }
     body <- paste0(body, " \\\\\\addlinespace")
+    # Horizontal rule between treatment-period rows, spanning columns 2-8 only
+    # (leaves column 1 -- the treatment label -- ungrouped). Skip after the
+    # last row since \bottomrule follows.
+    if (i < length(versions)) {
+      body <- paste0(body, "\n\\cmidrule(lr){2-8}")
+    }
   }
 
   header <- paste0(
