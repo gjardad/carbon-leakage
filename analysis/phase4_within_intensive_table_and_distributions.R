@@ -464,6 +464,40 @@ did_all <- did_all_full[omega_def == "shortage" & spec == "unconditional",
                          .(cut, version, n_obs, n_treated_cells, term,
                            estimate, std_error, t_stat, p_value)]
 
+# ---------------------------------------------------------------------------
+# 4a. Horizon robustness: vary the post-period end year for treat_2005.
+#     If the leakage signal at the EU ETS launch is real, it should appear
+#     even at short post-period horizons (not only at the full 2005-2022
+#     window). The treat_2017 spec is not varied -- its post-period is
+#     already short (2017-2022, 6 years).
+# ---------------------------------------------------------------------------
+HORIZONS <- c(2008L, 2010L, 2015L, 2022L)
+cat("\nHorizon robustness for treat_2005 (omega = shortage, unconditional)...\n")
+horizon_rows <- list()
+for (horizon in HORIZONS) {
+  for (cut_lab in CUT_LABELS) {
+    d_full <- panels_by_def[["shortage"]][[cut_lab]][version == "treat_2005"]
+    d <- d_full[year <= horizon]
+    est <- run_did_one(d, size_control = FALSE)
+    horizon_rows[[length(horizon_rows) + 1L]] <- data.table(
+      horizon         = horizon,
+      cut             = CUT_DISPLAY[[cut_lab]],
+      n_obs           = est$n_obs,
+      n_treated_cells = est$n_cells,
+      estimate        = est$beta,
+      std_error       = est$se,
+      t_stat          = est$t,
+      p_value         = est$p
+    )
+  }
+}
+horizon_df <- rbindlist(horizon_rows, use.names = TRUE)
+fwrite(horizon_df, file.path(OUTPUT_TAB,
+       "phase4_within_nace4d_reallocation_did_horizon_robustness.csv"))
+
+cat("--- Horizon robustness (treat_2005, shortage-based omega) ---\n")
+print(dcast(horizon_df, cut ~ horizon, value.var = "estimate"))
+
 cut_order <- c("Pooled (no heterogeneity)",
                "Top quartile by buyer-total shock",
                "Top decile by buyer-total shock",

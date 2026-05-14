@@ -116,11 +116,16 @@ buyer_tc <- aa_kv[!is.na(total_cost) & total_cost > 0,
 
 load(file.path(OUT_DATA, "phase3_firm_exposure.RData"))
 fe <- as.data.table(firm_exposure)[, .(vat = as.character(vat),
-                                       year, shortage, total_cost,
-                                       allocated_free)]
+                                       year, shortage, emissions,
+                                       total_cost, allocated_free)]
 rm(firm_exposure)
-fe[, omega := ifelse(!is.na(total_cost) & total_cost > 0,
-                     pmax(shortage, 0) / total_cost, NA_real_)]
+# Two firm-year omega definitions (matches the table_and_distributions
+# script): omega_sh = shortage/cost (cost-shock; headline), omega_em =
+# emissions/cost (physical intensity; falsification benchmark).
+fe[, omega_sh := ifelse(!is.na(total_cost) & total_cost > 0,
+                        pmax(shortage, 0) / total_cost, NA_real_)]
+fe[, omega_em := ifelse(!is.na(total_cost) & total_cost > 0,
+                        pmax(emissions, 0) / total_cost, NA_real_)]
 
 b2b <- merge(b2b, aa, by.x = c("seller", "year"), by.y = c("vat", "year"),
              all.x = TRUE)
@@ -135,13 +140,14 @@ cat(sprintf("  B2B rows after seller-NACE4d merge: %s\n",
 # ---------------------------------------------------------------------------
 # 2. Build cells per interval with all three heterogeneity scores
 # ---------------------------------------------------------------------------
-build_cells_interval <- function(version_label, years, treat_year) {
+build_cells_interval <- function(version_label, years, treat_year,
+                                  omega_col = "omega_sh") {
   yrs <- years  # vector of pre-event years for computing omega
   seller_int <- b2b[year %in% yrs,
                     .(int_sales = sum(sales)),
                     by = .(buyer, seller_nace4d, seller)]
   fe_int <- fe[year %in% yrs,
-               .(int_omega = mean(omega, na.rm = TRUE)),
+               .(int_omega = mean(get(omega_col), na.rm = TRUE)),
                by = .(vat)]
   seller_int <- merge(seller_int, fe_int,
                       by.x = "seller", by.y = "vat", all.x = TRUE)
@@ -209,25 +215,31 @@ build_cells_interval <- function(version_label, years, treat_year) {
   cells_top_bot[]
 }
 
-cells_list <- lapply(names(INTERVALS), function(lab) {
-  iv <- INTERVALS[[lab]]
-  cat(sprintf("Building cells for %s...\n", lab))
-  build_cells_interval(lab, iv$years, iv$treat_year)
-})
-cells_all <- rbindlist(cells_list, use.names = TRUE, fill = TRUE)
-cat(sprintf("Cells built: %s total rows across versions.\n",
-            format(nrow(cells_all), big.mark = ",")))
+OMEGA_DEFS <- c("shortage" = "omega_sh", "emissions" = "omega_em")
+cells_by_def <- list()
+for (def_name in names(OMEGA_DEFS)) {
+  omega_col <- OMEGA_DEFS[[def_name]]
+  cat(sprintf("--- Building cells under omega definition: %s (%s)\n",
+              def_name, omega_col))
+  cl <- lapply(names(INTERVALS), function(lab) {
+    iv <- INTERVALS[[lab]]
+    build_cells_interval(lab, iv$years, iv$treat_year, omega_col = omega_col)
+  })
+  cells_by_def[[def_name]] <- rbindlist(cl, use.names = TRUE, fill = TRUE)
+  cat(sprintf("  %s: %s rows across versions.\n",
+              def_name, format(nrow(cells_by_def[[def_name]]), big.mark = ",")))
+}
 
 # ---------------------------------------------------------------------------
-# 3. Build long panels for each (cut, event-year) combination
+# 3. Build long panels for each (cut, event-year, omega_def) combination
 # ---------------------------------------------------------------------------
 yr_denom <- unique(b2b[, .(buyer, seller_nace4d, year,
                            total_buyer_nace4d_spend)])
 yr_sales <- b2b[, .(buyer, seller_nace4d, seller, year, sales)]
 
-build_long_for_cut <- function(cut_label) {
+build_long_for_cut <- function(cut_label, cells_dt) {
   if (cut_label == "pooled") {
-    sub <- cells_all[, .(buyer, seller_nace4d, version, treat_year,
+    sub <- cells_dt[, .(buyer, seller_nace4d, version, treat_year,
                          top_supplier, bot_supplier)]
   } else {
     flag_col <- switch(cut_label,
@@ -237,7 +249,7 @@ build_long_for_cut <- function(cut_label) {
                        "input_share_d"  = "topD_nace4dshare",
                        "exposure_gap_q" = "topQ_omegagap",
                        "exposure_gap_d" = "topD_omegagap")
-    sub <- cells_all[get(flag_col) == TRUE,
+    sub <- cells_dt[get(flag_col) == TRUE,
                      .(buyer, seller_nace4d, version, treat_year,
                        top_supplier, bot_supplier)]
   }
@@ -267,12 +279,16 @@ build_long_for_cut <- function(cut_label) {
   panel[]
 }
 
-cat("Building long panels for the 4 cuts...\n")
-panels <- list()
-for (cut_lab in CUT_LABELS) {
-  panels[[cut_lab]] <- build_long_for_cut(cut_lab)
-  cat(sprintf("  %-13s %s rows\n", cut_lab,
-              format(nrow(panels[[cut_lab]]), big.mark = ",")))
+cat("Building long panels (2 omega defs x 4 cuts)...\n")
+panels_by_def <- list()
+for (def_name in names(OMEGA_DEFS)) {
+  panels_by_def[[def_name]] <- list()
+  for (cut_lab in CUT_LABELS) {
+    panels_by_def[[def_name]][[cut_lab]] <- build_long_for_cut(
+      cut_lab, cells_dt = cells_by_def[[def_name]]
+    )
+  }
+  cat(sprintf("  [%s] panels built\n", def_name))
 }
 
 # ---------------------------------------------------------------------------
@@ -296,13 +312,15 @@ run_did <- function(dt) {
     se   = as.numeric(ct[1, "Std. Error"]))
 }
 
-cat("Baseline DiDs (14 cells)...\n")
-baseline <- data.table(
-  cut     = rep(CUT_LABELS, each = length(INTERVALS)),
-  version = rep(names(INTERVALS), times = length(CUT_LABELS))
-)
+cat("Baseline DiDs (28 cells: 2 omega defs x 7 cuts x 2 versions)...\n")
+baseline <- CJ(omega_def = names(OMEGA_DEFS),
+               cut       = CUT_LABELS,
+               version   = names(INTERVALS),
+               sorted    = FALSE)
 for (i in seq_len(nrow(baseline))) {
-  panel_dt <- panels[[baseline$cut[i]]][version == baseline$version[i]]
+  panel_dt <- panels_by_def[[baseline$omega_def[i]]][[baseline$cut[i]]][
+    version == baseline$version[i]
+  ]
   est <- run_did(panel_dt)
   baseline[i, beta := est["beta"]]
   baseline[i, se   := est["se"]]
@@ -312,17 +330,23 @@ baseline[, p_unadj := 2 * (1 - pnorm(abs(t_stat)))]
 print(baseline)
 
 # ---------------------------------------------------------------------------
-# 5. Cluster-bootstrap on buyer; re-run all 12 DiDs each iteration
+# 5. Cluster-bootstrap on buyer; re-run all 28 DiDs each iteration
 # ---------------------------------------------------------------------------
-cat(sprintf("\nCluster bootstrap (B = %d, cluster = buyer)...\n", B))
+cat(sprintf("\nCluster bootstrap (B = %d, cluster = buyer, %d cells per iter)...\n",
+            B, nrow(baseline)))
 
-# Union of buyers across all 4 panels = clustering universe
-all_buyers <- unique(rbindlist(lapply(panels, function(p) p[, .(buyer)])))$buyer
+# Union of buyers across all panels = clustering universe
+all_buyers <- unique(rbindlist(
+  lapply(unlist(panels_by_def, recursive = FALSE),
+         function(p) p[, .(buyer)])
+))$buyer
 n_buyers   <- length(all_buyers)
 cat(sprintf("  unique buyer clusters: %s\n", format(n_buyers, big.mark = ",")))
 
 boot_betas <- matrix(NA_real_, nrow = B, ncol = nrow(baseline))
-colnames(boot_betas) <- paste(baseline$cut, baseline$version, sep = "__")
+colnames(boot_betas) <- paste(baseline$omega_def,
+                              baseline$cut,
+                              baseline$version, sep = "__")
 
 t0 <- Sys.time()
 for (b in 1:B) {
@@ -338,15 +362,14 @@ for (b in 1:B) {
                             draw_id = paste0("d", seq_len(n_buyers)))
 
   for (i in seq_len(nrow(baseline))) {
-    cut_lab <- baseline$cut[i]
-    ver_lab <- baseline$version[i]
-    panel_dt <- panels[[cut_lab]][version == ver_lab]
+    def_name <- baseline$omega_def[i]
+    cut_lab  <- baseline$cut[i]
+    ver_lab  <- baseline$version[i]
+    panel_dt <- panels_by_def[[def_name]][[cut_lab]][version == ver_lab]
     if (nrow(panel_dt) == 0L) next
     boot_panel <- merge(panel_dt, draw_lookup, by = "buyer",
                         allow.cartesian = TRUE)
-    # Build cell IDs that vary across draws so the same buyer in two draws
-    # is treated as two clusters (standard cluster-bootstrap convention).
-    boot_panel[, buyer        := paste(buyer, draw_id, sep = "@")]
+    boot_panel[, buyer := paste(buyer, draw_id, sep = "@")]
     est <- run_did(boot_panel)
     boot_betas[b, i] <- est["beta"]
   }
@@ -408,13 +431,13 @@ cat(sprintf("  W = %.2f, p_wald = %.4f (chi-sq df %d ref crit at 0.05 = %.2f)\n"
 # ---------------------------------------------------------------------------
 # 8. Outputs
 # ---------------------------------------------------------------------------
-out <- baseline[, .(cut, version, beta, se, t_stat, p_unadj,
+out <- baseline[, .(omega_def, cut, version, beta, se, t_stat, p_unadj,
                     p_bonf, p_holm, p_bh, p_rw)]
 fwrite(out, file.path(OUTPUT_TAB,
        "phase4_within_nace4d_intensive_mht_results.csv"))
 
 writeLines(c(
-  sprintf("Joint Wald test of the global null (all 14 coefficients = 0)"),
+  sprintf("Joint Wald test of the global null (all %d coefficients = 0)", n_tests),
   sprintf("  W_obs       = %.4f", W_obs),
   sprintf("  bootstrap p = %.4f", p_wald),
   sprintf("  chi-sq(%d) 95%% critical value = %.2f", n_tests, qchisq(0.95, n_tests)),
@@ -436,15 +459,20 @@ version_display_lookup <- c(
   "treat_2005" = "EU ETS start (2005)",
   "treat_2017" = "MSR (2017)"
 )
+omega_display_lookup <- c(
+  "shortage"  = "shortage classification",
+  "emissions" = "emissions classification"
+)
 rw_lines <- sig_rows[, sprintf(
-  "%s, %s: $\\hat{p}^{\\mathrm{RW}} = %.3f$",
+  "%s, %s, %s: $\\hat{p}^{\\mathrm{RW}} = %.3f$",
+  omega_display_lookup[omega_def],
   cut_display_lookup[cut],
   version_display_lookup[version],
   p_rw)]
 writeLines(c(
   "% MHT notes (auto-generated by phase4_within_intensive_did_mht.R)",
-  sprintf("\\textit{Multiple-testing correction.} Joint Wald test of the global null (all 14 coefficients $=0$): $W = %.2f$, bootstrap $p = %.3f$ (cluster-bootstrap on buyer, $B = %d$). Romano-Wolf step-down adjusted $p$-values for cells significant at $p < 0.05$ before correction:",
-          W_obs, p_wald, B),
+  sprintf("\\textit{Multiple-testing correction.} Joint Wald test of the global null (all %d coefficients $=0$): $W = %.2f$, bootstrap $p = %.3f$ (cluster-bootstrap on buyer, $B = %d$). Romano-Wolf step-down adjusted $p$-values for cells significant at $p < 0.05$ before correction:",
+          n_tests, W_obs, p_wald, B),
   paste(rw_lines, collapse = "; "),
   "."
 ), file.path(OUTPUT_TAB, "phase4_within_nace4d_intensive_mht_notes.tex"))
