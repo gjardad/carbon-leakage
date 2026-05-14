@@ -1,5 +1,5 @@
 ###############################################################################
-# phase4_within_intensive_table_and_distributions.R
+# phase4_within_intensive_figures.R
 #
 # PURPOSE
 #   Builds the paper artifacts for the within-NACE4d / intensive-margin

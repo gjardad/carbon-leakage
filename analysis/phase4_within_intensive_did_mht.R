@@ -18,7 +18,7 @@
 #   all 56 coefficients equal zero, useful as a single "any leakage
 #   anywhere" check.
 #
-# DEPENDENCIES (same as phase4_within_intensive_table_and_distributions.R)
+# DEPENDENCIES (same as phase4_within_intensive_figures.R)
 #   - b2b_selected_sample.RData
 #   - annual_accounts_selected_sample.RData
 #   - annual_accounts_selected_sample_key_variables.RData
@@ -63,7 +63,7 @@ YEAR_LO <- 2002L  # B2B panel starts in 2002. Extended below 2005 for the EU ETS
 YEAR_HI <- 2022L
 B       <- 500L  # bootstrap replicates; bump for production runs
 
-# Two treatment periods (matching phase4_within_intensive_table_and_distributions.R):
+# Two treatment periods (matching phase4_within_intensive_figures.R):
 #   treat_2005: omega from 2005, post = 1 from 2005 onwards
 #               pre-period uses pre-policy 2002-2004 B2B data.
 #   treat_2017: omega from 2015-16, post = 1 from 2017 onwards
@@ -77,7 +77,7 @@ CUT_LABELS <- c("pooled",
                 "exposure_gap_q", "exposure_gap_d")
 
 # ---------------------------------------------------------------------------
-# 1. Load data (mirror phase4_within_intensive_table_and_distributions.R)
+# 1. Load data (mirror phase4_within_intensive_figures.R)
 # ---------------------------------------------------------------------------
 cat("Loading data...\n")
 

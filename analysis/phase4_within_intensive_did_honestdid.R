@@ -24,7 +24,7 @@
 #   differences -- ample.
 #
 # DEPENDENCIES
-#   Same as phase4_within_intensive_table_and_distributions.R
+#   Same as phase4_within_intensive_figures.R
 #   plus HonestDiD package.
 #
 # OUTPUTS (output_<machine>/tables/)
