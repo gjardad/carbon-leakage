@@ -2,19 +2,19 @@
 # phase4_within_nace4d_reallocation_plots.R
 #
 # PURPOSE
-#   Plot, for each of three policy events (2008, 2013, 2017), the evolution of
-#   the buyer's expenditure share, within an ETS-treated NACE4d sector, on the
-#   single supplier with the highest pre-event allowance shortage / total cost
-#   ratio (omega).
+#   Plot, for each of two policy events (EU ETS launch 2005, MSR 2017), the
+#   evolution of the buyer's expenditure share, within an ETS-treated NACE4d
+#   sector, on the single supplier with the highest pre-event allowance
+#   shortage / total cost ratio (omega).
 #
 #   For each event we:
 #     1. Restrict the B2B sample to buyer-supplier pairs whose supplier sits in
 #        an ETS-treated NACE4d (= NACE4d that contains at least one EU-ETS
 #        firm in our `firm_exposure` panel, in_sample == 1).
-#     2. Build a firm-interval omega using a 2-year ratio of averages:
+#     2. Build a firm-interval omega using a ratio of averages:
 #               omega_{i,interval} = sum(shortage_t) / sum(total_cost_t)
-#        over the two interval years (Phase I 2006-07, Phase II 2011-12,
-#        Phase III 2015-16). shortage = max(emissions - allocated_free, 0).
+#        over the interval years (2005 for treat_2005; 2015-16 for treat_2017).
+#        shortage = max(emissions - allocated_free, 0).
 #        total_cost = (revenue - value_added) + wage_bill.
 #        Non-ETS firms (and ETS firms with missing data in either year) get
 #        omega = 0 with `is_ets = 0`.
@@ -32,12 +32,12 @@
 #         - by NACE4d : facet grid showing one panel per NACE4d (heterogeneity)
 #
 # OUTPUTS (output_local/figures/, output_local/tables/)
-#   - phase4_within_nace4d_reallocation_pooled_{2008,2013,2017}.{png,pdf}
+#   - phase4_within_nace4d_reallocation_pooled_{2005,2017}.{png,pdf}
 #   - phase4_within_nace4d_reallocation_pooled_combined.{png,pdf}
-#         3-panel facet: mean of NORMALIZED share (the original spec)
+#         2-panel facet: mean of NORMALIZED share (the original spec)
 #   - phase4_within_nace4d_reallocation_pooled_combined_raw.{png,pdf}
-#         3-panel facet: mean of RAW share, bounded [0,1]
-#   - phase4_within_nace4d_reallocation_by_nace4d_{2008,2013,2017}.{png,pdf}
+#         2-panel facet: mean of RAW share, bounded [0,1]
+#   - phase4_within_nace4d_reallocation_by_nace4d_{2005,2017}.{png,pdf}
 #   - phase4_within_nace4d_reallocation_panel.csv     (cell-year normalized data)
 #   - phase4_within_nace4d_reallocation_pooled.csv    (mean of normalized)
 #   - phase4_within_nace4d_reallocation_pooled_raw.csv    (mean of raw share)
@@ -58,12 +58,17 @@ suppressPackageStartupMessages({
 
 set.seed(20260508)
 
-YEAR_LO <- 2005L
+YEAR_LO <- 2002L  # B2B panel starts in 2002; extended below 2005 for a real pre-period at EU ETS launch.
 YEAR_HI <- 2022L
 
+# Two treatment periods we report on:
+#   "treat_2005" = EU ETS launch. omega is computed from year 2005 only
+#     (the launch year and first year of EUTL records). Pre-period uses
+#     B2B data from 2002-2004.
+#   "treat_2017" = MSR reform. omega is computed from 2015-16. Post = 1
+#     from 2017 onwards; pre-period is 2005-2016.
 INTERVALS <- list(
-  "treat_2008" = list(years = c(2006L, 2007L), norm_year = 2007L, treat_year = 2008L),
-  "treat_2013" = list(years = c(2011L, 2012L), norm_year = 2012L, treat_year = 2013L),
+  "treat_2005" = list(years = c(2005L),        norm_year = 2004L, treat_year = 2005L),
   "treat_2017" = list(years = c(2015L, 2016L), norm_year = 2016L, treat_year = 2017L)
 )
 
@@ -132,7 +137,8 @@ build_firm_omega <- function(yrs) {
              sum_short = sum(shortage),
              sum_cost  = sum(total_cost)),
          by = vat]
-  o <- o[n_yrs == 2L & sum_cost > 0]
+  # Require firm to be observed in every interval year (1 yr for treat_2005, 2 yrs for treat_2017).
+  o <- o[n_yrs == length(yrs) & sum_cost > 0]
   o[, omega := sum_short / sum_cost]
   o[, .(vat, omega)]
 }
@@ -200,7 +206,7 @@ process_interval <- function(label) {
                     bottom_is_ets   = is_ets)]
   cells <- merge(cells, bcells, by = c("buyer", "seller_nace4d"))
 
-  # Expand to all years 2005:2022 per cell
+  # Expand to all years YEAR_LO:YEAR_HI per cell
   panel <- cells[, .(year = YEAR_LO:YEAR_HI),
                  by = .(buyer, seller_nace4d,
                         top_supplier, bottom_supplier,
@@ -337,9 +343,8 @@ fwrite(by_nace,
 # 9. Plots
 # ---------------------------------------------------------------------------
 version_labels <- c(
-  "treat_2008" = "Treatment 2008 (omega from 2006-07, normalized at 2007)",
-  "treat_2013" = "Treatment 2013 (omega from 2011-12, normalized at 2012)",
-  "treat_2017" = "Treatment 2017 (omega from 2015-16, normalized at 2016)"
+  "treat_2005" = "EU ETS start, 2005 (omega from 2005)",
+  "treat_2017" = "MSR, 2017 (omega from 2015-16)"
 )
 
 base_theme <- theme_minimal(base_size = 11) +
