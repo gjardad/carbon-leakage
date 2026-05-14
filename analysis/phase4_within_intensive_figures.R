@@ -60,20 +60,22 @@ INTERVALS <- list(
 DIST_VERSION <- "treat_2017"  # for distribution + savings figures
 RHO_GRID     <- c(0.25, 0.5, 0.75, 1.0)
 
-# Eurostat HICP (prc_hicp_aind), EA changing composition, all items
-# (CP00), base 2015 = 100. Used to deflate end-of-year EUA prices into
-# 2016 base euros so the cost-shock distribution and savings figures
-# are on a real-euro scale that matches the buyer-total-cost
-# denominator (built from 2015-16 accounts).
-HICP_BASE <- list("2016" = 100.23,
-                  "2017" = 101.78,
-                  "2022" = 117.04)
-HICP_BASE_YEAR <- 2016L
-
-# End-of-year EUA prices come from the daily settlement CSV; they are
-# deflated to 2016 euros using HICP and used to scale the cost shock
-# and savings distributions.
-EUA_EOY_YEARS <- c(2017L, 2022L)
+# End-of-year EUA prices come from the daily settlement CSV. They are
+# deflated to 2016 euros using the Belgian aggregate producer price
+# index (equal-weighted geometric mean across NACE 4-digit sectors,
+# 2005 = 100 -- the same series used in phase3_aggregate_ppi_lp). PPI is
+# a more defensible deflator than HICP here because the quantity being
+# deflated (an EUA price feeding through to the buyer's total input
+# cost) is itself a producer-side cost.
+#
+# Three scenarios:
+#   2018 = headline post-MSR price for the paper figure (first year MSR
+#          activation was fully priced in).
+#   2017 = pre-MSR-peak (appendix robustness).
+#   2022 = post-MSR-peak (appendix robustness).
+EUA_EOY_YEARS    <- c(2017L, 2018L, 2022L)
+PPI_BASE_YEAR    <- 2016L
+EUA_HEADLINE_YR  <- 2018L
 
 # ---------------------------------------------------------------------------
 # 1. Load data
@@ -600,17 +602,37 @@ eua_daily[, yr := as.integer(format(date, "%Y"))]
 setorder(eua_daily, date)
 eua_eoy <- eua_daily[, .(eua_nominal = last(Price)), by = yr]
 
+# Aggregate Belgian PPI deflator (equal-weighted geometric mean of
+# NACE 4-digit PPI per month, 2005 = 100). Annual index = exp(mean of
+# log(monthly index)) over the year.
+cat("Loading aggregate PPI deflator (NACE 4-digit, 2005 = 100)...\n")
+load(file.path(PROC_DATA, "deflator_nace4d_2005base_monthly.RData"))
+ppi_panel <- as.data.table(deflator_monthly)[!is.na(ppi) & ppi > 0]
+ppi_panel[, yr := as.integer(format(date, "%Y"))]
+# Monthly geometric mean across sectors -> annual geometric mean across months.
+ppi_monthly <- ppi_panel[, .(log_ppi_agg = mean(log(ppi))), by = .(date, yr)]
+ppi_annual  <- ppi_monthly[, .(ppi_agg = exp(mean(log_ppi_agg))), by = yr]
+ppi_lookup  <- setNames(ppi_annual$ppi_agg, as.character(ppi_annual$yr))
+
+ppi_base <- ppi_lookup[[as.character(PPI_BASE_YEAR)]]
+if (is.null(ppi_base) || !is.finite(ppi_base))
+  stop(sprintf("PPI not available for base year %d", PPI_BASE_YEAR))
+
 deflate_to_base <- function(yr) {
-  HICP_BASE[[as.character(yr)]] / HICP_BASE[[as.character(HICP_BASE_YEAR)]]
+  ppi_yr <- ppi_lookup[[as.character(yr)]]
+  if (is.null(ppi_yr) || !is.finite(ppi_yr))
+    stop(sprintf("PPI not available for year %d", yr))
+  ppi_yr / ppi_base
 }
 
 eua_real <- list()
 for (yr_target in EUA_EOY_YEARS) {
-  nom <- eua_eoy[yr == yr_target, eua_nominal]
+  nom  <- eua_eoy[yr == yr_target, eua_nominal]
   defl <- deflate_to_base(yr_target)
   eua_real[[as.character(yr_target)]] <- nom / defl
-  cat(sprintf("  EUA end of %d: nominal = %.2f EUR/tCO2; real (2016 base) = %.2f\n",
-              yr_target, nom, eua_real[[as.character(yr_target)]]))
+  cat(sprintf("  EUA end of %d: nominal = %.2f EUR/tCO2; real (%d PPI base) = %.2f\n",
+              yr_target, nom, PPI_BASE_YEAR,
+              eua_real[[as.character(yr_target)]]))
 }
 
 # Shared theme for the clean histograms (cost shock, NACE4d input share,
@@ -669,10 +691,9 @@ plot_dist_pct_log <- function(vals, xlab, floor = NULL) {
     clean_hist_theme
 }
 
-# Cost shock distribution: shock_buyertotal * deflated EUA, end-of-2017 EUA only.
-# The end-of-2022 figure was dropped from the paper; the savings-figure loop
-# below still uses both scenarios as diagnostics.
-for (yr_target in 2017L) {
+# Cost shock distribution: shock_buyertotal * deflated EUA, per EUA year.
+# 2018 = headline scenario for the paper; 2017 and 2022 are appendix robustness.
+for (yr_target in EUA_EOY_YEARS) {
   p_cs <- plot_dist_pct_log(
     cells_dist$shock_buyertotal * eua_real[[as.character(yr_target)]],
     "Cost shock",
@@ -728,7 +749,8 @@ cat("All distribution figures written.\n")
 #    the bottom-omega supplier. EUA_real is the deflated end-of-year EUA
 #    price (2016 base).
 # ---------------------------------------------------------------------------
-cat("Building counterfactual savings figures (two EUA scenarios)...\n")
+cat(sprintf("Building counterfactual savings figures (%d EUA scenarios)...\n",
+            length(EUA_EOY_YEARS)))
 sv <- cells_dist[, .(buyer, seller_nace4d, omega_gap,
                      top_supplier_share_of_buyer)]
 sv <- sv[!is.na(omega_gap) & !is.na(top_supplier_share_of_buyer) &
@@ -786,7 +808,8 @@ for (yr_target in EUA_EOY_YEARS) {
 sv_summary_all <- rbindlist(summary_rows, use.names = TRUE)
 fwrite(sv_summary_all, file.path(OUTPUT_TAB,
        "phase4_within_nace4d_intensive_savings_summary.csv"))
-cat("Counterfactual savings figures written (2 EUA scenarios).\n")
+cat(sprintf("Counterfactual savings figures written (%d EUA scenarios).\n",
+            length(EUA_EOY_YEARS)))
 
 cat("\nAll outputs:\n")
 cat("  Figures:", OUTPUT_FIG, "\n")
