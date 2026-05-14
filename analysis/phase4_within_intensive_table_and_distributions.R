@@ -498,6 +498,79 @@ fwrite(horizon_df, file.path(OUTPUT_TAB,
 cat("--- Horizon robustness (treat_2005, shortage-based omega) ---\n")
 print(dcast(horizon_df, cut ~ horizon, value.var = "estimate"))
 
+# ---------------------------------------------------------------------------
+# 4b. All-cells top-omega vs bottom-omega trajectory (faceted by version).
+#     Analog of phase4_within_nace4d_reallocation_allcells_buyertotal.pdf
+#     under the new 2005 / 2017 treatment-period structure.
+# ---------------------------------------------------------------------------
+cat("\nBuilding all-cells top vs bot trajectory figure...\n")
+traj <- panels_by_def[["shortage"]][["pooled"]][!is.na(share),
+  .(mean_share = mean(share),
+    se_share   = sd(share) / sqrt(.N),
+    n_cells    = .N),
+  by = .(version, year, supplier_role)
+]
+traj[, lo := mean_share - 1.96 * se_share]
+traj[, hi := mean_share + 1.96 * se_share]
+traj[, version_label := fcase(
+  version == "treat_2005", "EU ETS start (2005)",
+  version == "treat_2017", "MSR (2017)"
+)]
+traj[, role_label := fcase(
+  supplier_role == "top", "Top-omega supplier",
+  supplier_role == "bot", "Bottom-omega supplier"
+)]
+traj[, role_label := factor(role_label,
+                            levels = c("Top-omega supplier",
+                                       "Bottom-omega supplier"))]
+
+treat_lines <- data.table(
+  version_label = c("EU ETS start (2005)", "MSR (2017)"),
+  treat_year    = c(2005, 2017)
+)
+
+p_traj <- ggplot(traj,
+                 aes(x = year, y = mean_share,
+                     color = role_label, fill = role_label)) +
+  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.18, color = NA) +
+  geom_line(linewidth = 0.9) +
+  geom_point(size = 1.4) +
+  geom_vline(data = treat_lines,
+             aes(xintercept = treat_year - 0.5),
+             linetype = "dashed", color = "firebrick", inherit.aes = FALSE) +
+  facet_wrap(~ version_label, ncol = 1, scales = "free_y") +
+  scale_x_continuous(breaks = seq(YEAR_LO, YEAR_HI, by = 2)) +
+  scale_color_manual(values = c("Top-omega supplier"    = "firebrick",
+                                 "Bottom-omega supplier" = "navy"),
+                     name = NULL) +
+  scale_fill_manual(values = c("Top-omega supplier"    = "firebrick",
+                                "Bottom-omega supplier" = "navy"),
+                    name = NULL) +
+  labs(x = NULL,
+       y = "Mean within-cell expenditure share") +
+  theme_classic(base_size = 13) +
+  theme(panel.grid       = element_blank(),
+        axis.title.y     = element_text(size = 14, margin = margin(r = 12)),
+        axis.text        = element_text(size = 12),
+        strip.text       = element_text(face = "bold", size = 13),
+        legend.position  = "bottom",
+        legend.text      = element_text(size = 12))
+
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_nace4d_intensive_allcells_topbot_trajectory.png"),
+       p_traj, width = 9, height = 8, dpi = 200)
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_nace4d_intensive_allcells_topbot_trajectory.pdf"),
+       p_traj, width = 9, height = 8)
+fwrite(traj, file.path(OUTPUT_TAB,
+       "phase4_within_nace4d_intensive_allcells_topbot_trajectory.csv"))
+cat("Trajectory figure + CSV written.\n")
+cat("--- Top vs bot mean shares around the treatment year ---\n")
+print(traj[, .(version, year, supplier_role,
+               mean_share = round(mean_share, 4),
+               n_cells)][version == "treat_2005" & year %in% 2002:2008
+                          | version == "treat_2017" & year %in% 2014:2020])
+
 cut_order <- c("Pooled (no heterogeneity)",
                "Top quartile by buyer-total shock",
                "Top decile by buyer-total shock",
