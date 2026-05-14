@@ -682,11 +682,13 @@ for (yr_target in EUA_EOY_YEARS) {
   cat(sprintf("  Cost-shock distribution (EUA %d) written.\n", yr_target))
 }
 
-# NACE4d input share: same clean styling, displayed as a percent on a
-# log-scale x-axis.
+# NACE4d input share: same clean styling. floor=1e-4 bottom-codes the
+# left tail so the x-axis breaks line up cleanly with the data range
+# (matches the cost-shock figures).
 p_nshare <- plot_dist_pct_log(
   cells_dist$nace4d_input_share,
-  "Supplier's sector cost share"
+  "Supplier's sector cost share",
+  floor = 1e-4
 )
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_intensive_dist_nace4d_share.png"),
