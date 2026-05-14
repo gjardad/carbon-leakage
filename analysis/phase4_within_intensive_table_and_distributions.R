@@ -3,35 +3,27 @@
 #
 # PURPOSE
 #   Builds the paper artifacts for the within-NACE4d / intensive-margin
-#   subsection:
-#     (1) The missing DiD for the topQ_buyertotal heterogeneity cut.
-#     (2) The combined 4-column DiD table: pooled + 3 heterogeneity cuts
-#         (topQ_buyertotal, topQ_nace4dshare, topQ_omegagap),
-#         across the three event years (2008, 2013, 2017).
-#     (3) Three "fix-ideas-about-magnitudes" distribution figures:
+#   subsection, under two treatment periods (2005, 2017):
+#     (1) Top-omega vs bottom-omega trajectory figure (2-panel).
+#     (2) "Fix-ideas-about-magnitudes" distribution figures for the three
+#         cut variables that define top quartile / top decile:
 #           (a) omega_top * (cell spend on top-omega supplier / buyer total cost)
 #           (b) (cell spend on NACE4d / buyer total cost)
 #           (c) omega_top - omega_bot
-#     (4) Counterfactual savings figure: the buyer's potential savings as a
-#         fraction of total input cost from substituting all of its top-omega
-#         spend to the bottom-omega supplier, for rho in {0.25, 0.5, 0.75, 1}.
+#     (3) Diagnostic CSV with all 56 spec x cut x version x omega_def DiDs
+#         (specs_comparison.csv) -- uncorrected reference for the headline
+#         table produced by phase4_within_intensive_did_mht.R.
+#     (4) Counterfactual savings + horizon-robustness CSV / figures
+#         (diagnostic; not in paper).
+#
+#   The headline DiD table (size-controlled, Romano-Wolf adjusted) is built
+#   by phase4_within_intensive_did_mht.R.
 #
 # DEPENDENCIES
 #   - b2b_selected_sample.RData
 #   - annual_accounts_selected_sample.RData
 #   - annual_accounts_selected_sample_key_variables.RData
 #   - phase3_firm_exposure.RData
-#   - output_<machine>/tables/phase4_within_nace4d_reallocation_did_coefs.csv
-#   - output_<machine>/tables/phase4_within_nace4d_reallocation_topQ_heterogeneity_did_coefs.csv
-#
-# OUTPUTS (output_<machine>/figures/, output_<machine>/tables/)
-#   - phase4_within_nace4d_reallocation_topQ_buyertotal_did_coefs.csv
-#   - phase4_within_nace4d_reallocation_did_table_combined.csv
-#   - phase4_within_nace4d_reallocation_did_table_combined.tex
-#   - phase4_within_nace4d_intensive_dist_shock_buyertotal.{png,pdf}
-#   - phase4_within_nace4d_intensive_dist_nace4d_share.{png,pdf}
-#   - phase4_within_nace4d_intensive_dist_omega_gap.{png,pdf}
-#   - phase4_within_nace4d_intensive_savings_by_passthrough.{png,pdf}
 ###############################################################################
 
 rm(list = ls())
@@ -583,84 +575,10 @@ setorder(did_all, version, cut)
 fwrite(did_all, file.path(OUTPUT_TAB,
        "phase4_within_nace4d_reallocation_did_table_combined.csv"))
 
-# Wide pivot for paper LaTeX
-wide <- dcast(did_all,
-              version ~ cut,
-              value.var = c("estimate", "std_error", "p_value",
-                            "n_treated_cells"))
-wide_rows <- list()
-for (lab in c("treat_2008", "treat_2013", "treat_2017")) {
-  ev_year <- INTERVALS[[lab]]$treat_year
-  for (cut_name in cut_order) {
-    r <- did_all[version == lab & cut == cut_name]
-    if (nrow(r) == 0L) next
-    wide_rows[[length(wide_rows) + 1L]] <- data.table(
-      `Event year`   = ev_year,
-      `Heterogeneity cut` = cut_name,
-      `beta`         = sprintf("%.3f", r$estimate),
-      `SE`           = sprintf("(%.3f)", r$std_error),
-      `p`            = sprintf("%.3f", r$p_value),
-      `N treated cells` = format(r$n_treated_cells, big.mark = ",")
-    )
-  }
-}
-combined_long <- rbindlist(wide_rows, use.names = TRUE)
-
-# Build the LaTeX table by hand: rows = event years, columns = 4 cuts.
-build_latex_4col <- function(did_all) {
-  versions <- c("treat_2005", "treat_2017")
-  event_years <- c("EU ETS start (2005)",
-                   "MSR (2017)")
-  cuts <- cut_order  # 7 cuts: pooled + 3 metrics x {Q, D}
-
-  cell_fmt <- function(beta, se, pv, n) {
-    if (length(beta) == 0L || is.na(beta)) return("---")
-    sig <- ifelse(pv < 0.001, "$^{***}$",
-                  ifelse(pv < 0.01, "$^{**}$",
-                         ifelse(pv < 0.05, "$^{*}$",
-                                ifelse(pv < 0.10, "$^{\\dagger}$", ""))))
-    sprintf("\\makecell{%.3f%s \\\\ \\footnotesize{(%.3f)} \\\\ \\footnotesize{N=%s}}",
-            beta, sig, se, format(n, big.mark = ","))
-  }
-
-  body <- ""
-  for (i in seq_along(versions)) {
-    v <- versions[i]; ev <- event_years[i]
-    body <- paste0(body, "\n", ev)
-    for (cut_name in cuts) {
-      r <- did_all[version == v & cut == cut_name]
-      body <- paste0(body, " & ",
-                     cell_fmt(r$estimate, r$std_error, r$p_value,
-                              r$n_treated_cells))
-    }
-    body <- paste0(body, " \\\\\\addlinespace")
-  }
-
-  header <- paste0(
-    "% Requires \\usepackage{makecell,booktabs} in main.tex\n",
-    "\\begin{tabular}{lccccccc}\n",
-    "\\toprule\n",
-    " & & \\multicolumn{2}{c}{Cost shock} & \\multicolumn{2}{c}{Input share} & \\multicolumn{2}{c}{Exposure gap} \\\\\n",
-    "\\cmidrule(lr){3-4}\\cmidrule(lr){5-6}\\cmidrule(lr){7-8}\n",
-    "Treatment period & Pooled & Top 25\\% & Top 10\\% & Top 25\\% & Top 10\\% & Top 25\\% & Top 10\\% \\\\\n",
-    "\\midrule"
-  )
-  footer <- paste0(
-    "\n\\bottomrule\n",
-    "\\end{tabular}\n",
-    "% Notes: Cells report $\\hat{\\beta}$ on (post $\\times$ top-omega) in the within-cell DiD, ",
-    "two-way clustered SE in parentheses, and the number of treated cells. ",
-    "Significance: $^{\\dagger}\\,p<0.10$, $^{*}\\,p<0.05$, $^{**}\\,p<0.01$, $^{***}\\,p<0.001$."
-  )
-
-  paste0(header, body, footer)
-}
-
-tex_table <- build_latex_4col(did_all)
-writeLines(tex_table,
-           file.path(OUTPUT_TAB,
-                     "phase4_within_nace4d_reallocation_did_table_combined.tex"))
-cat("Combined 4-col DiD table written.\n")
+# LaTeX DiD table is now produced exclusively by phase4_within_intensive_did_mht.R
+# (size-controlled with Romano-Wolf adjusted significance). This script keeps the
+# diagnostic CSV (specs_comparison.csv) with all 56 unconditional/size_controlled
+# x omega_def cells for reference.
 
 # ---------------------------------------------------------------------------
 # 5. Distribution figures (using DIST_VERSION cells)
@@ -706,20 +624,40 @@ clean_hist_theme <- theme_classic(base_size = 13) +
 
 # Generic clean histogram on a log-scale x-axis displayed in %, with a
 # dashed line at p75. `vals` is a vector of positive fractions (e.g.
-# 0.001 displays as 0.1%).
-plot_dist_pct_log <- function(vals, xlab) {
+# 0.001 displays as 0.1%). If `floor` is supplied, values below it are
+# bottom-coded into a single leftmost bin and that tick is labelled
+# "<floor%".
+plot_dist_pct_log <- function(vals, xlab, floor = NULL) {
   d <- data.table(val = vals)
   d <- d[is.finite(val) & val > 0]
   if (nrow(d) == 0L) return(NULL)
+
+  if (!is.null(floor)) d[val < floor, val := floor]
+
   qs <- quantile(d$val, c(0.50, 0.75, 0.90, 0.99), na.rm = TRUE)
 
-  pct_breaks <- c(1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1)
-  pct_labels <- c("0.00001%", "0.0001%", "0.001%", "0.01%",
-                  "0.1%", "1%", "10%", "100%")
+  if (!is.null(floor)) {
+    log_min <- log10(floor)
+    log_max <- ceiling(log10(max(d$val)))
+    bin_breaks <- 10^seq(log_min, log_max, length.out = 61)
+    pct_breaks <- 10^seq(log_min, log_max)
+    pct_labels <- vapply(pct_breaks, function(b) {
+      lab <- sprintf("%g%%", b * 100)
+      if (abs(b - floor) < 1e-12) paste0("<", lab) else lab
+    }, character(1))
+    hist_layer <- geom_histogram(breaks = bin_breaks,
+                                 fill = "steelblue",
+                                 color = "white", alpha = 0.9)
+  } else {
+    pct_breaks <- c(1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1)
+    pct_labels <- c("0.00001%", "0.0001%", "0.001%", "0.01%",
+                    "0.1%", "1%", "10%", "100%")
+    hist_layer <- geom_histogram(bins = 60, fill = "steelblue",
+                                 color = "white", alpha = 0.9)
+  }
 
   ggplot(d, aes(x = val)) +
-    geom_histogram(bins = 60, fill = "steelblue",
-                   color = "white", alpha = 0.9) +
+    hist_layer +
     geom_vline(xintercept = qs[2], linetype = "dashed", color = "firebrick") +
     annotate("text", x = qs[2], y = Inf, label = " p75",
              vjust = 1.5, hjust = 0, color = "firebrick", size = 4.5) +
@@ -732,7 +670,8 @@ plot_dist_pct_log <- function(vals, xlab) {
 for (yr_target in EUA_EOY_YEARS) {
   p_cs <- plot_dist_pct_log(
     cells_dist$shock_buyertotal * eua_real[[as.character(yr_target)]],
-    "Cost shock"
+    "Cost shock",
+    floor = 1e-4
   )
   fig_base <- sprintf("phase4_within_nace4d_intensive_dist_shock_buyertotal_eua%d",
                       yr_target)
@@ -747,7 +686,7 @@ for (yr_target in EUA_EOY_YEARS) {
 # log-scale x-axis.
 p_nshare <- plot_dist_pct_log(
   cells_dist$nace4d_input_share,
-  "Cost share of expenditure on supplier's sector"
+  "Supplier's sector cost share"
 )
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_intensive_dist_nace4d_share.png"),
@@ -809,18 +748,21 @@ cat("All distribution figures written.\n")
 # ---------------------------------------------------------------------------
 # 6. Counterfactual savings figures: TWO versions, one per EUA scenario
 #    savings(b,n,rho,EUA) = rho * EUA_real * (omega_top - omega_bot)
-#                                * (cell spend / buyer total cost)
-#    EUA_real is the deflated end-of-year EUA price (2016 base), so the
-#    numerator and denominator are in consistent units.
+#                                * (top supplier spend / buyer total cost)
+#    Matches the top-vs-bot reallocation tested in the DiD: the buyer
+#    switches what it currently buys from the top-omega supplier over to
+#    the bottom-omega supplier. EUA_real is the deflated end-of-year EUA
+#    price (2016 base).
 # ---------------------------------------------------------------------------
 cat("Building counterfactual savings figures (two EUA scenarios)...\n")
-sv <- cells_dist[, .(buyer, seller_nace4d, omega_gap, nace4d_input_share)]
-sv <- sv[!is.na(omega_gap) & !is.na(nace4d_input_share) &
-           omega_gap > 0 & nace4d_input_share > 0]
+sv <- cells_dist[, .(buyer, seller_nace4d, omega_gap,
+                     top_supplier_share_of_buyer)]
+sv <- sv[!is.na(omega_gap) & !is.na(top_supplier_share_of_buyer) &
+           omega_gap > 0 & top_supplier_share_of_buyer > 0]
 
-savings_x_breaks <- c(0, 0.005, 0.01, 0.05, 0.10)
-savings_x_labels <- c("0%", "0.5%", "1%", "5%", "10%")
-savings_x_limits <- c(0, 0.10)
+savings_x_breaks <- c(0, 0.001, 0.005, 0.01, 0.05)
+savings_x_labels <- c("0%", "0.1%", "0.5%", "1%", "5%")
+savings_x_limits <- c(0, 0.05)
 
 summary_rows <- list()
 for (yr_target in EUA_EOY_YEARS) {
@@ -828,7 +770,8 @@ for (yr_target in EUA_EOY_YEARS) {
 
   sv_panels <- rbindlist(lapply(RHO_GRID, function(rho) {
     data.table(rho     = rho,
-               savings = rho * eua_p_real * sv$omega_gap * sv$nace4d_input_share)
+               savings = rho * eua_p_real * sv$omega_gap *
+                           sv$top_supplier_share_of_buyer)
   }))
 
   sv_summary <- sv_panels[, .(
