@@ -263,9 +263,10 @@ yr_denom <- unique(b2b[, .(buyer, seller_nace4d, year,
 yr_sales <- b2b[, .(buyer, seller_nace4d, seller, year, sales)]
 
 build_long_for_cut <- function(cut_label) {
+  base_cols <- c("buyer", "seller_nace4d", "version", "treat_year",
+                 "top_supplier", "bot_supplier", "top_sales", "bot_sales")
   if (cut_label == "pooled") {
-    sub <- cells_all[, .(buyer, seller_nace4d, version, treat_year,
-                         top_supplier, bot_supplier)]
+    sub <- cells_all[, ..base_cols]
   } else {
     flag_col <- switch(cut_label,
                        "cost_shock_q"   = "topQ_buyertotal",
@@ -274,20 +275,20 @@ build_long_for_cut <- function(cut_label) {
                        "input_share_d"  = "topD_nace4dshare",
                        "exposure_gap_q" = "topQ_omegagap",
                        "exposure_gap_d" = "topD_omegagap")
-    sub <- cells_all[get(flag_col) == TRUE,
-                     .(buyer, seller_nace4d, version, treat_year,
-                       top_supplier, bot_supplier)]
+    sub <- cells_all[get(flag_col) == TRUE, ..base_cols]
   }
   if (nrow(sub) == 0L) return(data.table())
   long <- rbind(
     sub[, .(buyer, seller_nace4d, version, treat_year,
-            seller = top_supplier, supplier_role = "top")],
+            seller = top_supplier, supplier_role = "top",
+            pre_sales_role = top_sales)],
     sub[, .(buyer, seller_nace4d, version, treat_year,
-            seller = bot_supplier, supplier_role = "bot")]
+            seller = bot_supplier, supplier_role = "bot",
+            pre_sales_role = bot_sales)]
   )
   panel <- long[, .(year = YEAR_LO:YEAR_HI),
                 by = .(buyer, seller_nace4d, version, treat_year,
-                       seller, supplier_role)]
+                       seller, supplier_role, pre_sales_role)]
   panel <- merge(panel, yr_denom,
                  by = c("buyer", "seller_nace4d", "year"), all.x = TRUE)
   panel <- merge(panel, yr_sales,
@@ -300,6 +301,12 @@ build_long_for_cut <- function(cut_label) {
                           sales / total_buyer_nace4d_spend)]
   panel[, top  := as.integer(supplier_role == "top")]
   panel[, post := as.integer(year >= treat_year)]
+  # Pre-period within-cell role size (log). Used as a control for the
+  # size-confound robustness: top-omega and bottom-omega may differ
+  # systematically in baseline size, and large vs small suppliers may
+  # have different secular trends in within-cell share for reasons
+  # unrelated to carbon exposure.
+  panel[, log_pre_sales := log1p(pmax(pre_sales_role, 0))]
   panel[]
 }
 
@@ -325,7 +332,7 @@ for (cut_lab in CUT_LABELS) {
               format(nrow(panels[[cut_lab]]), big.mark = ",")))
 }
 
-run_did_one <- function(panel_dt) {
+run_did_one <- function(panel_dt, size_control = FALSE) {
   d <- panel_dt[!is.na(share)]
   if (nrow(d) == 0L || uniqueN(d$post) < 2L || uniqueN(d$top) < 2L) {
     return(list(beta = NA_real_, se = NA_real_, t = NA_real_,
@@ -333,9 +340,17 @@ run_did_one <- function(panel_dt) {
   }
   d[, cell_id      := paste(buyer, seller_nace4d, sep = "::")]
   d[, cell_role_id := paste(cell_id, supplier_role, sep = "::")]
+  if (size_control && "log_pre_sales" %in% names(d) &&
+      uniqueN(d$log_pre_sales) > 1L) {
+    # Year x log(pre-period sales) interaction lets large vs small
+    # suppliers follow different secular trends.
+    fml <- share ~ i(post, top, ref = 0) + i(year, log_pre_sales) |
+                  cell_role_id + year
+  } else {
+    fml <- share ~ i(post, top, ref = 0) | cell_role_id + year
+  }
   fit <- tryCatch(
-    feols(share ~ i(post, top, ref = 0) | cell_role_id + year,
-          data = d, cluster = ~ cell_id, notes = FALSE),
+    feols(fml, data = d, cluster = ~ cell_id, notes = FALSE),
     error = function(e) NULL
   )
   if (is.null(fit)) return(list(beta = NA_real_, se = NA_real_, t = NA_real_,
@@ -349,26 +364,42 @@ run_did_one <- function(panel_dt) {
        n_cells = uniqueN(d$cell_id))
 }
 
-cat("Running baseline DiDs (4 cuts x 2 treatment periods)...\n")
+cat("Running baseline DiDs (4 cuts x 2 treatment periods) -- unconditional + size-controlled...\n")
 did_rows <- list()
-for (cut_lab in CUT_LABELS) {
-  for (ver in names(INTERVALS)) {
-    d <- panels[[cut_lab]][version == ver]
-    est <- run_did_one(d)
-    did_rows[[length(did_rows) + 1L]] <- data.table(
-      cut             = CUT_DISPLAY[[cut_lab]],
-      version         = ver,
-      n_obs           = est$n_obs,
-      n_treated_cells = est$n_cells,
-      term            = "post::1:top",
-      estimate        = est$beta,
-      std_error       = est$se,
-      t_stat          = est$t,
-      p_value         = est$p
-    )
+for (spec_name in c("unconditional", "size_controlled")) {
+  for (cut_lab in CUT_LABELS) {
+    for (ver in names(INTERVALS)) {
+      d <- panels[[cut_lab]][version == ver]
+      est <- run_did_one(d, size_control = (spec_name == "size_controlled"))
+      did_rows[[length(did_rows) + 1L]] <- data.table(
+        spec            = spec_name,
+        cut             = CUT_DISPLAY[[cut_lab]],
+        version         = ver,
+        n_obs           = est$n_obs,
+        n_treated_cells = est$n_cells,
+        term            = "post::1:top",
+        estimate        = est$beta,
+        std_error       = est$se,
+        t_stat          = est$t,
+        p_value         = est$p
+      )
+    }
   }
 }
 did_all <- rbindlist(did_rows, use.names = TRUE)
+fwrite(did_all, file.path(OUTPUT_TAB,
+       "phase4_within_nace4d_reallocation_did_specs_comparison.csv"))
+
+# Print a compact summary to console for quick comparison
+cat("\n--- DiD comparison (unconditional vs size-controlled) ---\n")
+cmp <- dcast(did_all,
+             cut + version ~ spec,
+             value.var = c("estimate", "std_error", "p_value"))
+print(cmp)
+
+# The headline table uses the unconditional spec (matches prior outputs).
+did_all <- did_rows[sapply(did_rows, function(r) r$spec == "unconditional")] |>
+  rbindlist(use.names = TRUE)
 
 cut_order <- c("Pooled (no heterogeneity)",
                "Top quartile by buyer-total shock",
