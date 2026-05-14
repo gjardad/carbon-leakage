@@ -222,6 +222,18 @@ build_cells_interval <- function(version_label, years, treat_year,
   )]
   cells_top_bot[, shock_buyertotal := omega_top * top_supplier_share_of_buyer]
 
+  # Sibling shock variable scaled by the buyer's spending in this NACE 4-digit
+  # sector instead of the buyer's whole input bill. This is the more relevant
+  # magnitude for the *within-NACE-4d* substitution decision: it asks "as a
+  # fraction of my spending in this input category, how big is the carbon-cost
+  # burden embedded in the top-omega supplier's deliveries?"
+  #   shock_nacespend = omega_top * (top_sales / int_nace4d_spend)
+  cells_top_bot[, top_supplier_share_of_nace4d := ifelse(
+    !is.na(int_nace4d_spend) & int_nace4d_spend > 0,
+    top_sales / int_nace4d_spend, NA_real_
+  )]
+  cells_top_bot[, shock_nacespend := omega_top * top_supplier_share_of_nace4d]
+
   # Top-quartile flags (>= 75th percentile) per cut (within version)
   qtl_share <- quantile(cells_top_bot$nace4d_input_share, 0.75, na.rm = TRUE)
   qtl_gap   <- quantile(cells_top_bot$omega_gap,           0.75, na.rm = TRUE)
@@ -691,7 +703,8 @@ plot_dist_pct_log <- function(vals, xlab, floor = NULL) {
     clean_hist_theme
 }
 
-# Cost shock distribution: shock_buyertotal * deflated EUA, per EUA year.
+# Cost shock distribution (relative to buyer's TOTAL cost):
+#   shock_buyertotal * deflated EUA, per EUA year.
 # 2018 = headline scenario for the paper; 2017 and 2022 are appendix robustness.
 # Floor at 1e-6 (0.0001%) matches the exposure-gap figure and lets the
 # distribution spread across log decades. The previous 1e-4 floor was too
@@ -709,7 +722,29 @@ for (yr_target in EUA_EOY_YEARS) {
          width = 8, height = 5, dpi = 200)
   ggsave(file.path(OUTPUT_FIG, paste0(fig_base, ".pdf")), p_cs,
          width = 8, height = 5)
-  cat(sprintf("  Cost-shock distribution (EUA %d) written.\n", yr_target))
+  cat(sprintf("  Cost-shock distribution (EUA %d, denom = buyer total cost) written.\n",
+              yr_target))
+}
+
+# Cost shock distribution scaled by the buyer's spending in this NACE 4-digit:
+#   shock_nacespend * deflated EUA, per EUA year.
+# More relevant magnitude for the within-NACE-4d substitution decision than
+# the buyer-total-cost denominator: scales the carbon burden against the
+# input category the buyer is actually choosing within.
+for (yr_target in EUA_EOY_YEARS) {
+  p_cs <- plot_dist_pct_log(
+    cells_dist$shock_nacespend * eua_real[[as.character(yr_target)]],
+    "Cost shock (% of NACE 4-digit spend)",
+    floor = 1e-6
+  )
+  fig_base <- sprintf("phase4_within_nace4d_intensive_dist_shock_nacespend_eua%d",
+                      yr_target)
+  ggsave(file.path(OUTPUT_FIG, paste0(fig_base, ".png")), p_cs,
+         width = 8, height = 5, dpi = 200)
+  ggsave(file.path(OUTPUT_FIG, paste0(fig_base, ".pdf")), p_cs,
+         width = 8, height = 5)
+  cat(sprintf("  Cost-shock distribution (EUA %d, denom = NACE 4-digit spend) written.\n",
+              yr_target))
 }
 
 # NACE4d input share: same clean styling. floor=1e-4 bottom-codes the
