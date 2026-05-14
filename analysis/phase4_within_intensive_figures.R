@@ -523,12 +523,12 @@ traj[, version_label := fcase(
   version == "treat_2017", "2017 Treatment"
 )]
 traj[, role_label := fcase(
-  supplier_role == "top", "Top-omega supplier",
-  supplier_role == "bot", "Bottom-omega supplier"
+  supplier_role == "top", "Most exposed supplier",
+  supplier_role == "bot", "Least exposed supplier"
 )]
 traj[, role_label := factor(role_label,
-                            levels = c("Top-omega supplier",
-                                       "Bottom-omega supplier"))]
+                            levels = c("Most exposed supplier",
+                                       "Least exposed supplier"))]
 
 treat_lines <- data.table(
   version_label = c("2005 Treatment", "2017 Treatment"),
@@ -546,11 +546,11 @@ p_traj <- ggplot(traj,
              linetype = "dashed", color = "firebrick", inherit.aes = FALSE) +
   facet_wrap(~ version_label, ncol = 1, scales = "free_y") +
   scale_x_continuous(breaks = seq(YEAR_LO, YEAR_HI, by = 2)) +
-  scale_color_manual(values = c("Top-omega supplier"    = "firebrick",
-                                 "Bottom-omega supplier" = "navy"),
+  scale_color_manual(values = c("Most exposed supplier"    = "firebrick",
+                                 "Least exposed supplier" = "navy"),
                      name = NULL) +
-  scale_fill_manual(values = c("Top-omega supplier"    = "firebrick",
-                                "Bottom-omega supplier" = "navy"),
+  scale_fill_manual(values = c("Most exposed supplier"    = "firebrick",
+                                "Least exposed supplier" = "navy"),
                     name = NULL) +
   labs(x = NULL,
        y = "Mean within-cell expenditure share") +
