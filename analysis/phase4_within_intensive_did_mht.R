@@ -585,7 +585,7 @@ build_latex_size_rw <- function(d14) {
     "\\toprule\n",
     " & & \\multicolumn{2}{c}{Cost shock} & \\multicolumn{2}{c}{Input share} & \\multicolumn{2}{c}{Exposure gap} \\\\\n",
     "\\cmidrule(lr){3-4}\\cmidrule(lr){5-6}\\cmidrule(lr){7-8}\n",
-    "Treatment period & Pooled & Top 25\\% & Top 10\\% & Top 25\\% & Top 10\\% & Top 25\\% & Top 10\\% \\\\\n",
+    "Treatment & Pooled & Top 25\\% & Top 10\\% & Top 25\\% & Top 10\\% & Top 25\\% & Top 10\\% \\\\\n",
     "\\midrule"
   )
   footer <- paste0(
