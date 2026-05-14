@@ -693,11 +693,15 @@ plot_dist_pct_log <- function(vals, xlab, floor = NULL) {
 
 # Cost shock distribution: shock_buyertotal * deflated EUA, per EUA year.
 # 2018 = headline scenario for the paper; 2017 and 2022 are appendix robustness.
+# Floor at 1e-6 (0.0001%) matches the exposure-gap figure and lets the
+# distribution spread across log decades. The previous 1e-4 floor was too
+# high: it bottom-coded most cells, since the cost shock at the buyer's
+# total cost is typically 0.0001%-0.1% even at the 2022 EUA price.
 for (yr_target in EUA_EOY_YEARS) {
   p_cs <- plot_dist_pct_log(
     cells_dist$shock_buyertotal * eua_real[[as.character(yr_target)]],
     "Cost shock",
-    floor = 1e-4
+    floor = 1e-6
   )
   fig_base <- sprintf("phase4_within_nace4d_intensive_dist_shock_buyertotal_eua%d",
                       yr_target)
