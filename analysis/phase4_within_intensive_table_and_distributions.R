@@ -123,13 +123,22 @@ buyer_tc <- aa_kv[!is.na(total_cost) & total_cost > 0,
 
 load(file.path(OUT_DATA, "phase3_firm_exposure.RData"))
 fe <- as.data.table(firm_exposure)[, .(vat = as.character(vat),
-                                       year, shortage, total_cost,
-                                       allocated_free)]
+                                       year, shortage, emissions,
+                                       total_cost, allocated_free)]
 rm(firm_exposure)
 
-# Compute firm-year omega: shortage / total_cost (carbon-cost share)
-fe[, omega := ifelse(!is.na(total_cost) & total_cost > 0,
-                     pmax(shortage, 0) / total_cost, NA_real_)]
+# Two firm-year omega definitions:
+#   omega_sh = max(shortage, 0) / total_cost  (the cost shock the firm
+#       actually pays at the margin -- the headline measure).
+#   omega_em = emissions / total_cost  (physical carbon intensity --
+#       a falsification benchmark: if the leakage signal is driven by
+#       the cost shock, classification by omega_em should *not* produce
+#       significant DiD coefficients, because omega_em does not reflect
+#       what the firm pays).
+fe[, omega_sh := ifelse(!is.na(total_cost) & total_cost > 0,
+                        pmax(shortage, 0) / total_cost, NA_real_)]
+fe[, omega_em := ifelse(!is.na(total_cost) & total_cost > 0,
+                        pmax(emissions, 0) / total_cost, NA_real_)]
 
 # Attach seller NACE4d to B2B
 b2b <- merge(b2b, aa, by.x = c("seller", "year"), by.y = c("vat", "year"),
@@ -147,8 +156,12 @@ b2b[, total_buyer_nace4d_spend := sum(sales),
 # ---------------------------------------------------------------------------
 # 2. Build cells per interval with all three heterogeneity scores
 # ---------------------------------------------------------------------------
-build_cells_interval <- function(version_label, years, treat_year) {
+build_cells_interval <- function(version_label, years, treat_year,
+                                  omega_col = "omega_sh") {
   # `years` is the vector of pre-event years used to compute omega.
+  # `omega_col` selects which firm-level omega definition to use:
+  #   "omega_sh" = shortage/total_cost (the cost-shock measure -- headline)
+  #   "omega_em" = emissions/total_cost (physical intensity -- falsification)
   yrs <- years
 
   # Interval-period seller-level aggregates within (buyer, seller_nace4d)
@@ -156,9 +169,10 @@ build_cells_interval <- function(version_label, years, treat_year) {
                     .(int_sales = sum(sales)),
                     by = .(buyer, seller_nace4d, seller)]
 
-  # Attach interval-period omega for each seller
+  # Attach interval-period omega for each seller (uses the requested
+  # omega definition).
   fe_int <- fe[year %in% yrs,
-               .(int_omega = mean(omega, na.rm = TRUE)),
+               .(int_omega = mean(get(omega_col), na.rm = TRUE)),
                by = .(vat)]
   seller_int <- merge(seller_int, fe_int,
                       by.x = "seller", by.y = "vat", all.x = TRUE)
@@ -240,19 +254,56 @@ build_cells_interval <- function(version_label, years, treat_year) {
   cells_top_bot[]
 }
 
-cells_list <- lapply(names(INTERVALS), function(lab) {
-  iv <- INTERVALS[[lab]]
-  cat(sprintf("Building cells for %s...\n", lab))
-  build_cells_interval(lab, iv$years, iv$treat_year)
-})
-cells_all <- rbindlist(cells_list, use.names = TRUE, fill = TRUE)
+# Build cells under both omega definitions: omega_sh (shortage-based,
+# the headline) and omega_em (emissions-based, the falsification).
+OMEGA_DEFS <- c("shortage" = "omega_sh", "emissions" = "omega_em")
+cells_by_def <- list()
+for (def_name in names(OMEGA_DEFS)) {
+  omega_col <- OMEGA_DEFS[[def_name]]
+  cat(sprintf("--- Building cells under omega definition: %s (%s)\n",
+              def_name, omega_col))
+  cl <- lapply(names(INTERVALS), function(lab) {
+    iv <- INTERVALS[[lab]]
+    build_cells_interval(lab, iv$years, iv$treat_year, omega_col = omega_col)
+  })
+  cells_by_def[[def_name]] <- rbindlist(cl, use.names = TRUE, fill = TRUE)
+  cat(sprintf("  %s: %s rows across versions.\n",
+              def_name, format(nrow(cells_by_def[[def_name]]), big.mark = ",")))
+}
 
-cat(sprintf("Cells built: %s total rows across versions.\n",
-            format(nrow(cells_all), big.mark = ",")))
-
-# Save cells with all three scores
+# Headline cells_all uses the shortage-based definition (what the figures
+# and the prior outputs use).
+cells_all <- cells_by_def[["shortage"]]
 fwrite(cells_all, file.path(OUTPUT_TAB,
        "phase4_within_nace4d_intensive_cells_all_scores.csv"))
+
+# Classification agreement between shortage- and emissions-based omega.
+agreement_rows <- list()
+for (ver in names(INTERVALS)) {
+  a <- cells_by_def[["shortage"]][version == ver,
+                                   .(buyer, seller_nace4d,
+                                     top_sh = top_supplier, bot_sh = bot_supplier,
+                                     omega_top_sh = omega_top)]
+  b <- cells_by_def[["emissions"]][version == ver,
+                                    .(buyer, seller_nace4d,
+                                      top_em = top_supplier, bot_em = bot_supplier,
+                                      omega_top_em = omega_top)]
+  m <- merge(a, b, by = c("buyer", "seller_nace4d"))
+  agreement_rows[[ver]] <- data.table(
+    version             = ver,
+    n_cells_both        = nrow(m),
+    pct_same_top        = mean(m$top_sh == m$top_em, na.rm = TRUE),
+    pct_same_bot        = mean(m$bot_sh == m$bot_em, na.rm = TRUE),
+    spearman_omega_top  = suppressWarnings(cor(m$omega_top_sh, m$omega_top_em,
+                                                method = "spearman",
+                                                use = "pairwise.complete.obs"))
+  )
+}
+agreement <- rbindlist(agreement_rows)
+fwrite(agreement, file.path(OUTPUT_TAB,
+       "phase4_within_nace4d_intensive_omega_classification_agreement.csv"))
+cat("\n--- Classification agreement: shortage- vs emissions-based omega ---\n")
+print(agreement)
 
 # ---------------------------------------------------------------------------
 # 3. Build long panels (one per cut) and run DiDs internally.
@@ -262,11 +313,11 @@ yr_denom <- unique(b2b[, .(buyer, seller_nace4d, year,
                            total_buyer_nace4d_spend)])
 yr_sales <- b2b[, .(buyer, seller_nace4d, seller, year, sales)]
 
-build_long_for_cut <- function(cut_label) {
+build_long_for_cut <- function(cut_label, cells_dt = cells_all) {
   base_cols <- c("buyer", "seller_nace4d", "version", "treat_year",
                  "top_supplier", "bot_supplier", "top_sales", "bot_sales")
   if (cut_label == "pooled") {
-    sub <- cells_all[, ..base_cols]
+    sub <- cells_dt[, ..base_cols]
   } else {
     flag_col <- switch(cut_label,
                        "cost_shock_q"   = "topQ_buyertotal",
@@ -275,7 +326,7 @@ build_long_for_cut <- function(cut_label) {
                        "input_share_d"  = "topD_nace4dshare",
                        "exposure_gap_q" = "topQ_omegagap",
                        "exposure_gap_d" = "topD_omegagap")
-    sub <- cells_all[get(flag_col) == TRUE, ..base_cols]
+    sub <- cells_dt[get(flag_col) == TRUE, ..base_cols]
   }
   if (nrow(sub) == 0L) return(data.table())
   long <- rbind(
@@ -324,13 +375,20 @@ CUT_DISPLAY <- c(
   "exposure_gap_d" = "Top decile by omega gap"
 )
 
-cat("Building long panels for the 4 cuts...\n")
-panels <- list()
-for (cut_lab in CUT_LABELS) {
-  panels[[cut_lab]] <- build_long_for_cut(cut_lab)
-  cat(sprintf("  %-13s %s rows\n", cut_lab,
-              format(nrow(panels[[cut_lab]]), big.mark = ",")))
+cat("Building long panels for the 4 cuts under both omega definitions...\n")
+panels_by_def <- list()
+for (def_name in names(OMEGA_DEFS)) {
+  panels_by_def[[def_name]] <- list()
+  for (cut_lab in CUT_LABELS) {
+    panels_by_def[[def_name]][[cut_lab]] <- build_long_for_cut(
+      cut_lab, cells_dt = cells_by_def[[def_name]]
+    )
+  }
+  cat(sprintf("  [%s] panels built\n", def_name))
 }
+# Backward-compatibility alias for the "panels" used by the headline path
+# (the shortage-based definition).
+panels <- panels_by_def[["shortage"]]
 
 run_did_one <- function(panel_dt, size_control = FALSE) {
   d <- panel_dt[!is.na(share)]
@@ -364,42 +422,47 @@ run_did_one <- function(panel_dt, size_control = FALSE) {
        n_cells = uniqueN(d$cell_id))
 }
 
-cat("Running baseline DiDs (4 cuts x 2 treatment periods) -- unconditional + size-controlled...\n")
+cat("Running baseline DiDs: 2 omega defs x 2 specs x 7 cuts x 2 versions = 56 cells...\n")
 did_rows <- list()
-for (spec_name in c("unconditional", "size_controlled")) {
-  for (cut_lab in CUT_LABELS) {
-    for (ver in names(INTERVALS)) {
-      d <- panels[[cut_lab]][version == ver]
-      est <- run_did_one(d, size_control = (spec_name == "size_controlled"))
-      did_rows[[length(did_rows) + 1L]] <- data.table(
-        spec            = spec_name,
-        cut             = CUT_DISPLAY[[cut_lab]],
-        version         = ver,
-        n_obs           = est$n_obs,
-        n_treated_cells = est$n_cells,
-        term            = "post::1:top",
-        estimate        = est$beta,
-        std_error       = est$se,
-        t_stat          = est$t,
-        p_value         = est$p
-      )
+for (def_name in names(OMEGA_DEFS)) {
+  for (spec_name in c("unconditional", "size_controlled")) {
+    for (cut_lab in CUT_LABELS) {
+      for (ver in names(INTERVALS)) {
+        d <- panels_by_def[[def_name]][[cut_lab]][version == ver]
+        est <- run_did_one(d, size_control = (spec_name == "size_controlled"))
+        did_rows[[length(did_rows) + 1L]] <- data.table(
+          omega_def       = def_name,
+          spec            = spec_name,
+          cut             = CUT_DISPLAY[[cut_lab]],
+          version         = ver,
+          n_obs           = est$n_obs,
+          n_treated_cells = est$n_cells,
+          term            = "post::1:top",
+          estimate        = est$beta,
+          std_error       = est$se,
+          t_stat          = est$t,
+          p_value         = est$p
+        )
+      }
     }
   }
 }
-did_all <- rbindlist(did_rows, use.names = TRUE)
-fwrite(did_all, file.path(OUTPUT_TAB,
+did_all_full <- rbindlist(did_rows, use.names = TRUE)
+fwrite(did_all_full, file.path(OUTPUT_TAB,
        "phase4_within_nace4d_reallocation_did_specs_comparison.csv"))
 
 # Print a compact summary to console for quick comparison
-cat("\n--- DiD comparison (unconditional vs size-controlled) ---\n")
-cmp <- dcast(did_all,
-             cut + version ~ spec,
-             value.var = c("estimate", "std_error", "p_value"))
+cat("\n--- DiD comparison (omega_def x spec) ---\n")
+cmp <- dcast(did_all_full,
+             cut + version ~ omega_def + spec,
+             value.var = "estimate")
 print(cmp)
 
-# The headline table uses the unconditional spec (matches prior outputs).
-did_all <- did_rows[sapply(did_rows, function(r) r$spec == "unconditional")] |>
-  rbindlist(use.names = TRUE)
+# The headline table uses omega_def = "shortage" and spec = "unconditional"
+# (matches prior outputs).
+did_all <- did_all_full[omega_def == "shortage" & spec == "unconditional",
+                         .(cut, version, n_obs, n_treated_cells, term,
+                           estimate, std_error, t_stat, p_value)]
 
 cut_order <- c("Pooled (no heterogeneity)",
                "Top quartile by buyer-total shock",
