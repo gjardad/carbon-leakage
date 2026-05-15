@@ -1,0 +1,20 @@
+% Requires \usepackage{makecell,booktabs} in main.tex
+% Across-NACE4d intensive-margin DiD: headline static-DiD coefficients.
+% Single FE specification: cell + NACE2d x year (absorbs sector-aggregate cycles).
+\begin{tabular}{lc}
+\toprule
+ & Cell + NACE2d $\times$ year FE \\
+\midrule
+\makecell[l]{2005 event \\ \footnotesize{(ETS-treated vs non-ETS)}} & \makecell{0.0031$^{***}$ \\ \footnotesize{(0.0001)} \\ \footnotesize{N=62.4M}} \\\addlinespace
+\makecell[l]{2017 event \\ \footnotesize{(high-$\omega$ vs low-$\omega$, within ETS)}} & \makecell{0.0000 \\ \footnotesize{(0.0002)} \\ \footnotesize{N=4.3M}} \\\addlinespace
+\makecell[l]{2017 event \\ \footnotesize{(top-quartile $\omega$ vs non-ETS)}} & \makecell{0.0044$^{***}$ \\ \footnotesize{(0.0001)} \\ \footnotesize{N=34.4M}} \\\addlinespace
+\bottomrule
+\end{tabular}
+% Notes: Outcome is buyer's share of total B2B spend directed at NACE4d $n$.
+% Unit of observation is buyer $\times$ NACE4d $\times$ year. Cell = buyer $\times$ NACE4d.
+% 2005 event: regression window 2002--2022, NACE4d sample = ETS-treated $\cup$ non-ETS.
+% 2017 high-vs-low: regression window 2012--2022, NACE4d sample = ETS-treated with classifiable $\omega$, median split.
+% 2017 top-quartile vs non-ETS: regression window 2012--2022, NACE4d sample = top-25\% $\omega$ ETS-treated $\cup$ non-ETS (ETS NACE4d below Q75 dropped).
+% $\omega_n$ aggregated to NACE4d from firm-level shortage / total cost over 2015--2016 EUTL.
+% Cluster-robust SE in parentheses (cluster = cell).
+% Significance: $^{\dagger}\,p<0.10$, $^{*}\,p<0.05$, $^{**}\,p<0.01$, $^{***}\,p<0.001$.
