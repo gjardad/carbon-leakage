@@ -1,0 +1,13 @@
+% Requires \usepackage{makecell,booktabs} in main.tex
+% Size-controlled extensive-margin DiD with Romano-Wolf adjusted significance.
+\begin{tabular}{lccccccc}
+\toprule
+ & & \multicolumn{2}{c}{Cost shock} & \multicolumn{2}{c}{Input share} & \multicolumn{2}{c}{Exposure gap} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}
+Treatment & Pooled & Top 25\% & Top 10\% & Top 25\% & Top 10\% & Top 25\% & Top 10\% \\
+\midrule
+2005 & \makecell{-0.006 \\ \footnotesize{(0.012)} \\ \footnotesize{N=2,293}} & \makecell{-0.012 \\ \footnotesize{(0.034)} \\ \footnotesize{N=573}} & \makecell{-0.096 \\ \footnotesize{(0.054)} \\ \footnotesize{N=229}} & \makecell{0.024 \\ \footnotesize{(0.031)} \\ \footnotesize{N=573}} & \makecell{-0.028 \\ \footnotesize{(0.053)} \\ \footnotesize{N=229}} & \makecell{-0.095$^{***}$ \\ \footnotesize{(0.026)} \\ \footnotesize{N=655}} & \makecell{-0.107$^{**}$ \\ \footnotesize{(0.033)} \\ \footnotesize{N=442}} \\\addlinespace
+2017 & \makecell{0.112$^{***}$ \\ \footnotesize{(0.006)} \\ \footnotesize{N=9,323}} & \makecell{0.153$^{***}$ \\ \footnotesize{(0.014)} \\ \footnotesize{N=2,327}} & \makecell{0.121$^{***}$ \\ \footnotesize{(0.022)} \\ \footnotesize{N=931}} & \makecell{0.072$^{***}$ \\ \footnotesize{(0.012)} \\ \footnotesize{N=2,327}} & \makecell{0.085$^{***}$ \\ \footnotesize{(0.021)} \\ \footnotesize{N=931}} & \makecell{0.193$^{***}$ \\ \footnotesize{(0.008)} \\ \footnotesize{N=4,253}} & \makecell{0.194$^{***}$ \\ \footnotesize{(0.017)} \\ \footnotesize{N=933}} \\\addlinespace
+\bottomrule
+\end{tabular}
+% Notes: Size-controlled within-cell extensive-margin DiD (LPM with outcome = $\mathbf{1}\{\text{sales}_{ijt}>0\}$; cell-role FE + year FE + year $\times$ log(pre-period sales) interaction). Cluster-robust SE in parentheses (cluster = buyer $\times$ NACE4d cell). Stars use Romano-Wolf step-down adjusted $p$-values from a cluster-bootstrap on buyer with $B = 500$ replicates, applied within the 14-test shortage family. Significance: $^{\dagger}\,p^{\mathrm{RW}}<0.10$, $^{*}\,p^{\mathrm{RW}}<0.05$, $^{**}\,p^{\mathrm{RW}}<0.01$, $^{***}\,p^{\mathrm{RW}}<0.001$.
