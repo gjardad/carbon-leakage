@@ -134,18 +134,33 @@ VARIANTS <- list(
   )
 )
 
-# Event-study windows (tau range and regression window)
+# Event-study windows (tau range and regression window). One entry per
+# table column so the event-study figure mirrors the paper table 1:1.
 ES_SPECS <- list(
-  "2005" = list(
+  "2005-ets" = list(
     treat_year     = 2005L,
     treatment_kind = "ets",
     pre_years      = 2002L:2004L,
     reg_lo         = 2002L, reg_hi = 2010L,
     tau_lo         = -3L,   tau_hi = 5L
   ),
-  "2017" = list(
+  "2017-ets" = list(
+    treat_year     = 2017L,
+    treatment_kind = "ets",
+    pre_years      = 2015L:2016L,
+    reg_lo         = 2012L, reg_hi = 2022L,
+    tau_lo         = -5L,   tau_hi = 5L
+  ),
+  "2017-omega" = list(
     treat_year     = 2017L,
     treatment_kind = "omega",
+    pre_years      = 2015L:2016L,
+    reg_lo         = 2012L, reg_hi = 2022L,
+    tau_lo         = -5L,   tau_hi = 5L
+  ),
+  "2017-topq" = list(
+    treat_year     = 2017L,
+    treatment_kind = "top_q_omega_vs_nonets",
     pre_years      = 2015L:2016L,
     reg_lo         = 2012L, reg_hi = 2022L,
     tau_lo         = -5L,   tau_hi = 5L
@@ -153,9 +168,13 @@ ES_SPECS <- list(
 )
 
 # FE specifications -- each regression below runs once per FE spec.
+# Diagnostic CSV keeps all three. The paper table and figure use
+# `nace3dxyear` (set below as PAPER_FE_SPEC) -- the most granular sector-
+# cycle control that still leaves identification on the 2017 sample.
 FE_SPECS <- list(
   "base"        = "cell_id + year",
-  "nace2dxyear" = "cell_id + nace2d^year"
+  "nace2dxyear" = "cell_id + nace2d^year",
+  "nace3dxyear" = "cell_id + nace3d^year"
 )
 
 # ---------------------------------------------------------------------------
@@ -322,6 +341,7 @@ build_panel <- function(spec) {
   panel[, post       := as.integer(year >= spec$treat_year)]
   panel[, cell_id    := paste(buyer, nace4d, sep = "::")]
   panel[, nace2d     := substr(nace4d, 1L, 2L)]
+  panel[, nace3d     := substr(nace4d, 1L, 3L)]
   panel[, tau        := year - spec$treat_year]
   panel
 }
@@ -389,7 +409,7 @@ paper_columns <- list(
   list(variant = "2017-topq-vs-nonets", group = "2017 Treatment",
        label  = "Q1 Exposure vs non-ETS")
 )
-PAPER_FE_SPEC <- "nace2dxyear"   # single FE spec shown in the paper table
+PAPER_FE_SPEC <- "nace3dxyear"   # single FE spec shown in the paper table + figure
 
 stars_for <- function(p) {
   ifelse(p < 0.001, "$^{***}$",
@@ -473,7 +493,7 @@ paper_tex <- c(
   "\\end{tabular}",
   "% Notes: Outcome is buyer's share of total B2B spend directed at NACE4d $n$ in year $t$.",
   "% Unit of observation is buyer $\\times$ NACE4d $\\times$ year. Cell = buyer $\\times$ NACE4d.",
-  "% Specification: $\\text{share}_{jnt} = \\alpha_{jn} + \\gamma_{s(n),t} + \\beta \\cdot \\mathrm{treatment}_n \\times \\mathrm{post}_t + \\varepsilon_{jnt}$, with cell FE $\\alpha_{jn}$ and NACE2d $\\times$ year FE $\\gamma_{s(n),t}$.",
+  "% Specification: $\\text{share}_{jnt} = \\alpha_{jn} + \\gamma_{s(n),t} + \\beta \\cdot \\mathrm{treatment}_n \\times \\mathrm{post}_t + \\varepsilon_{jnt}$, with cell FE $\\alpha_{jn}$ (buyer $\\times$ NACE4d) and NACE3d $\\times$ year FE $\\gamma_{s(n),t}$.",
   "% Cluster-robust standard errors in parentheses, clustered at the cell (buyer $\\times$ NACE4d) level.",
   "% $\\omega_n = \\sum_{f \\in n,\\, t \\in 2015\\text{--}16} \\mathrm{shortage}_{ft} / \\sum \\mathrm{total\\_cost}_{ft}$, aggregated from firm-level EUTL data to NACE4d.",
   "% High vs Low Exposure uses the median split of $\\omega$ among ETS-treated NACE4d with $\\geq 2$ firm-years of 2015--16 coverage. Q1 Exposure = top quartile of the same distribution. The Q1-vs-non-ETS column drops ETS NACE4d below the Q75 threshold.",
@@ -550,12 +570,14 @@ fwrite(es_coefs_plot,
 # 7. Event-study figure
 # ---------------------------------------------------------------------------
 event_lab_lookup <- list(
-  "2005" = "2005 event: ETS-treated vs non-ETS",
-  "2017" = "2017 event: high-ω vs low-ω"
+  "2005-ets"   = "2005: ETS-treated vs non-ETS",
+  "2017-ets"   = "2017: ETS-treated vs non-ETS",
+  "2017-omega" = "2017: high-ω vs low-ω (within ETS)",
+  "2017-topq"  = "2017: Q1-ω vs non-ETS"
 )
-# Paper figure shows only the NACE2d x year FE specification (the one with
-# absorbed sector-aggregate cycles, i.e. credible pre-trends).
-es_coefs_paper <- es_coefs_plot[fe_spec == "nace2dxyear"]
+# Paper figure shows only the PAPER_FE_SPEC specification (the one with
+# absorbed sector-aggregate cycles, i.e. the most credible pre-trends).
+es_coefs_paper <- es_coefs_plot[fe_spec == PAPER_FE_SPEC]
 es_coefs_paper[, event_lab := factor(unlist(event_lab_lookup[event]),
                                      levels = unlist(event_lab_lookup))]
 
@@ -565,8 +587,8 @@ p <- ggplot(es_coefs_paper,
   geom_vline(xintercept = -0.5, linetype = "dotted", color = "grey40") +
   geom_errorbar(aes(ymin = ci_lo, ymax = ci_hi),
                 width = 0.15, color = "#1f77b4") +
-  geom_point(size = 2.4, color = "#1f77b4") +
-  facet_wrap(~ event_lab, scales = "free_x") +
+  geom_point(size = 2.2, color = "#1f77b4") +
+  facet_wrap(~ event_lab, ncol = 2, scales = "free") +
   labs(x = expression(tau ~ "(years from treatment)"),
        y = expression(beta[tau])) +
   theme_classic(base_size = 12) +
@@ -577,11 +599,11 @@ p <- ggplot(es_coefs_paper,
 # Use Cairo to embed Unicode (ω, ×) reliably across devices.
 ggsave(file.path(OUTPUT_FIG,
                  "phase4_across_nace4d_intensive_DiD.png"),
-       p, width = 10, height = 4.0, dpi = 200,
+       p, width = 10, height = 7.5, dpi = 200,
        type = "cairo")
 ggsave(file.path(OUTPUT_FIG,
                  "phase4_across_nace4d_intensive_DiD.pdf"),
-       p, width = 10, height = 4.0,
+       p, width = 10, height = 7.5,
        device = cairo_pdf)
 
 cat("\nDone.\n")

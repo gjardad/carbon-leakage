@@ -6,14 +6,14 @@
 \cmidrule(lr){3-5}
  &  & ETS vs non-ETS & High vs Low Exposure & Q1 Exposure vs non-ETS \\
 \midrule
-Coefficient & -0.0082$^{***}$ & 0.0007 & -0.0033 & -0.0023 \\
-Std. error & (0.0021) & (0.0018) & (0.0037) & (0.0051) \\
+Coefficient & -0.0123$^{***}$ & 0.0040$^{\dagger}$ & 0.0004 & 0.0413$^{*}$ \\
+Std. error & (0.0030) & (0.0024) & (0.0054) & (0.0187) \\
 $N$ & 447k & 242k & 63k & 168k \\
 \bottomrule
 \end{tabular}
 % Notes: Outcome is buyer's share of total B2B spend directed at NACE4d $n$ in year $t$.
 % Unit of observation is buyer $\times$ NACE4d $\times$ year. Cell = buyer $\times$ NACE4d.
-% Specification: $\text{share}_{jnt} = \alpha_{jn} + \gamma_{s(n),t} + \beta \cdot \mathrm{treatment}_n \times \mathrm{post}_t + \varepsilon_{jnt}$, with cell FE $\alpha_{jn}$ and NACE2d $\times$ year FE $\gamma_{s(n),t}$.
+% Specification: $\text{share}_{jnt} = \alpha_{jn} + \gamma_{s(n),t} + \beta \cdot \mathrm{treatment}_n \times \mathrm{post}_t + \varepsilon_{jnt}$, with cell FE $\alpha_{jn}$ (buyer $\times$ NACE4d) and NACE3d $\times$ year FE $\gamma_{s(n),t}$.
 % Cluster-robust standard errors in parentheses, clustered at the cell (buyer $\times$ NACE4d) level.
 % $\omega_n = \sum_{f \in n,\, t \in 2015\text{--}16} \mathrm{shortage}_{ft} / \sum \mathrm{total\_cost}_{ft}$, aggregated from firm-level EUTL data to NACE4d.
 % High vs Low Exposure uses the median split of $\omega$ among ETS-treated NACE4d with $\geq 2$ firm-years of 2015--16 coverage. Q1 Exposure = top quartile of the same distribution. The Q1-vs-non-ETS column drops ETS NACE4d below the Q75 threshold.
