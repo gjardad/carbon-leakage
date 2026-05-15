@@ -614,10 +614,10 @@ For each (buyer j, supplier i, year_first) triplet, define:
 - Pair is "new" in year_first if it is first observed in B2B in year_first. B2B starts in 2002; pairs first observed in 2002 are dropped as left-censored.
 - Supplier omega in year t: `omega1_it = shortage_it / total_cost_it` (Def 1, net carbon-cost burden; the headline). Def 2 (`emissions_it / total_cost_it`) is tracked in parallel for descriptives only.
 - Omega rank: percentile rank of supplier i within NACE4d N in year t among all EUTL firms with non-missing omega in (N, t). Higher rank = dirtier.
-- **Headline LHS (formal DiD)**: supplier's rank in year τ − 1, fixed across all rel-years. For τ = 2017 the reference year is 2016. For τ = 2005, EUTL data starts in 2005 itself so the reference year is 2005 (contemporaneous; the only feasible choice). Fixing the rank by construction strips out within-firm omega evolution: any movement in coefficients across rel-years is composition (which suppliers buyers pick).
-- **Descriptive LHS (trajectory plots only)**: supplier's rank in year_first (year-t rank). Used only for the headline trajectory plot. *Not* used as a regression LHS — Test 3 below shows why it is methodologically contaminated.
+- **Headline LHS** (paper main figure): supplier's rank in year_first ("year-t rank"). This is what the buyer can observe when picking a supplier; the most direct test of buyer choice. Restricted to NACE4d where the supplier rank order is stable across the post-event window (Spearman ρ between rank_2016 and rank_2022 above threshold), so the LHS is not confounded by within-firm rank evolution. Sample: ~1,000 new pairs at τ=2017, 7 stable NACE4d at ρ ≥ 0.8 (5 at ρ ≥ 0.9). This is **Test 5** below.
+- **Supplementary LHS** (documented but not paper headline): supplier's rank in year τ − 1, fixed across all rel-years (the "fixed-at-τ−1" DiD on the unrestricted sample). Strips within-firm evolution but only detects a buyer shift toward firms that were *already cleaner* in τ−1 (Story A1 in §6 notation); misses the more relevant Story A2 where buyers shift toward firms that abated post-event. Reported below as a robustness reference.
 
-Sample for the formal DiD: new pairs in ETS-treated NACE4d with `year_first ∈ [τ − 5, τ + 5]` and a non-missing τ−1 supplier rank. SEs two-way clustered on buyer and supplier-NACE4d. We also run a "drop NACE 3511" (electricity) robustness for each τ, and a supplier-tenure-controlled spec (continuous control = `year_first − supplier_first_b2b_year`, absorbs cross-cohort survivor selection in the fixed-rank LHS).
+Sample for the headline (TEST 5): new pairs in ETS-treated NACE4d × stable-NACE4d intersection, with year_first ∈ [τ − 5, τ + 5] and a non-missing year_first supplier rank. SEs two-way clustered on buyer and supplier-NACE4d. The headline event is τ = 2017 — at τ = 2005, no NACE4d are rank-stable (consistent with the −0.95 mean-reversion coefficient in Test 3), so the stable-NACE4d test cannot be run there.
 
 #### Identification independence from Sections 1-5: intensive-overlap diagnostic
 
@@ -630,9 +630,11 @@ Two facts:
 
 Implication: the omega-rank analysis identifies off **market entry**, not within-portfolio switching. The intensive-margin tests cover existing relationships; this section covers initial entries. The two margins do not share identifying variation, so the absence of intensive-margin reallocation does not pre-determine the new-pair result, and vice versa.
 
-#### Headline DiD: rank fixed at τ−1
+#### Supplementary: fixed-at-τ−1 DiD on the unrestricted sample
 
 Script: `analysis/phase4_new_relationships_omega_rank_did.R`. Output: [`_did_coefs.tex`](output_rmd/tables/phase4_new_relationships_omega_rank_did_coefs.tex), event-study figures [`_did_event_study_2005.png`](output_rmd/figures/phase4_new_relationships_omega_rank_did_event_study_2005.png), [`_did_event_study_2017.png`](output_rmd/figures/phase4_new_relationships_omega_rank_did_event_study_2017.png).
+
+Documented for completeness, *not* the paper headline. Uses supplier's rank in τ−1 (fixed across rel-years) as the LHS. Captures Story A1 (buyer shift toward firms that were *already* clean in τ−1) but misses Story A2 (shift toward firms that abated post-event), which is the more behaviorally interesting channel. Headline LHS in the paper is the year-t-rank-on-stable-NACE4d spec (TEST 5 above).
 
 Pooled β at both events, base and tenure-controlled, full and drop-NACE-3511 samples (RMD):
 
@@ -709,34 +711,41 @@ Three observations:
 
 Pre-event popular suppliers do not differentially abate at either event. The supplier-side abatement documented in Test 4 is general (correlated with pre-rank itself, not with pre-popularity). Test 4 already rules out year-t rank as a clean LHS; Test 2 just confirms the same conclusion under a tighter framing.
 
-#### TEST 5 — Year-t-rank event study restricted to stable-NACE4d (robustness)
+#### TEST 5 — Headline: year-t-rank event study on stable-NACE4d (τ=2017)
 
-Script: same. Outputs: [`_supplier_test_stable_nace4d_summary.csv`](output_rmd/tables/phase4_new_relationships_omega_rank_supplier_test_stable_nace4d_summary.csv), [`_supplier_test_stable_yeartrank_event_study.png`](output_rmd/figures/phase4_new_relationships_omega_rank_supplier_test_stable_yeartrank_event_study.png).
+Script: `analysis/phase4_new_relationships_omega_rank_supplier_test.R`. Outputs: [`_supplier_test_stable_nace4d_summary.csv`](output_rmd/tables/phase4_new_relationships_omega_rank_supplier_test_stable_nace4d_summary.csv), **[`_supplier_test_stable_yeartrank_event_study.png`](output_rmd/figures/phase4_new_relationships_omega_rank_supplier_test_stable_yeartrank_event_study.png) — main paper figure**.
 
-A complementary check: in NACE4d where supplier rank order is *preserved* between τ−1 and τ+5, year-t rank ≈ rank-at-τ−1 by construction, so the year-t-rank LHS is not confounded by within-firm rank evolution. We identify these NACE4d at τ=2017 by Spearman ρ of (rank_2016, rank_2022) within each NACE4d with ≥ 3 EUTL firms at both endpoints.
+**Identifying the stable-NACE4d subsample.** A NACE4d is "rank-stable" if Spearman ρ between supplier ranks at 2016 and 2022 is above a threshold. Within a rank-stable NACE4d, year-t rank ≈ rank-at-τ−1 by construction, so the year-t-rank LHS is not confounded by supplier-side rank evolution.
 
-Stable-NACE4d counts at τ=2017 (out of 17 NACE4d with ≥ 3 EUTL firms tracked):
+Stable-NACE4d counts at τ=2017 (out of 17 NACE4d with ≥ 3 EUTL firms tracked across both endpoints):
 
 | Threshold | # NACE4d stable | # EUTL firms | # new pairs in [2012, 2022] window |
 |---|---:|---:|---:|
-| ρ = 1.0 | 4 | 13 | small |
+| ρ = 1.0 | 4 | 13 | small, noisy |
 | ρ ≥ 0.9 | 5 | 18 | ~950 |
 | ρ ≥ 0.8 | 7 | 28 | ~1,030 |
 
-(At τ=2005, no NACE4d are stable at any threshold — consistent with the −0.95 Test 3 coefficient. The stable-NACE4d robustness only applies at τ=2017.)
+(At τ=2005, no NACE4d are stable at any threshold — consistent with the −0.95 mean-reversion coefficient in Test 3. The stable-NACE4d test only applies at τ=2017.)
 
-Within each stable-NACE4d subsample, run the year-t-rank event study:
+**Specification.**
 
 ```
 rank_year_first_ij = Σ_{e ≠ −1} β_e · 1{year_first − 2017 = e}
                        + α_buyer + γ_NACE4d + ε_ij      (ref e = −1)
 ```
 
-SE two-way clustered: buyer × supplier-NACE4d.
+SE two-way clustered: buyer × supplier-NACE4d. The figure (`_supplier_test_stable_yeartrank_event_study.png`) reports rel-year ∈ [−4, +4] with two specs: ρ ≥ 0.9 and ρ ≥ 0.8 (the ρ = 1.0 spec is too thin to plot meaningfully).
 
-The event-study figure shows post-period coefficients hovering near zero (0 to +0.10) at all three thresholds, with CIs straddling zero throughout. Pre-trends are not perfectly flat — rel-year=−5 (2012) shows a ~+0.19 spike at the ρ ≥ 0.8 and ρ ≥ 0.9 thresholds — but the post-period coefficients are small and centred at zero, supporting the headline null. ρ = 1.0 is too noisy (4 NACE4d) to interpret.
+**Reading the figure honestly.** It is not a textbook-clean DiD:
 
-Reading: in the subsample of NACE4d where the year-t-rank LHS is logically valid (supplier rank is stable), the post-event coefficients do not differ from zero — consistent with the supplier-level Test 1 null below.
+- **Pre-period (rel-year = −4, −3)**: coefficients sit at ±0.05, roughly parallel to zero.
+- **Pre-period spike at rel-year = −2 (year_first = 2015)**: +0.11 at ρ ≥ 0.9, +0.06 at ρ ≥ 0.8. The 95% CIs exclude zero at ρ ≥ 0.9. Likely the 2015-16 B2B reporting-wave cohort effect (the same wave that drives the 2016 reference-year being anomalously low; see the cohort-composition diagnostic below).
+- **rel-year = 0 (year_first = 2017)**: +0.087 (ρ ≥ 0.9), +0.086 (ρ ≥ 0.8). The 95% CIs exclude zero. This spike mirrors the rel-year = −2 spike symmetrically around the 2016 reference, again consistent with the reference cohort being unusually clean rather than a behavioral post-event shift.
+- **rel-year = +1 through +4**: coefficients hover within ±0.05 of zero, with CIs straddling zero in most points. No sustained post-event drift in either direction.
+
+**Defensible claim.** From rel-year = +1 onward (one year past the policy event), there is no evidence of a sustained shift in the year-t rank of new picks. The visible imperfections (rel-year = −2 and rel-year = 0 spikes) are symmetric around the reference cohort and consistent with the documented 2015-16 reporting-wave artifact rather than a behavioral response. If switching costs were the binding friction in §1-5, the new-pair margin should show a sustained negative post-event drift in year-t rank (buyers shifting to cleaner suppliers). It does not.
+
+**Limitations.** Sample is small (1,000-1,400 new pairs across 7 NACE4d). The pre-trend imperfection means we cannot interpret the rel-year = 0 spike as a clean treatment effect — it could be partly cohort-noise, partly a small one-year shift. From rel-year = +1 onward the data is consistent with no behavioral change, but the test is "absence of evidence" rather than "evidence of absence."
 
 #### Supplier-level Story A vs B DiD
 
@@ -772,17 +781,17 @@ Script: `analysis/phase4_new_relationships_omega_rank_diagnostics.R`. Outputs: `
 
 LOO trajectories at both events cluster tightly around the main line on the descriptive plots — no single supplier-NACE4d drives the headline trajectory. The drop-NACE-3511 robustness at the pooled-DiD level is already covered in the headline DiD table above and does not change the qualitative conclusion at τ=2017.
 
-#### Bottom line: relational capital does not explain the within-NACE4d null
+#### Bottom line: relational capital is not supported by the new-pair-margin evidence
 
-Three independent pieces of evidence converge at τ=2017:
+Three pieces of evidence at τ=2017:
 
-- **Fixed-at-τ−1 event-study (headline DiD)**: post β = +0.019 (p = 0.15). No composition shift toward suppliers with low τ−1 rank.
-- **Tenure-controlled headline DiD**: post β = −0.064 (SE 0.052, p = 0.22). Survivor channel partially absorbed; CI includes zero.
-- **Supplier-level Story-A-vs-B DiD (Test 1)**: post:abater = +0.052 (p = 0.71). Abaters do not differentially gain new buyers.
+- **Headline (TEST 5: year-t-rank ES on stable-NACE4d)**: post coefficients from rel-year = +1 onward hover within ±0.05 of zero with CIs straddling zero in most points. The rel-year = −2 and rel-year = 0 spikes (~+0.10 each) mirror each other around the 2016 reference and are consistent with the 2015-16 reporting-wave cohort artifact, not a sustained behavioral shift. No evidence of buyers systematically shifting toward cleaner suppliers post-MSR.
+- **Supplier-level Story-A-vs-B DiD (Test 1)**: post:abater = +0.052 (SE 0.14, p = 0.71). Abaters do not differentially gain new buyers post-event.
+- **Supplementary fixed-at-τ−1 DiD**: post β = +0.019 (p = 0.15) base; β = −0.064 (p = 0.22) with tenure control. Both nulls.
 
-If relational capital / switching costs explained the within-NACE4d intensive-margin null (Sections 1-5), buyers at the new-pair margin — where switching costs are zero — should shift toward cleaner suppliers. They don't, on either the composition (fixed-rank) or behavioral (supplier-level DiD) test. **Switching costs are ruled out as the explanation for the Section 1 null.**
+If relational capital / switching costs were the binding friction explaining the within-NACE4d intensive-margin null (Sections 1-5), buyers at the new-pair margin — where switching costs are zero by construction — should display a sustained post-event shift toward cleaner suppliers. **The data show no such shift.** The evidence is consistent with relational capital *not* being the dominant friction, though the sample is thin (~1,000 new pairs in 7 stable NACE4d) and pre-trends are not clean enough for a strong "ruled out" claim. The honest reading is "the new-pair margin provides no evidence in favor of the relational-capital story."
 
-A residual +0.039 (p=0.024) coefficient at τ=2005 drop-NACE-3511 base spec goes away with the tenure control (+0.067, p=0.11) and is not robust to specification. Small sample (n ≈ 20-30 cells in this restricted cut); not interpreted.
+At τ=2005 the stable-NACE4d test cannot be run (no rank-stable NACE4d at any threshold; see Test 3 / Test 4). The supplier-level Test 1 at τ=2005 gives a noisy positive point estimate (+0.33, SE 0.30, p=0.27) that doesn't reach significance and is not interpreted.
 
 ### Section 7: Combined interpretation across all six tests
 
