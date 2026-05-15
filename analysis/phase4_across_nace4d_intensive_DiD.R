@@ -122,6 +122,15 @@ VARIANTS <- list(
     treatment_kind  = "top_q_omega_vs_nonets",
     pre_years       = 2015L:2016L,
     reg_lo          = 2012L, reg_hi = 2022L
+  ),
+  # 2017 binary ETS-treated vs non-ETS (same construction as 2005 but with
+  # treat_year = 2017 and pre = 2015-16). Headline 2017 contrast for the
+  # paper table.
+  "2017-ets-vs-nonets" = list(
+    treat_year      = 2017L,
+    treatment_kind  = "ets",
+    pre_years       = 2015L:2016L,
+    reg_lo          = 2012L, reg_hi = 2022L
   )
 )
 
@@ -365,67 +374,114 @@ write_tex_table(coefs,
                 caption = "Across-NACE4d intensive-margin DiD on buyer portfolio share. 2005 event: binary ETS-treated vs non-ETS. 2017 variants: high-omega vs low-omega within ETS-treated.")
 
 # ---------------------------------------------------------------------------
-# 5b. Paper-ready table -- single FE column (NACE2d x year), three rows
-# (2005 ETS, 2017 high vs low, 2017 top-quartile vs non-ETS).
+# 5b. Paper-ready table -- 3 rows (coef / SE / N) x 4 columns
+# (2005 ETS-vs-non-ETS, 2017 ETS-vs-non-ETS, 2017 high-vs-low,
+# 2017 top-quartile-vs-non-ETS). Single FE spec (cell + NACE2d x year).
+# Multi-level column header groups the three 2017 columns.
 # ---------------------------------------------------------------------------
-headline_variants <- c("2005", "2017-sym", "2017-topq-vs-nonets")
-PAPER_FE_SPEC     <- "nace2dxyear"   # single FE column shown in the paper table
-
-format_cell <- function(est, se, pval, n) {
-  stars <- ifelse(pval < 0.001, "$^{***}$",
-           ifelse(pval < 0.01,  "$^{**}$",
-           ifelse(pval < 0.05,  "$^{*}$",
-           ifelse(pval < 0.10,  "$^{\\dagger}$",
-                                ""))))
-  est_str <- sprintf("%.4f", est)
-  se_str  <- sprintf("%.4f", se)
-  if (n >= 1e6) {
-    n_str <- sprintf("%.1fM", n / 1e6)
-  } else if (n >= 1e3) {
-    n_str <- sprintf("%.0fk", n / 1e3)
-  } else {
-    n_str <- format(n, big.mark = ",")
-  }
-  sprintf("\\makecell{%s%s \\\\ \\footnotesize{(%s)} \\\\ \\footnotesize{N=%s}}",
-          est_str, stars, se_str, n_str)
-}
-
-variant_labels <- c(
-  "2005"               = "2005 event \\\\ \\footnotesize{(ETS-treated vs non-ETS)}",
-  "2017-sym"           = "2017 event \\\\ \\footnotesize{(high-$\\omega$ vs low-$\\omega$, within ETS)}",
-  "2017-topq-vs-nonets"= "2017 event \\\\ \\footnotesize{(top-quartile $\\omega$ vs non-ETS)}"
+paper_columns <- list(
+  list(variant = "2005",                group = "2005 Treatment",
+       label  = ""),                      # 2005 column has no sub-label
+  list(variant = "2017-ets-vs-nonets",  group = "2017 Treatment",
+       label  = "ETS vs non-ETS"),
+  list(variant = "2017-sym",            group = "2017 Treatment",
+       label  = "High vs Low Exposure"),
+  list(variant = "2017-topq-vs-nonets", group = "2017 Treatment",
+       label  = "Q1 Exposure vs non-ETS")
 )
+PAPER_FE_SPEC <- "nace2dxyear"   # single FE spec shown in the paper table
 
-paper_rows <- character(0)
-for (v in headline_variants) {
-  row <- coefs[coefs$variant == v & coefs$fe_spec == PAPER_FE_SPEC, ]
-  cell <- if (nrow(row) != 1L) "--" else
-    format_cell(row$estimate, row$std_error, row$p_value, row$n_obs)
-  paper_rows <- c(paper_rows,
-                  paste0("\\makecell[l]{", variant_labels[[v]], "} & ",
-                         cell, " \\\\\\addlinespace"))
+stars_for <- function(p) {
+  ifelse(p < 0.001, "$^{***}$",
+  ifelse(p < 0.01,  "$^{**}$",
+  ifelse(p < 0.05,  "$^{*}$",
+  ifelse(p < 0.10,  "$^{\\dagger}$",
+                    ""))))
 }
+format_n <- function(n) {
+  if (n >= 1e6) sprintf("%.1fM", n / 1e6)
+  else if (n >= 1e3) sprintf("%.0fk", n / 1e3)
+  else format(n, big.mark = ",")
+}
+
+# Pull the cell for each column under the paper FE spec.
+col_cells <- lapply(paper_columns, function(c) {
+  row <- coefs[coefs$variant == c$variant & coefs$fe_spec == PAPER_FE_SPEC, ]
+  if (nrow(row) != 1L) {
+    list(coef = "--", se = "--", n = "--")
+  } else {
+    list(
+      coef = paste0(sprintf("%.4f", row$estimate), stars_for(row$p_value)),
+      se   = sprintf("(%.4f)", row$std_error),
+      n    = format_n(row$n_obs)
+    )
+  }
+})
+
+# Build the grouped header. The first column belongs to "2005 Treatment";
+# columns 2-4 are spanned by "2017 Treatment".
+groups <- vapply(paper_columns, `[[`, character(1), "group")
+labels <- vapply(paper_columns, `[[`, character(1), "label")
+# Find spans of consecutive identical group names.
+group_runs <- rle(groups)
+header_cells <- character(0)
+col_idx      <- 1L
+cmidrules    <- character(0)
+for (i in seq_along(group_runs$lengths)) {
+  span <- group_runs$lengths[i]
+  name <- group_runs$values[i]
+  if (span == 1L) {
+    header_cells <- c(header_cells, name)
+  } else {
+    header_cells <- c(header_cells,
+                      sprintf("\\multicolumn{%d}{c}{%s}", span, name))
+    cmidrules <- c(cmidrules,
+                   sprintf("\\cmidrule(lr){%d-%d}",
+                           col_idx + 1L,             # +1 for leading column
+                           col_idx + span))
+  }
+  col_idx <- col_idx + span
+}
+
+header_row1 <- paste0(" & ", paste(header_cells, collapse = " & "), " \\\\")
+header_row2 <- paste0(" & ", paste(labels,        collapse = " & "), " \\\\")
+
+coef_row <- paste0("Coefficient & ",
+                   paste(vapply(col_cells, `[[`, character(1), "coef"),
+                         collapse = " & "), " \\\\")
+se_row   <- paste0("Std. error & ",
+                   paste(vapply(col_cells, `[[`, character(1), "se"),
+                         collapse = " & "), " \\\\")
+n_row    <- paste0("$N$ & ",
+                   paste(vapply(col_cells, `[[`, character(1), "n"),
+                         collapse = " & "), " \\\\")
 
 paper_tex <- c(
   "% Requires \\usepackage{makecell,booktabs} in main.tex",
   "% Across-NACE4d intensive-margin DiD: headline static-DiD coefficients.",
-  "% Single FE specification: cell + NACE2d x year (absorbs sector-aggregate cycles).",
-  "\\begin{tabular}{lc}",
+  sprintf("\\begin{tabular}{l%s}", paste(rep("c", length(paper_columns)),
+                                         collapse = "")),
   "\\toprule",
-  " & Cell + NACE2d $\\times$ year FE \\\\",
+  header_row1,
+  if (length(cmidrules) > 0) paste(cmidrules, collapse = "") else NULL,
+  header_row2,
   "\\midrule",
-  paper_rows,
+  coef_row,
+  se_row,
+  n_row,
   "\\bottomrule",
   "\\end{tabular}",
-  "% Notes: Outcome is buyer's share of total B2B spend directed at NACE4d $n$.",
+  "% Notes: Outcome is buyer's share of total B2B spend directed at NACE4d $n$ in year $t$.",
   "% Unit of observation is buyer $\\times$ NACE4d $\\times$ year. Cell = buyer $\\times$ NACE4d.",
-  "% 2005 event: regression window 2002--2022, NACE4d sample = ETS-treated $\\cup$ non-ETS.",
-  "% 2017 high-vs-low: regression window 2012--2022, NACE4d sample = ETS-treated with classifiable $\\omega$, median split.",
-  "% 2017 top-quartile vs non-ETS: regression window 2012--2022, NACE4d sample = top-25\\% $\\omega$ ETS-treated $\\cup$ non-ETS (ETS NACE4d below Q75 dropped).",
-  "% $\\omega_n$ aggregated to NACE4d from firm-level shortage / total cost over 2015--2016 EUTL.",
-  "% Cluster-robust SE in parentheses (cluster = cell).",
+  "% Specification: $\\text{share}_{jnt} = \\alpha_{jn} + \\gamma_{s(n),t} + \\beta \\cdot \\mathrm{treatment}_n \\times \\mathrm{post}_t + \\varepsilon_{jnt}$, with cell FE $\\alpha_{jn}$ and NACE2d $\\times$ year FE $\\gamma_{s(n),t}$.",
+  "% Cluster-robust standard errors in parentheses, clustered at the cell (buyer $\\times$ NACE4d) level.",
+  "% $\\omega_n = \\sum_{f \\in n,\\, t \\in 2015\\text{--}16} \\mathrm{shortage}_{ft} / \\sum \\mathrm{total\\_cost}_{ft}$, aggregated from firm-level EUTL data to NACE4d.",
+  "% High vs Low Exposure uses the median split of $\\omega$ among ETS-treated NACE4d with $\\geq 2$ firm-years of 2015--16 coverage. Q1 Exposure = top quartile of the same distribution. The Q1-vs-non-ETS column drops ETS NACE4d below the Q75 threshold.",
+  "% 2005 Treatment uses pre = 2002--04, post = 2005--22, regression window 2002--22. 2017 Treatment uses pre = 2015--16, post = 2017--22, regression window 2012--22.",
   "% Significance: $^{\\dagger}\\,p<0.10$, $^{*}\\,p<0.05$, $^{**}\\,p<0.01$, $^{***}\\,p<0.001$."
 )
+# Drop the conditional NULL line if no cmidrules were generated.
+paper_tex <- paper_tex[!sapply(paper_tex, is.null)]
 writeLines(paper_tex,
            file.path(OUTPUT_TAB,
                      "phase4_across_nace4d_intensive_DiD_paper.tex"))
