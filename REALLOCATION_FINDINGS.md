@@ -800,16 +800,45 @@ Seven of ten cells in the table above are clean flats. Two of the three "movemen
 
 The remaining candidate signal is cut #2's **Q3 high-exposure intensive decline** (~13% in 2011–12 to ~10% in 2022). We've recorded this pattern but **we don't have a strong reason to believe it's connected to ETS pricing**. The decline starts in 2011, which doesn't line up with any ETS regime change (Phase III begins in 2013; MSR decision in 2017; EUA price jump in 2018), and the magnitude is modest (~3pp over a decade). Most plausibly the trajectory reflects compositional churn in the Q3 cohort, a structural decline in specific high-shortage Belgian sectors over 2012–2022 (steel restructuring, refining contraction), or a denominator effect (Q3 buyers' total B2B spend growing in non-ETS sectors faster than in high-shortage sectors). We have not investigated mechanism — deliberately, because the timing offers no policy hook. Flagging for posterity, not pursuing.
 
+### Formal DiD (added 2026-05-16)
+
+Buyer-level DiD at the intensive margin: outcome = buyer's share of total B2B spend directed at NACE4d *n*; unit = buyer × NACE4d × year. Two events:
+
+- **2005** (binary): `treatment_n = 1{NACE4d n is ETS-treated}`, regression window 2002–22, pre = 2002–04, post = 2005–22, sample = ETS-treated ∪ non-ETS NACE4d the buyer bought from in 2002–04.
+- **2017** (heterogeneity within ETS): `treatment_n = 1{ω_n > median}` where `ω_n = sum_{f, t ∈ 2015-16} shortage_ft / sum total_cost_ft` aggregated to NACE4d. Regression window 2012–22 (the 2017-sym variant; tight 2013–22 and long 2002–22 reported in the diagnostic CSV). Pre = pre-2017, post = 2017+. Sample = ETS-treated NACE4d the buyer bought from in 2015–16.
+
+Two FE specs per event:
+- **Cell + year**: `α_jn + δ_t`. Baseline.
+- **Cell + NACE2d × year**: `α_jn + γ_{2,t}`. Absorbs sector-aggregate (NACE2d-by-year) demand cycles; identification moves to within-NACE2d-year cross-NACE4d variation.
+
+Script: [analysis/phase4_across_nace4d_intensive_DiD.R](analysis/phase4_across_nace4d_intensive_DiD.R). Headline table: [output_rmd/tables/phase4_across_nace4d_intensive_DiD_paper.tex](output_rmd/tables/phase4_across_nace4d_intensive_DiD_paper.tex). Event-study figure: [output_rmd/figures/phase4_across_nace4d_intensive_DiD.png](output_rmd/figures/phase4_across_nace4d_intensive_DiD.png).
+
+| Event | Cell + year FE | Cell + NACE2d × year FE |
+|---|---|---|
+| **2005** (ETS vs non-ETS) | +0.0012*** (0.0001) | +0.0031*** (0.0001) |
+| **2017** (high-ω vs low-ω, sym window) | +0.0047*** (0.0001) | +0.0000 (0.0002) |
+
+*N* ≈ 62M (2005), ≈ 4.3M (2017). SEs clustered on cell (buyer × NACE4d). Stars: ***p<0.001, **p<0.01, *p<0.05.
+
+**Reading the table.** Statistical significance is mechanical given the sample size — focus on sign and magnitude.
+
+- **2005 event** is *anti*-leakage in sign: after NACE2d × year FE, buyers raise their share on ETS-treated NACE4d by ≈ +0.3pp by τ = +5, not lower it. Small but the direction is opposite to leakage. Plausibly Phase I free allocations actually helped ETS-treated sectors expand share, but the magnitude is too small to claim a meaningful policy effect.
+- **2017 event** is null. The cell+year column shows β = +0.0047 (a positive level shift in high-ω cells post-2017) and a corresponding pre-trend in the event-study (high-ω cells rising into 2016, then flat). Once NACE2d × year FE absorbs the sector-aggregate cycle, both the pre-trend and the post coefficient collapse to ≈ 0. The "signal" in the unconditional spec was a NACE2d-level demand cycle, not buyer reallocation across NACE4d.
+
+The event-study figure confirms this visually: the 2017 panel under cell+year FE shows the classic rising-pre-period / kink-at-zero pattern that flags a confounded design; the same panel under cell+NACE2d×year FE has all coefficients tightly around zero throughout.
+
+**On the local-1 vs RMD reading.** An earlier local-1 (downsampled) run had β_{2005} = −0.0076 (apparent leakage). Full-sample RMD flips the sign to +0.0012. Local-1 was too noisy for the 2005 sign; the RMD result is the authoritative one.
+
 ### Bottom line
 
-Across-NACE4d reallocation is **inactive on all four heterogeneity cuts and both margins** that we can credibly identify. The two extensive-margin movement cells are data artefacts; the intensive-margin Q3 cohort decline isn't policy-timed and is most plausibly compositional or structural-sectoral.
+Across-NACE4d reallocation is **inactive on all four descriptive heterogeneity cuts and both margins**, and the formal DiD confirms this on both events (2005 and 2017). The intensive-margin Q3 cohort decline in the descriptive plots isn't policy-timed and is most plausibly compositional or structural-sectoral; the DiD's 2005 anti-leakage sign is small and most consistent with a Phase-I free-allocation level effect rather than substitution behavior.
 
 ### Caveats
 
-- We have no formal DiD on the across-NACE4d batch. The within-NACE4d new-supplier omega-rank DiD with τ−1-fixed rank (above, Section 6) is the closest comparison — that one produced a clean β ≈ 0 at τ = 2013. We expect across-NACE4d to land similarly but have not run the equivalent specification.
 - The 2015–16 B2B reporting discontinuity (the "Belgian VAT-reporting threshold change" or similar — origin not yet diagnosed; checking with NBB) contaminates any pre/post comparison that straddles it. Pre-2015 segments can be read cleanly; post-2016 segments require a separate baseline.
-- The local-1 downsampled B2B has been confirmed to track full-RMD on trends for these cuts but not on levels (especially the domestic-vs-imported levels). All numbers above are RMD.
+- The local-1 downsampled B2B tracks full-RMD on trends for the descriptive cuts but not on levels and not on the DiD coefficients themselves (the 2005 event sign actually flipped between local-1 and RMD; the 2017 event-study pre-trend was 6× larger on local-1 than on RMD). All DiD numbers in the table above are RMD.
+- The 2005 binary spec uses all NACE4d (ETS-treated ∪ non-ETS) as the panel. The 2017 ω spec restricts to ETS-treated only, since a high-vs-low ω contrast only makes sense within ETS. The two events therefore answer slightly different questions: "did ETS-treated NACE4d gain/lose buyer share against non-ETS NACE4d post-2005?" vs "within ETS, did high-ω NACE4d lose share to low-ω NACE4d post-2017?"
 
 ---
 
-*Generated by `analysis/phase0_decomposition.R`, `analysis/phase0_melitz_polanec.R`, `analysis/phase0_ets_share_shift.R`, `analysis/phase0_pairwise_decomposition.R`, `analysis/phase1a_output_share_by_exposure.R`, `analysis/phase4_sector_passthrough_classification.R`, `analysis/phase4_firm_output_reallocation.R`; `analysis/phase4_within_nace4d_reallocation_did.R`, `_topQ.R`, `_topQ_heterogeneity.R`, `_placebo.R`, `_plots.R`, `analysis/phase4_within_nace4d_extensive_DiD.R`, `analysis/phase4_within_nace4d_extensive_margin.R`; and the `analysis/phase4_new_relationships_omega_rank*.R` family. May 2026.*
+*Generated by `analysis/phase0_decomposition.R`, `analysis/phase0_melitz_polanec.R`, `analysis/phase0_ets_share_shift.R`, `analysis/phase0_pairwise_decomposition.R`, `analysis/phase1a_output_share_by_exposure.R`, `analysis/phase4_sector_passthrough_classification.R`, `analysis/phase4_firm_output_reallocation.R`; `analysis/phase4_within_nace4d_reallocation_did.R`, `_topQ.R`, `_topQ_heterogeneity.R`, `_placebo.R`, `_plots.R`, `analysis/phase4_within_nace4d_extensive_DiD.R`, `analysis/phase4_within_nace4d_extensive_margin.R`; `analysis/phase4_across_nace4d_intensive_DiD.R`; and the `analysis/phase4_new_relationships_omega_rank*.R` family. May 2026.*

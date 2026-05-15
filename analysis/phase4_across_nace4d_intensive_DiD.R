@@ -56,10 +56,11 @@
 #   not bite here.
 #
 # OUTPUTS (output_<machine>/figures/, output_<machine>/tables/)
-#   - phase4_across_nace4d_intensive_DiD_coefs.csv
-#   - phase4_across_nace4d_intensive_DiD_coefs.tex
+#   - phase4_across_nace4d_intensive_DiD_coefs.csv         (diagnostic, all variants x FE specs)
+#   - phase4_across_nace4d_intensive_DiD_coefs.tex         (diagnostic, raw xtable)
+#   - phase4_across_nace4d_intensive_DiD_paper.tex         (paper-ready: 2 events x 2 FE specs)
 #   - phase4_across_nace4d_intensive_DiD_eventstudy.csv
-#   - phase4_across_nace4d_intensive_DiD.{png,pdf}
+#   - phase4_across_nace4d_intensive_DiD.{png,pdf}         (paper-ready event-study)
 ###############################################################################
 
 rm(list = ls())
@@ -334,6 +335,78 @@ write_tex_table(coefs,
                 caption = "Across-NACE4d intensive-margin DiD on buyer portfolio share. 2005 event: binary ETS-treated vs non-ETS. 2017 variants: high-omega vs low-omega within ETS-treated.")
 
 # ---------------------------------------------------------------------------
+# 5b. Paper-ready table -- two events (2005, 2017-sym) x two FE specs,
+# headline numbers only (matches the paper-side mirror of the within-NACE4d
+# combined table).
+# ---------------------------------------------------------------------------
+headline_variants <- c("2005", "2017-sym")
+
+format_cell <- function(est, se, pval, n) {
+  stars <- ifelse(pval < 0.001, "$^{***}$",
+           ifelse(pval < 0.01,  "$^{**}$",
+           ifelse(pval < 0.05,  "$^{*}$",
+           ifelse(pval < 0.10,  "$^{\\dagger}$",
+                                ""))))
+  est_str <- sprintf("%.4f", est)
+  se_str  <- sprintf("%.4f", se)
+  if (n >= 1e6) {
+    n_str <- sprintf("%.1fM", n / 1e6)
+  } else if (n >= 1e3) {
+    n_str <- sprintf("%.0fk", n / 1e3)
+  } else {
+    n_str <- format(n, big.mark = ",")
+  }
+  sprintf("\\makecell{%s%s \\\\ \\footnotesize{(%s)} \\\\ \\footnotesize{N=%s}}",
+          est_str, stars, se_str, n_str)
+}
+
+paper_rows <- list()
+for (v in headline_variants) {
+  cells_row <- character(0)
+  for (fe_lab in names(FE_SPECS)) {
+    row <- coefs[coefs$variant == v & coefs$fe_spec == fe_lab, ]
+    if (nrow(row) != 1L) {
+      cells_row <- c(cells_row, "--")
+    } else {
+      cells_row <- c(cells_row,
+                     format_cell(row$estimate, row$std_error,
+                                 row$p_value, row$n_obs))
+    }
+  }
+  variant_label <- switch(v,
+    "2005"     = "2005 event \\\\ \\footnotesize{(ETS-treated vs non-ETS)}",
+    "2017-sym" = "2017 event \\\\ \\footnotesize{(high-$\\omega$ vs low-$\\omega$)}",
+    v)
+  paper_rows[[v]] <- paste0(
+    "\\makecell[l]{", variant_label, "} & ",
+    paste(cells_row, collapse = " & "),
+    " \\\\\\addlinespace"
+  )
+}
+
+paper_tex <- c(
+  "% Requires \\usepackage{makecell,booktabs} in main.tex",
+  "% Across-NACE4d intensive-margin DiD: headline static-DiD coefficients.",
+  "\\begin{tabular}{lcc}",
+  "\\toprule",
+  " & Cell + year FE & Cell + NACE2d $\\times$ year FE \\\\",
+  "\\midrule",
+  paper_rows[["2005"]],
+  paper_rows[["2017-sym"]],
+  "\\bottomrule",
+  "\\end{tabular}",
+  "% Notes: Outcome is buyer's share of total B2B spend directed at NACE4d $n$.",
+  "% Unit of observation is buyer $\\times$ NACE4d $\\times$ year.",
+  "% 2005 event uses regression window 2002--2022 with NACE4d sample = ETS-treated $\\cup$ non-ETS.",
+  "% 2017 event uses the 2017-sym window (2012--2022) with NACE4d sample = ETS-treated and $\\omega$ measured over 2015--2016 EUTL.",
+  "% Cluster-robust SE in parentheses (cluster = buyer $\\times$ NACE4d cell).",
+  "% Significance: $^{\\dagger}\\,p<0.10$, $^{*}\\,p<0.05$, $^{**}\\,p<0.01$, $^{***}\\,p<0.001$."
+)
+writeLines(paper_tex,
+           file.path(OUTPUT_TAB,
+                     "phase4_across_nace4d_intensive_DiD_paper.tex"))
+
+# ---------------------------------------------------------------------------
 # 6. Event-study (per event), tau in [-5, +5] with reference tau = -1
 # ---------------------------------------------------------------------------
 cat("\n=== Event-study ===\n")
@@ -396,15 +469,16 @@ fwrite(es_coefs_plot,
 # ---------------------------------------------------------------------------
 # 7. Event-study figure
 # ---------------------------------------------------------------------------
-es_labels <- c(
-  "2005" = "2005 event (ETS vs non-ETS, regression window 2002-2010)",
-  "2017" = "2017 event (high-omega vs low-omega, regression window 2012-2022)"
-)
 fe_labels <- c(
   "base"        = "Cell + year FE",
-  "nace2dxyear" = "Cell + NACE2d x year FE"
+  "nace2dxyear" = "Cell + NACE2d × year FE"
 )
-es_coefs_plot[, event_lab := factor(es_labels[event], levels = es_labels)]
+event_lab_lookup <- list(
+  "2005" = "2005 event: ETS-treated vs non-ETS",
+  "2017" = "2017 event: high-ω vs low-ω"
+)
+es_coefs_plot[, event_lab := factor(unlist(event_lab_lookup[event]),
+                                    levels = unlist(event_lab_lookup))]
 es_coefs_plot[, fe_lab    := factor(fe_labels[fe_spec], levels = fe_labels)]
 
 dodge <- position_dodge(width = 0.35)
@@ -417,24 +491,27 @@ p <- ggplot(es_coefs_plot,
                 width = 0.15, position = dodge) +
   geom_point(size = 2.2, position = dodge) +
   facet_wrap(~ event_lab, scales = "free_x") +
-  scale_color_manual(values = c("Cell + year FE" = "#1f77b4",
-                                "Cell + NACE2d x year FE" = "#d62728")) +
+  scale_color_manual(values = setNames(c("#1f77b4", "#d62728"),
+                                       fe_labels)) +
+  scale_shape_manual(values = setNames(c(16, 17), fe_labels)) +
   labs(x = expression(tau ~ "(years from treatment)"),
-       y = expression(beta[tau] ~ "(share on treated NACE4d)"),
-       title = "Across-NACE4d intensive-margin DiD: event-study",
-       subtitle = "Reference tau = -1; 95% CI from cell-clustered SE",
+       y = expression(beta[tau]),
        color = NULL, shape = NULL) +
-  theme_minimal(base_size = 12) +
-  theme(plot.title    = element_text(face = "bold"),
-        strip.text    = element_text(face = "bold"),
-        legend.position = "bottom")
+  theme_classic(base_size = 12) +
+  theme(strip.text       = element_text(face = "bold"),
+        strip.background = element_rect(fill = "grey95", color = "grey80"),
+        legend.position  = "bottom",
+        panel.border     = element_rect(color = "grey80", fill = NA))
 
+# Use Cairo to embed Unicode (ω, ×) reliably across devices.
 ggsave(file.path(OUTPUT_FIG,
                  "phase4_across_nace4d_intensive_DiD.png"),
-       p, width = 11, height = 5, dpi = 150)
+       p, width = 10, height = 4.2, dpi = 200,
+       type = "cairo")
 ggsave(file.path(OUTPUT_FIG,
                  "phase4_across_nace4d_intensive_DiD.pdf"),
-       p, width = 11, height = 5)
+       p, width = 10, height = 4.2,
+       device = cairo_pdf)
 
 cat("\nDone.\n")
 cat("  Tables:  ", OUTPUT_TAB, "\n", sep = "")
