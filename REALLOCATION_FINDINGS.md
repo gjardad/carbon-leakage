@@ -601,140 +601,138 @@ Two universes: all multi-supplier cells (`anyNACE4d`) and only cells where the s
 
 Reads ([`_placebo_pooled.csv`](output_rmd/tables/phase4_within_nace4d_reallocation_placebo_pooled.csv)): treated and placebo trajectories track each other closely across all three event years. Mean R_jt grows ~0.4–0.55 at any horizon for both groups, with overlapping CIs in essentially every year. **No differential reallocation in treated cells beyond the natural year-to-year share churn that placebo cells also exhibit.** This rules out a "treated cells reshuffle more than untreated cells" story.
 
-### Section 6: New-supplier omega-rank
+### Section 6: New-supplier omega-rank (relational-capital falsification)
 
-Scripts: `analysis/phase4_new_relationships_omega_rank.R`, `_diagnostics.R`, `_pre2005.R`, `_intensive_overlap.R`, `_did.R`. All findings below run on full NBB-RMD data.
+Scripts: `analysis/phase4_new_relationships_omega_rank.R`, `_did.R`, `_diagnostics.R`, `_pre2005.R`, `_intensive_overlap.R`, `_supplier_test.R`. All findings below run on full NBB-RMD data under the 2-event (2005, 2017) spec.
 
-Distinct identification from Sections 1–5: rather than tracking an existing top-omega supplier's share within a cell, ask which firms buyers select when they form a *new* supplier relationship in an ETS-treated NACE4d. Diagnostic 3 below shows this captures essentially disjoint variation from Sections 1–5: ~90% of new omega-matched pairs live in single-seller cells outside the multi-supplier-cell universe used in Sections 1–5.
+Sections 1-5 test reallocation within *existing* supplier portfolios. This section tests reallocation at the **new-relationship margin**, where switching costs are zero by construction. The intended role of this section is a falsification of the "relational capital / switching costs" explanation for the Section 1 null: if switching costs were what suppressed within-NACE4d reallocation, the new-pair margin should show buyers shifting toward cleaner suppliers post-event. It doesn't.
 
 #### Specification
 
-For each (buyer j, supplier i, year t) pair, define:
+For each (buyer j, supplier i, year_first) triplet, define:
 
-- Pair is "new" in year t if it is first observed in B2B in year t. B2B starts in 2002, so pairs first observed in 2002 are dropped as left-censored.
-- Supplier omega in year t:
-  - Def 1: `shortage_it / total_cost_it` (net carbon-cost burden — allows negative shortage)
-  - Def 2: `emissions_it / total_cost_it` (gross emission intensity)
-- Omega rank: percentile rank of supplier i within NACE4d N in year t, using all EUTL firms with non-missing omega in (N, t). Higher rank = dirtier.
-- LHS for headline trajectory: supplier's rank in year_first.
-- LHS for formal DiD: supplier's rank in year τ − 1, fixed across all rel-years (strips within-firm omega evolution by design).
+- Pair is "new" in year_first if it is first observed in B2B in year_first. B2B starts in 2002; pairs first observed in 2002 are dropped as left-censored.
+- Supplier omega in year t: `omega1_it = shortage_it / total_cost_it` (Def 1, net carbon-cost burden; the headline). Def 2 (`emissions_it / total_cost_it`) is tracked in parallel for descriptives only.
+- Omega rank: percentile rank of supplier i within NACE4d N in year t among all EUTL firms with non-missing omega in (N, t). Higher rank = dirtier.
+- **Headline LHS (formal DiD)**: supplier's rank in year τ − 1, fixed across all rel-years. For τ = 2017 the reference year is 2016. For τ = 2005, EUTL data starts in 2005 itself so the reference year is 2005 (contemporaneous; the only feasible choice). Fixing the rank by construction strips out within-firm omega evolution: any movement in coefficients across rel-years is composition (which suppliers buyers pick).
+- **Descriptive LHS (trajectory plots only)**: supplier's rank in year_first (year-t rank). Used only for the headline trajectory plot. *Not* used as a regression LHS — Test 3 below shows why it is methodologically contaminated.
 
-Restricted to new pairs in ETS-treated NACE4d with an omega-matched supplier (i.e., the supplier is one of the ~150–200 Belgian EUTL firms with non-missing omega).
+Sample for the formal DiD: new pairs in ETS-treated NACE4d with `year_first ∈ [τ − 5, τ + 5]` and a non-missing τ−1 supplier rank. SEs two-way clustered on buyer and supplier-NACE4d. We also run a "drop NACE 3511" (electricity) robustness for each τ, and a supplier-tenure-controlled spec (continuous control = `year_first − supplier_first_b2b_year`, absorbs cross-cohort survivor selection in the fixed-rank LHS).
 
-#### Headline mean-rank trajectory
-
-[`phase4_new_relationships_omega_rank_def1.png`](output_rmd/figures/phase4_new_relationships_omega_rank_def1.png), [`_def2.png`](output_rmd/figures/phase4_new_relationships_omega_rank_def2.png).
-
-Mean within-NACE4d omega-rank of new-supplier picks per year, with year-t rank as LHS. Eyeballed RMD trajectory under Def 2:
-
-- 2006: 0.80, 2007: 0.83 (Phase I "peak")
-- 2008: 0.50 (cliff drop)
-- 2009–2014: 0.52–0.58
-- 2015: 0.65 (spike)
-- 2016: 0.36 (dip)
-- 2017–2022: erratic 0.36–0.57
-
-Pre/post means under Def 1 at the three event years (obs-level, from [`phase4_new_relationships_omega_rank_pre_post.tex`](output_rmd/tables/phase4_new_relationships_omega_rank_pre_post.tex)):
-
-| Treat year | Definition | Pre mean | Post mean | Δ | t-stat |
-|---|---|---:|---:|---:|---:|
-| 2008 | Def 1 | 0.606 | 0.690 | +0.084 | +66.0 |
-| 2008 | Def 2 | 0.812 | 0.540 | −0.272 | −132.2 |
-| 2013 | Def 1 | 0.690 | 0.479 | **−0.211** | **−168.5** |
-| 2013 | Def 2 | 0.540 | 0.450 | −0.090 | −52.9 |
-| 2017 | Def 1 | 0.477 | 0.517 | +0.040 | +27.7 |
-| 2017 | Def 2 | 0.436 | 0.490 | +0.054 | +38.9 |
-
-The 2013 / Def 1 row initially suggested a large reallocation toward cleaner firms post-Phase-III. Three diagnostic exercises ruled out that interpretation.
-
-#### Diagnostic 1: Leave-one-NACE4d-out
-
-[`_loo_nace4d.png`](output_rmd/figures/phase4_new_relationships_omega_rank_loo_nace4d.png). Recompute the 2013 yearly-mean pre/post diff while dropping one supplier-NACE4d at a time (RMD, Def 2):
-
-- Full sample: 2013 diff ≈ −0.015
-- Dropping NACE **3511** (electricity): 2013 diff = **+0.066** — sign flips
-- Dropping NACE 1920 (petroleum refining): 2013 diff = −0.084 (counter-leakage outlier; its pre-period is unusually clean and its removal amplifies the average post-2013 drop)
-- All other ~100 sectors: diff in [−0.015, −0.005] (essentially the full-sample value)
-
-NACE 3511 is the only sector whose removal kills the result. Within electricity, buyers picked cleaner generators after Phase III auctioning began — consistent with the well-documented coal → gas/renewables retirement pattern in Belgian power generation (Mulier, Ovaere & Stimpfle 2024). Across all other ETS-treated NACE4d, the post-2013 mean-rank decline is essentially zero.
-
-[`_loo_buyer.png`](output_rmd/figures/phase4_new_relationships_omega_rank_loo_buyer.png): leave-one-buyer-out of the top 10 buyers (by # new pairs) leaves the trajectory essentially unchanged. No single buyer is driving the result.
-
-#### Diagnostic 2: Pre-2005 extension
-
-[`_pre2005_hybrid.png`](output_rmd/figures/phase4_new_relationships_omega_rank_pre2005_hybrid.png), [`_pre2005_fixed.png`](output_rmd/figures/phase4_new_relationships_omega_rank_pre2005_fixed.png). Script: `analysis/phase4_new_relationships_omega_rank_pre2005.R`.
-
-B2B goes back to 2002 in the panel; firm_exposure (EUTL omega) starts in 2005. Strategy: extend the trajectory to 2003–2022 by using each supplier's 2005 within-NACE4d rank for new pairs in 2003–2004 (where no emissions data exists). Two versions:
-
-- **Hybrid**: 2005-baseline rank for 2003–04, year-t rank for 2005+ (combines composition + within-firm omega evolution)
-- **Fixed**: 2005-baseline rank for all years 2003–2022 (strips within-firm evolution; isolates composition)
-
-Eyeballed RMD values (Def 2):
-
-| Year | Hybrid | Fixed | Hybrid − Fixed |
-|---|---:|---:|---:|
-| 2003 | 0.61 | 0.61 | 0.00 |
-| 2004 | 0.64 | 0.64 | 0.00 |
-| 2005 | 0.57 | 0.59 | −0.02 |
-| 2006 | 0.81 | 0.81 | 0.00 |
-| 2007 | 0.84 | 0.85 | −0.01 |
-| 2008 | 0.50 | 0.46 | +0.04 |
-| 2013 | 0.55 | 0.57 | −0.02 |
-| 2018–2022 (mean) | ~0.47 | ~0.55 | **−0.08** |
-
-Two findings:
-
-1. **The 2003–2005 pre-policy baseline (~0.60) matches the post-2008 long-run level.** The 2006–2007 spike to 0.81–0.85 is **the anomaly**, not the post-2008 drop. The post-2008 trajectory is a return to the pre-ETS baseline — likely a small-N/coverage artifact specific to Phase I (very few firms reporting in 2006–07; the subset that did was non-random). The "Phase II cliff" we see in the headline trajectory is therefore not a behavioural response to Phase II caps but a normalization away from the 2006–07 anomaly.
-
-2. **The hybrid − fixed gap bounds the within-firm omega channel.** From 2008 to 2017 the gap is small (±0.04). From 2018 onward it widens to ~−0.08: the hybrid plot drifts down toward 0.47 while the fixed plot stays at 0.55. The post-2015 drift in the hybrid trajectory is therefore **incumbent suppliers becoming cleaner over time**, not buyers picking different (cleaner) suppliers. This is the within-firm abatement story already documented in §3.1, just measured via the buyer-side.
-
-#### Diagnostic 3: Intensive-margin sample overlap
+#### Identification independence from Sections 1-5: intensive-overlap diagnostic
 
 [`_intensive_overlap_counts.png`](output_rmd/figures/phase4_new_relationships_intensive_overlap_counts.png), [`_intensive_overlap_size.png`](output_rmd/figures/phase4_new_relationships_intensive_overlap_size.png). Script: `analysis/phase4_new_relationships_intensive_overlap.R`.
 
-Reconciles the omega-rank evidence with the absence of intensive-margin reallocation in §3.1.
+Two facts:
 
-1. **Sample disjointness.** Of new omega-matched pairs on RMD, only **4–15% per year** land in a buyer-NACE4d-year cell that has ≥2 omega-able suppliers. The remaining 85–96% are *single-seller cells* — buyers entering a NACE4d through one supplier — invisible to the intensive margin (GK / OP-covariance / output-share-by-tercile) tests by construction.
-2. **Cell dominance.** For omega-matched new pairs, the median share of the new supplier within the buyer's total NACE4d spend is **100% throughout 2006–2022**. Mean is 85–92%. The typical new relationship IS the buyer's entire exposure to that NACE4d that year.
+1. **Sample disjointness.** Only **4-15% per year** of new omega-matched pairs land in a buyer-NACE4d-year cell with ≥2 omega-able suppliers. The remaining **85-96% are single-seller cells** — buyers entering a NACE4d through one supplier, invisible to the intensive-margin (GK / OP-covariance / output-share-by-tercile) tests by construction.
+2. **Cell dominance.** For omega-matched new pairs, the median share of the new supplier within the buyer's total NACE4d spend is **100% throughout 2006-2022**. Mean is 85-92%. The typical new relationship IS the buyer's entire exposure to that NACE4d in that year.
 
-Conclusion: the omega-rank analysis is overwhelmingly a **market-entry phenomenon** (buyers starting to source from a new sector), not a within-portfolio switching phenomenon. The intensive-margin tests cover existing relationships; the omega rank covers initial entries. The two margins do not overlap in their identifying variation, so the absence of intensive-margin reallocation does not constrain the omega-rank result — and vice versa.
+Implication: the omega-rank analysis identifies off **market entry**, not within-portfolio switching. The intensive-margin tests cover existing relationships; this section covers initial entries. The two margins do not share identifying variation, so the absence of intensive-margin reallocation does not pre-determine the new-pair result, and vice versa.
 
-#### Formal DiD with LHS fixed at τ − 1
+#### Headline DiD: rank fixed at τ−1
 
-Script: `analysis/phase4_new_relationships_omega_rank_did.R`. Output: [`phase4_new_relationships_omega_rank_did_coefs.tex`](output_rmd/tables/phase4_new_relationships_omega_rank_did_coefs.tex), event-study figures `phase4_new_relationships_omega_rank_did_event_study_{2008,2013,2017}.png`.
+Script: `analysis/phase4_new_relationships_omega_rank_did.R`. Output: [`_did_coefs.tex`](output_rmd/tables/phase4_new_relationships_omega_rank_did_coefs.tex), event-study figures [`_did_event_study_2005.png`](output_rmd/figures/phase4_new_relationships_omega_rank_did_event_study_2005.png), [`_did_event_study_2017.png`](output_rmd/figures/phase4_new_relationships_omega_rank_did_event_study_2017.png).
 
-Specification. For each τ ∈ {2008, 2013, 2017}, LHS is supplier's within-NACE4d Def 1 rank in year τ − 1 (fixed across all rel-years — eliminates the within-firm omega channel by design). Sample is new (buyer, seller, year_first) pairs with year_first ∈ [τ − 5, τ + 5] and a non-missing τ−1 supplier rank:
+Pooled β at both events, base and tenure-controlled, full and drop-NACE-3511 samples (RMD):
+
+| τ | Sample | spec | n_obs | β | SE | p |
+|---|---|---|---:|---:|---:|---:|
+| 2005 | Full | base | 40,381 | +0.022 | 0.019 | 0.27 |
+| 2005 | Full | +tenure | 40,381 | +0.036 | 0.044 | 0.41 |
+| 2005 | Drop NACE 3511 | base | 28,304 | **+0.039** | 0.017 | **0.024** |
+| 2005 | Drop NACE 3511 | +tenure | 28,304 | +0.067 | 0.041 | 0.11 |
+| **2017** | **Full** | **base** | **45,572** | **+0.019** | **0.013** | **0.15** |
+| 2017 | Full | +tenure | 45,572 | −0.064 | 0.052 | 0.22 |
+| 2017 | Drop NACE 3511 | base | 24,698 | +0.023 | 0.017 | 0.18 |
+| 2017 | Drop NACE 3511 | +tenure | 24,698 | −0.085 | 0.063 | 0.18 |
+
+Three observations:
+
+1. **All base-spec coefficients are positive at both events.** Point estimates point to buyers picking marginally *dirtier* suppliers post-τ (wrong sign for leakage), but each is small (≤+0.04) and only the τ=2005 drop-NACE-3511 row is significant at 5% (and that one becomes null under tenure control).
+2. **At τ=2017, the headline is a null** (β = +0.019, p = 0.15). The tenure-controlled spec flips the post coefficient to −0.064 with SE 0.052 — the survivor channel is real and was inflating the base coefficient upward, but the CI is wide enough that we cannot reject zero in either direction.
+3. **Pre-trend issues at τ=2017** are visible in the event-study figure. Base spec: rel-year=−5 at −0.17, rel-year=−2 at +0.06 — reference-year (2016) contamination dominates. Tenure control flattens the far-pre by ~40-50% (rel-year=−5 moves from −0.17 to −0.10) but does not fix the rel-year=−2 spike, which is from a different mechanism (next subsection).
+
+#### Cohort-composition diagnostic: the 2016 reporting wave
+
+Outputs: [`_did_cohort_count_2017.png`](output_rmd/figures/phase4_new_relationships_omega_rank_did_cohort_count_2017.png), [`_did_cohort_vintage_2017.png`](output_rmd/figures/phase4_new_relationships_omega_rank_did_cohort_vintage_2017.png), plus τ=2005 counterparts and underlying CSVs.
+
+At τ=2017, the 2016 cohort (year_first = 2016) is anomalous on two dimensions:
+
+- **Cohort size**: ~45k new pairs in 2016 vs ~4-7k in 2012-2015 — a ~10× spike.
+- **Supplier vintage**: mean `supplier_first_b2b_year` for the 2016 cohort is ~2002.1 — the *longest-tenured* suppliers in the entire window (vs ~2002.9 for 2014-15 cohorts).
+
+Together these rule out "wave of newly-reporting suppliers" and point to **a wave of buyers entering the B2B panel** in 2016 (the 2015-16 B2B reporting-threshold change), forming relationships with already-established suppliers. Since rel-year=−1 (2016) is the event-study reference category, the pre-trend deviation at rel-year=−2 is a **reference-year artifact**. The fixed-at-τ-1 pooled DiD post coefficient (which averages over rel-years on each side) is not directly affected, but the event-study figure should be read with this in mind.
+
+#### Why we don't lean on year-t-rank as the headline LHS
+
+Script: `analysis/phase4_new_relationships_omega_rank_supplier_test.R`. Output: [`_supplier_test_coefs.tex`](output_rmd/tables/phase4_new_relationships_omega_rank_supplier_test_coefs.tex).
+
+A natural alternative LHS is the supplier's rank in the year the pair forms (year-t rank). The descriptive trajectory under year-t rank shows a ~5pp decline in mean pick rank from pre- to post-2017 (see [`_def2.png`](output_rmd/figures/phase4_new_relationships_omega_rank_def2.png)). Two supplier-level tests show this decline cannot be interpreted as evidence of buyer behavior change.
+
+**TEST 3: mean reversion in rank.** Δrank ~ rank_at_(τ−1) | NACE4d FE, where Δrank = rank_at_(τ+5) − rank_at_(τ−1).
+
+| τ | β | SE | p | n | Implied ρ |
+|---|---:|---:|---:|---:|---:|
+| 2005 | **−0.946** | 0.13 | <0.001 | 89 | 0.05 |
+| 2017 | **−0.536** | 0.11 | <0.001 | 120 | 0.46 |
+
+The rank distribution is not stable at the firm level. At τ=2005, rank in 2005 is essentially uncorrelated with rank in 2010 (ρ ≈ 0.05). At τ=2017, modest persistence (ρ ≈ 0.46). Mechanically: even under unchanged buyer behavior, if buyers slightly prefer high-rank suppliers (descriptive mean pick rank ≈ 0.55) and high-rank suppliers tend to drop in rank, the year-t rank of picks declines by roughly `(mean_pick_rank − 0.5) × (1 − ρ)` ≈ 2.7 pp purely from mean reversion. The observed ~5 pp decline is in that ballpark. **Year-t rank conflates behavior change with mean reversion and within-firm abatement; we don't use it as a clean regression LHS for that reason.**
+
+**TEST 2: popularity ↔ abatement.** Δrank ~ log(1 + n_new_pre) | NACE4d FE.
+
+| τ | β | SE | p | n |
+|---|---:|---:|---:|---:|
+| 2005 | −0.013 | 0.020 | 0.54 | 89 |
+| 2017 | −0.012 | 0.016 | 0.48 | 120 |
+
+Pre-event popular suppliers do not differentially abate at either event. So the tighter version of the year-t-rank concern (the specific suppliers buyers prefer are the ones cleaning up) doesn't hold — but Test 3 alone is sufficient to invalidate year-t rank as a clean LHS regardless.
+
+#### Supplier-level Story A vs B DiD
+
+The cleanest direct test of "did buyer behavior change?" — robust to mean reversion (Test 3), survivor bias, and reference-year contamination — is a supplier-level DiD on new-buyer counts:
 
 ```
-rank_ij,τ−1 = Σ_{e≠−1} β_e · 1{year_first − τ = e}   (event study)
-            + α_buyer + γ_NACE4d + ε
-
-rank_ij,τ−1 = β · 1{year_first ≥ τ}                  (pooled DiD)
-            + α_buyer + γ_NACE4d + ε
+log(1 + n_pairs_it) = β · post_t × abater_i + α_seller + γ_period + ε
 ```
 
-SEs two-way clustered on buyer and supplier-NACE4d. We also run a "drop NACE 3511" robustness for each τ.
+where `abater_i = 1{Δrank_i < median(Δrank)}` and SEs clustered at supplier (`seller`).
 
-Pooled β (RMD):
+| τ | β (post:abater) | SE | p | n |
+|---|---:|---:|---:|---:|
+| 2005 | +0.334 | 0.30 | 0.27 | 238 |
+| **2017** | **+0.052** | **0.14** | **0.71** | 292 |
 
-| τ | Sample | n | β | SE | p |
-|---|---|---:|---:|---:|---:|
-| 2008 | Full | 47,880 | +0.0343 | 0.0172 | 0.05 |
-| 2008 | Drop NACE 3511 | 35,133 | +0.0074 | 0.0045 | 0.10 |
-| **2013** | **Full** | **46,125** | **+0.0023** | **0.0015** | **0.13** |
-| 2013 | Drop NACE 3511 | 26,035 | +0.0006 | 0.0009 | 0.54 |
-| 2017 | Full | 45,572 | +0.0189 | 0.0131 | 0.15 |
-| 2017 | Drop NACE 3511 | 24,698 | +0.0233 | 0.0173 | 0.18 |
+**At τ=2017, abaters do not differentially gain new buyers post-event.** A buyer choice rule shifting toward cleaner suppliers would imply a positive coefficient; the data shows essentially zero. Story B (buyer behavior change at the new-pair margin) is rejected at the headline event. At τ=2005 the point estimate is positive (+0.33) but the CI is wide (SE 0.30); we cannot reject either story with the Phase-I-launch sample.
 
-Two observations:
+#### Pre-2005 extension and within-firm abatement decomposition
 
-1. **Every β is positive.** The (statistically insignificant) point estimates point to buyers picking marginally *dirtier* suppliers post-τ. The leakage hypothesis predicts the opposite sign.
-2. **The 2013 specification is the cleanest null.** β = +0.002, SE = 0.0015, p = 0.13. Event-study coefficients (rel-year = −5 to +5, ref = −1) all within ±0.01 of zero. Pre-trends visibly flat. The drop-NACE-3511 spec barely changes (β = +0.0006), confirming the residual signal is not concentrated in electricity for this event.
+[`_pre2005_hybrid.png`](output_rmd/figures/phase4_new_relationships_omega_rank_pre2005_hybrid.png), [`_pre2005_fixed.png`](output_rmd/figures/phase4_new_relationships_omega_rank_pre2005_fixed.png). Script: `analysis/phase4_new_relationships_omega_rank_pre2005.R`.
 
-The 2008 and 2017 specifications fail to identify cleanly:
+EUTL omega starts in 2005 but B2B starts in 2002. We extend the descriptive trajectory to 2003-2022 using the supplier's 2005 within-NACE4d rank for new pairs in 2003-2004. Two versions: **Hybrid** (2005-baseline rank for 2003-04, year-t rank for 2005+) and **Fixed** (2005-baseline rank for all years 2003-2022, strips within-firm evolution).
 
-- **2008**: Pre-period coefficients trace the 2006–07 anomaly. Rel-year −1 (2007) is itself the bottom of the dip, so 2003–2005 (rel-year −5 to −3) sit at ≈ +0.04 — not a parallel pre-trend. Once NACE 3511 is removed, the marginal full-sample coefficient (β = +0.034, p = 0.05) collapses to +0.007.
-- **2017**: Pre-period coefficients swing from −0.17 (rel-year −5 = 2012) to +0.06 (rel-year −2 = 2015), driven by (a) survivorship in 4–5-year-back cohorts whose suppliers must still have rank in 2016, and (b) the 2015 reporting/cohort spike (an unusual influx of "new" pairs that were actually long-standing relationships entering the panel). Parallel-trends visibly fails. Post-period dummies drift slightly negative (−0.01 to −0.05) but CIs straddle zero throughout.
+Two findings persist from the prior 3-event analysis:
+
+1. **The 2003-2005 pre-policy baseline (~0.60) matches the post-2008 long-run level**, while 2006-2007 spikes to 0.81-0.85. The Phase-I peak is a small-N coverage anomaly, not a behavioural signal.
+2. **The hybrid − fixed gap from 2018 onward (~−0.08) bounds the within-firm omega channel**: post-2015 the hybrid plot drifts to 0.47 while the fixed plot stays at 0.55 — incumbent suppliers becoming cleaner over time, not buyers picking different suppliers. The within-firm abatement story already documented in §3.1, measured here from the buyer-side. Test 3 generalizes the same finding via mean reversion in the EUTL rank distribution.
+
+#### Leave-one-NACE4d-out and leave-one-buyer-out robustness
+
+Script: `analysis/phase4_new_relationships_omega_rank_diagnostics.R`. Outputs: `_loo_nace4d{,_fixed2005}.{png,pdf}`, `_loo_nace4d_{2005,2017}diff.csv`, `_loo_buyer{,_fixed2005}.{png,pdf}`, `_loo_buyer_{2005,2017}diff.csv`. Two rank panels per event: year-t rank for τ=2017 LOO diffs, fixed-2005 rank for τ=2005 LOO diffs.
+
+LOO trajectories at both events cluster tightly around the main line on the descriptive plots — no single supplier-NACE4d drives the headline trajectory. The drop-NACE-3511 robustness at the pooled-DiD level is already covered in the headline DiD table above and does not change the qualitative conclusion at τ=2017.
+
+#### Bottom line: relational capital does not explain the within-NACE4d null
+
+Three independent pieces of evidence converge at τ=2017:
+
+- **Fixed-at-τ−1 event-study (headline DiD)**: post β = +0.019 (p = 0.15). No composition shift toward suppliers with low τ−1 rank.
+- **Tenure-controlled headline DiD**: post β = −0.064 (SE 0.052, p = 0.22). Survivor channel partially absorbed; CI includes zero.
+- **Supplier-level Story-A-vs-B DiD (Test 1)**: post:abater = +0.052 (p = 0.71). Abaters do not differentially gain new buyers.
+
+If relational capital / switching costs explained the within-NACE4d intensive-margin null (Sections 1-5), buyers at the new-pair margin — where switching costs are zero — should shift toward cleaner suppliers. They don't, on either the composition (fixed-rank) or behavioral (supplier-level DiD) test. **Switching costs are ruled out as the explanation for the Section 1 null.**
+
+A residual +0.039 (p=0.024) coefficient at τ=2005 drop-NACE-3511 base spec goes away with the tenure control (+0.067, p=0.11) and is not robust to specification. Small sample (n ≈ 20-30 cells in this restricted cut); not interpreted.
 
 ### Section 7: Combined interpretation across all six tests
 
@@ -800,44 +798,54 @@ Seven of ten cells in the table above are clean flats. Two of the three "movemen
 
 The remaining candidate signal is cut #2's **Q3 high-exposure intensive decline** (~13% in 2011–12 to ~10% in 2022). We've recorded this pattern but **we don't have a strong reason to believe it's connected to ETS pricing**. The decline starts in 2011, which doesn't line up with any ETS regime change (Phase III begins in 2013; MSR decision in 2017; EUA price jump in 2018), and the magnitude is modest (~3pp over a decade). Most plausibly the trajectory reflects compositional churn in the Q3 cohort, a structural decline in specific high-shortage Belgian sectors over 2012–2022 (steel restructuring, refining contraction), or a denominator effect (Q3 buyers' total B2B spend growing in non-ETS sectors faster than in high-shortage sectors). We have not investigated mechanism — deliberately, because the timing offers no policy hook. Flagging for posterity, not pursuing.
 
-### Formal DiD (added 2026-05-16)
+### Formal DiD (added 2026-05-16, updated 2026-05-17)
 
-Buyer-level DiD at the intensive margin: outcome = buyer's share of total B2B spend directed at NACE4d *n*; unit = buyer × NACE4d × year. Two events:
+Buyer-level DiD at the intensive margin: outcome = buyer's share of total B2B spend directed at NACE4d *n*; unit = buyer × NACE4d × year. Two events × three contrasts:
 
-- **2005** (binary): `treatment_n = 1{NACE4d n is ETS-treated}`, regression window 2002–22, pre = 2002–04, post = 2005–22, sample = ETS-treated ∪ non-ETS NACE4d the buyer bought from in 2002–04.
-- **2017** (heterogeneity within ETS): `treatment_n = 1{ω_n > median}` where `ω_n = sum_{f, t ∈ 2015-16} shortage_ft / sum total_cost_ft` aggregated to NACE4d. Regression window 2012–22 (the 2017-sym variant; tight 2013–22 and long 2002–22 reported in the diagnostic CSV). Pre = pre-2017, post = 2017+. Sample = ETS-treated NACE4d the buyer bought from in 2015–16.
+- **2005** (binary, ETS vs non-ETS): `treatment_n = 1{NACE4d n is ETS-treated}`, regression window 2002–22, pre = 2002–04, post = 2005–22, sample = ETS-treated ∪ non-ETS NACE4d the buyer bought from in 2002–04.
+- **2017 — high-ω vs low-ω within ETS**: `treatment_n = 1{ω_n > median(ω among ETS)}` where `ω_n = sum_{f, t ∈ 2015-16} shortage_ft / sum total_cost_ft` aggregated to NACE4d. Regression window 2012–22 (the 2017-sym variant; tight 2013–22 and long 2002–22 in the diagnostic CSV). Sample = ETS-treated NACE4d with classifiable ω, bought from in 2015–16.
+- **2017 — top-quartile ω vs non-ETS**: `treatment_n = 1{NACE4d in top 25% of ω among ETS} ; control = non-ETS NACE4d`. ETS NACE4d below the Q75 ω threshold are dropped from the sample so the contrast is sharp. Same regression window and cell-inclusion rule as the high-vs-low variant.
 
-Two FE specs per event:
-- **Cell + year**: `α_jn + δ_t`. Baseline.
-- **Cell + NACE2d × year**: `α_jn + γ_{2,t}`. Absorbs sector-aggregate (NACE2d-by-year) demand cycles; identification moves to within-NACE2d-year cross-NACE4d variation.
+Headline FE spec: `α_jn + γ_{2,t}` (cell × NACE2d-year). Absorbs sector-aggregate (NACE2d-by-year) demand cycles; identification moves to within-NACE2d-year cross-NACE4d variation. The cell + year FE column was dropped from the paper output after we showed its 2017 pre-trend was a NACE2d-level demand cycle (collapses under NACE2d × year FE — see [phase4_across_nace4d_intensive_DiD_coefs.csv](output_rmd/tables/phase4_across_nace4d_intensive_DiD_coefs.csv) for the diagnostic comparison).
 
-Script: [analysis/phase4_across_nace4d_intensive_DiD.R](analysis/phase4_across_nace4d_intensive_DiD.R). Headline table: [output_rmd/tables/phase4_across_nace4d_intensive_DiD_paper.tex](output_rmd/tables/phase4_across_nace4d_intensive_DiD_paper.tex). Event-study figure: [output_rmd/figures/phase4_across_nace4d_intensive_DiD.png](output_rmd/figures/phase4_across_nace4d_intensive_DiD.png).
+Script: [analysis/phase4_across_nace4d_intensive_DiD.R](analysis/phase4_across_nace4d_intensive_DiD.R). Paper table: [output_rmd/tables/phase4_across_nace4d_intensive_DiD_paper.tex](output_rmd/tables/phase4_across_nace4d_intensive_DiD_paper.tex). Event-study figure: [output_rmd/figures/phase4_across_nace4d_intensive_DiD.png](output_rmd/figures/phase4_across_nace4d_intensive_DiD.png).
 
-| Event | Cell + year FE | Cell + NACE2d × year FE |
+| Variant | β (SE) | N |
 |---|---|---|
-| **2005** (ETS vs non-ETS) | +0.0012*** (0.0001) | +0.0031*** (0.0001) |
-| **2017** (high-ω vs low-ω, sym window) | +0.0047*** (0.0001) | +0.0000 (0.0002) |
+| **2005** (ETS-treated vs non-ETS) | **+0.0031**\*** (0.0001) | 62.4M |
+| **2017** (high-ω vs low-ω, within ETS) | +0.0000 (0.0002) | 4.3M |
+| **2017** (top-quartile ω vs non-ETS) | **+0.0044**\*** (0.0001) | 34.4M |
 
-*N* ≈ 62M (2005), ≈ 4.3M (2017). SEs clustered on cell (buyer × NACE4d). Stars: ***p<0.001, **p<0.01, *p<0.05.
+SEs clustered on cell (buyer × NACE4d). Stars: ***p<0.001, **p<0.01, *p<0.05.
 
-**Reading the table.** Statistical significance is mechanical given the sample size — focus on sign and magnitude.
+**Reading the table.** Statistical significance is mechanical at these sample sizes — focus on sign and magnitude.
 
-- **2005 event** is *anti*-leakage in sign: after NACE2d × year FE, buyers raise their share on ETS-treated NACE4d by ≈ +0.3pp by τ = +5, not lower it. Small but the direction is opposite to leakage. Plausibly Phase I free allocations actually helped ETS-treated sectors expand share, but the magnitude is too small to claim a meaningful policy effect.
-- **2017 event** is null. The cell+year column shows β = +0.0047 (a positive level shift in high-ω cells post-2017) and a corresponding pre-trend in the event-study (high-ω cells rising into 2016, then flat). Once NACE2d × year FE absorbs the sector-aggregate cycle, both the pre-trend and the post coefficient collapse to ≈ 0. The "signal" in the unconditional spec was a NACE2d-level demand cycle, not buyer reallocation across NACE4d.
+- **2005 event** is *anti*-leakage. β = +0.0031, meaning buyers shifted ~0.3pp of total B2B spend **toward** ETS-treated NACE4d post-2005, with a clean flat pre-trend (event-study τ=-3 ≈ +0.0005, τ=-2 ≈ +0.0007 vs τ=-1 reference) and a monotonic rise to +0.0045 by τ=+5.
+- **2017 high-ω vs low-ω within ETS** is null. β ≈ 0; event-study coefficients hug zero in ±0.002 range, pre and post.
+- **2017 top-quartile ω vs non-ETS** is also *anti*-leakage. β = +0.0044: the most-exposed ETS-treated NACE4d (top 25% ω) gained ~0.4pp of buyer share against unregulated NACE4d post-2017.
 
-The event-study figure confirms this visually: the 2017 panel under cell+year FE shows the classic rising-pre-period / kink-at-zero pattern that flags a confounded design; the same panel under cell+NACE2d×year FE has all coefficients tightly around zero throughout.
+**Two cleanest contrasts (ETS vs non-ETS in 2005; top-Q ω vs non-ETS in 2017) point the same way.** Both show modest *gains* for the most-exposed ETS sectors after policy events. The within-ETS-only contrast (high-ω vs low-ω, where both arms are ETS-treated) is null, which is consistent with there being no marginal substitution *within* the regulated bucket — the binding contrast is between regulated and unregulated NACE4d.
 
-**On the local-1 vs RMD reading.** An earlier local-1 (downsampled) run had β_{2005} = −0.0076 (apparent leakage). Full-sample RMD flips the sign to +0.0012. Local-1 was too noisy for the 2005 sign; the RMD result is the authoritative one.
+**Candidate stories for the anti-leakage signal.** Three readings, none mutually exclusive:
+
+1. *Free-allocation buffering.* Phase I (2005–07) and Phase III continuation (2017+) gave the highest-emitting sectors generous free allowances, neutralizing the marginal-cost pass-through that would otherwise drive substitution.
+2. *Inelastic upstream demand.* High-ω NACE4d (refining, cement, basic chemicals, basic metals, electricity) produce intermediate inputs with few network-level substitutes — buyers cannot easily reallocate away, regardless of price.
+3. *Compositional drift.* High-ω sectors happen to be on a positive within-NACE2d trend in 2005–22 for non-policy reasons. NACE2d × year FE only absorbs *intra-NACE2d* drift; if the within-NACE2d cross-NACE4d composition is shifting toward high-ω sectors over the whole panel for structural reasons, the design picks that up.
+
+We cannot adjudicate among these three from this regression alone. The within-NACE4d work already documents that **regulated firms maintain or expand market share** under ETS (story 1+2 mechanism); this across-NACE4d finding is the network-level mirror.
+
+**On local-1 vs RMD.** An earlier local-1 (downsampled) run had β_{2005} = −0.0076 (apparent leakage). Full-sample RMD flips the sign to +0.0012 (cell+year FE) and +0.0031 (cell+NACE2d×year FE). Local-1 was too noisy for the 2005 sign; the RMD result is authoritative.
 
 ### Bottom line
 
-Across-NACE4d reallocation is **inactive on all four descriptive heterogeneity cuts and both margins**, and the formal DiD confirms this on both events (2005 and 2017). The intensive-margin Q3 cohort decline in the descriptive plots isn't policy-timed and is most plausibly compositional or structural-sectoral; the DiD's 2005 anti-leakage sign is small and most consistent with a Phase-I free-allocation level effect rather than substitution behavior.
+Across-NACE4d reallocation is **inactive-to-anti-leakage at the intensive margin** on full-sample RMD data. The descriptive four-cuts table from May 2026 reads as inactive; the formal DiD shows that on the two cleanest contrasts — ETS vs non-ETS in 2005, top-Q ω vs non-ETS in 2017 — buyers' portfolios shifted *toward* the most-exposed ETS sectors post-treatment, by small but precisely-estimated margins (+0.3 and +0.4pp respectively). The within-ETS-only heterogeneity (high vs low ω) is null. Mechanism is not identified by this regression but is consistent with the within-NACE4d finding that regulated firms maintain market share under ETS.
 
 ### Caveats
 
 - The 2015–16 B2B reporting discontinuity (the "Belgian VAT-reporting threshold change" or similar — origin not yet diagnosed; checking with NBB) contaminates any pre/post comparison that straddles it. Pre-2015 segments can be read cleanly; post-2016 segments require a separate baseline.
 - The local-1 downsampled B2B tracks full-RMD on trends for the descriptive cuts but not on levels and not on the DiD coefficients themselves (the 2005 event sign actually flipped between local-1 and RMD; the 2017 event-study pre-trend was 6× larger on local-1 than on RMD). All DiD numbers in the table above are RMD.
-- The 2005 binary spec uses all NACE4d (ETS-treated ∪ non-ETS) as the panel. The 2017 ω spec restricts to ETS-treated only, since a high-vs-low ω contrast only makes sense within ETS. The two events therefore answer slightly different questions: "did ETS-treated NACE4d gain/lose buyer share against non-ETS NACE4d post-2005?" vs "within ETS, did high-ω NACE4d lose share to low-ω NACE4d post-2017?"
+- NACE2d × year FE absorbs *intra-NACE2d* sector cycles. Cross-NACE2d composition shifts (e.g., the chemicals NACE2d as a whole expanding relative to other NACE2d) are NOT absorbed. We have not run a full NACE3d × year FE robustness; on the 2017 sample with 68 NACE4d and ~17 top-Q ETS NACE4d, NACE3d × year FE may absorb too much identification.
+- The 2005 spec compares ETS-treated NACE4d to non-ETS NACE4d in the full economy. The 2017 high-ω-vs-low-ω spec restricts to ETS-treated only. The 2017 top-Q-vs-non-ETS spec compares the most-exposed ETS NACE4d to non-ETS (drops mid-low ETS NACE4d). The three contrasts therefore answer related but distinct questions and should be read together rather than ranked.
 
 ---
 
