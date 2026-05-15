@@ -1,0 +1,441 @@
+###############################################################################
+# phase4_across_nace4d_intensive_DiD.R
+#
+# PURPOSE
+#   Buyer-level analog of phase4_within_nace4d_reallocation_did.R: does the
+#   marginal B2B dollar flow away from ETS-treated NACE4d (2005 event) or
+#   away from high-shortage ETS-NACE4d (2017 event)?
+#
+#   Unit of observation:  buyer x NACE4d x year
+#   Outcome:              share_jnt = spend(j, n, t) / total spend(j, t)
+#                         where total = buyer j's total B2B spend across all
+#                         sellers (including those without classifiable NACE4d)
+#
+#   Spec (static DiD):
+#       share_jnt = alpha_jn + delta_t + beta * treatment_n * post_t + eps
+#       buyer x NACE4d FE + year FE, SE clustered on cell (buyer x NACE4d).
+#
+#   Two events, four variants:
+#       - 2005:        treatment_n = ets_treated_n (binary).
+#                      Sample: NACE4d the buyer bought from in 2002-04
+#                      (ETS-treated and non-ETS pooled).
+#                      Regression window: 2002-22.
+#       - 2017-tight:  treatment_n = high_omega_n (median split among ETS).
+#                      Sample: ETS-treated NACE4d the buyer bought from in
+#                      2015-16. Regression window: 2013-22.
+#       - 2017-sym:    same as 2017-tight, regression window 2012-22.
+#       - 2017-long:   same as 2017-tight, regression window 2002-22.
+#
+#   omega_n (NACE4d-level shortage / total cost):
+#       omega_n = sum_{f in N, t in 2015-16} shortage_ft
+#               / sum_{f in N, t in 2015-16} total_cost_ft
+#   built from firm_exposure restricted to 2015-16.  Sectors with < 2 firm-
+#   years of pre-period coverage are dropped (consistent with the descriptive
+#   phase4_across_nace4d_intensive_by_shortage.R rule).
+#
+#   Event-study figure: tau in [-5, +5] with tau = -1 as reference.
+#       - 2005 event uses regression window 2002-2010 (tau in [-3, +5];
+#         B2B panel starts in 2002).
+#       - 2017 event uses regression window 2012-2022 (tau in [-5, +5]),
+#         i.e. the 2017-sym window.
+#
+#   Two FE specifications per regression:
+#       - base        : cell_id + year FE.
+#       - nace2dxyear : cell_id + NACE2d x year FE.  Absorbs sector-aggregate
+#                       (NACE2d-by-year) demand cycles.  Identification moves
+#                       to within-NACE2d-year cross-NACE4d variation in
+#                       high_omega -- so beta only loads on differential
+#                       behavior of high-omega vs low-omega NACE4d that
+#                       coexist within the same NACE2d group.
+#
+# NOTE on the RTM concern (see conversation 2026-05-15)
+#   This is the supplier-NACE4d-shortage cut, NOT the buyer-exposure cut.
+#   Treatment is a NACE4d attribute built from EUTL data on sellers, so the
+#   regressor is not constructed from the buyer's spending behavior, and the
+#   regression-to-the-mean trap that would affect a buyer-exposure DiD does
+#   not bite here.
+#
+# OUTPUTS (output_<machine>/figures/, output_<machine>/tables/)
+#   - phase4_across_nace4d_intensive_DiD_coefs.csv
+#   - phase4_across_nace4d_intensive_DiD_coefs.tex
+#   - phase4_across_nace4d_intensive_DiD_eventstudy.csv
+#   - phase4_across_nace4d_intensive_DiD.{png,pdf}
+###############################################################################
+
+rm(list = ls())
+
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
+
+suppressPackageStartupMessages({
+  library(data.table)
+  library(ggplot2)
+  library(fixest)
+  library(xtable)
+})
+
+set.seed(20260515)
+
+YEAR_LO        <- 2002L     # B2B panel starts in 2002
+YEAR_HI        <- 2022L
+OMEGA_YEARS    <- 2015L:2016L   # NACE4d omega-construction window for 2017 event
+MIN_FYRS_OMEGA <- 2L            # require >= 2 firm-years in OMEGA_YEARS per NACE4d
+
+# Static-DiD variants
+VARIANTS <- list(
+  "2005" = list(
+    treat_year      = 2005L,
+    treatment_kind  = "ets",          # binary ETS-treated vs non-ETS
+    pre_years       = 2002L:2004L,    # cell-inclusion window
+    reg_lo          = 2002L, reg_hi = 2022L
+  ),
+  "2017-tight" = list(
+    treat_year      = 2017L,
+    treatment_kind  = "omega",        # binary high-omega within ETS
+    pre_years       = 2015L:2016L,
+    reg_lo          = 2013L, reg_hi = 2022L
+  ),
+  "2017-sym" = list(
+    treat_year      = 2017L,
+    treatment_kind  = "omega",
+    pre_years       = 2015L:2016L,
+    reg_lo          = 2012L, reg_hi = 2022L
+  ),
+  "2017-long" = list(
+    treat_year      = 2017L,
+    treatment_kind  = "omega",
+    pre_years       = 2015L:2016L,
+    reg_lo          = 2002L, reg_hi = 2022L
+  )
+)
+
+# Event-study windows (tau range and regression window)
+ES_SPECS <- list(
+  "2005" = list(
+    treat_year     = 2005L,
+    treatment_kind = "ets",
+    pre_years      = 2002L:2004L,
+    reg_lo         = 2002L, reg_hi = 2010L,
+    tau_lo         = -3L,   tau_hi = 5L
+  ),
+  "2017" = list(
+    treat_year     = 2017L,
+    treatment_kind = "omega",
+    pre_years      = 2015L:2016L,
+    reg_lo         = 2012L, reg_hi = 2022L,
+    tau_lo         = -5L,   tau_hi = 5L
+  )
+)
+
+# FE specifications -- each regression below runs once per FE spec.
+FE_SPECS <- list(
+  "base"        = "cell_id + year",
+  "nace2dxyear" = "cell_id + nace2d^year"
+)
+
+# ---------------------------------------------------------------------------
+# Helper: write a data.table as a clean LaTeX tabular
+# ---------------------------------------------------------------------------
+write_tex_table <- function(dt, file, digits = 4, caption = NULL) {
+  x <- xtable(as.data.frame(dt), digits = digits, caption = caption)
+  print(x, file = file, include.rownames = FALSE, booktabs = TRUE,
+        caption.placement = "top",
+        sanitize.colnames.function = function(s) gsub("_", "\\\\_", s, fixed = TRUE),
+        sanitize.text.function    = function(s) gsub("_", "\\\\_", s, fixed = TRUE))
+  invisible(NULL)
+}
+
+# ---------------------------------------------------------------------------
+# 1. Load data
+# ---------------------------------------------------------------------------
+cat("Loading data...\n")
+
+load(file.path(PROC_DATA, "b2b_selected_sample.RData"))
+b2b <- as.data.table(df_b2b_selected_sample)
+rm(df_b2b_selected_sample)
+setnames(b2b,
+         old = c("vat_i_ano", "vat_j_ano", "corr_sales_ij"),
+         new = c("seller", "buyer", "sales"),
+         skip_absent = TRUE)
+b2b <- b2b[year %between% c(YEAR_LO, YEAR_HI) & !is.na(sales) & sales > 0,
+           .(seller = as.character(seller),
+             buyer  = as.character(buyer),
+             year   = as.integer(year),
+             sales)]
+
+load(file.path(PROC_DATA, "annual_accounts_selected_sample.RData"))
+aa <- as.data.table(df_annual_accounts_selected_sample)[, .(
+  vat = as.character(vat_ano),
+  year = as.integer(year),
+  nace4d = substr(nace5d, 1, 4)
+)]
+rm(df_annual_accounts_selected_sample)
+aa <- unique(aa[!is.na(nace4d) & nace4d != ""])
+
+load(file.path(OUT_DATA, "phase3_firm_exposure.RData"))
+fe <- as.data.table(firm_exposure)[, .(vat = as.character(vat),
+                                       year = as.integer(year),
+                                       shortage, total_cost,
+                                       nace4d)]
+rm(firm_exposure)
+
+# ETS-treated NACE4d = any NACE4d containing an in-sample firm in firm_exposure
+ets_treated_nace4d <- unique(fe$nace4d[!is.na(fe$nace4d) & fe$nace4d != ""])
+cat(sprintf("  ETS-treated NACE4d: %d\n", length(ets_treated_nace4d)))
+
+# Attach seller NACE4d to b2b (per year, using AA panel)
+seller_nace <- aa[, .(seller = vat, year, seller_nace4d = nace4d)]
+b2b <- merge(b2b, seller_nace, by = c("seller", "year"), all.x = TRUE)
+cat(sprintf("  b2b rows: %d   (with NACE4d: %d)\n",
+            nrow(b2b),
+            nrow(b2b[!is.na(seller_nace4d)])))
+
+# ---------------------------------------------------------------------------
+# 2. NACE4d-level omega from 2015-16 firm_exposure
+# ---------------------------------------------------------------------------
+cat("\nBuilding NACE4d-level omega (2015-16)...\n")
+
+fe_omega <- fe[year %in% OMEGA_YEARS &
+               !is.na(shortage) & !is.na(total_cost) & total_cost > 0 &
+               !is.na(nace4d) & nace4d != ""]
+omega_nace <- fe_omega[, .(n_firm_yrs = .N,
+                           sum_short  = sum(shortage),
+                           sum_cost   = sum(total_cost)),
+                       by = nace4d]
+omega_nace <- omega_nace[n_firm_yrs >= MIN_FYRS_OMEGA & sum_cost > 0]
+omega_nace[, omega := sum_short / sum_cost]
+
+# Median split among ETS-treated NACE4d that have classifiable omega
+med_omega <- median(omega_nace$omega, na.rm = TRUE)
+omega_nace[, high_omega := as.integer(omega > med_omega)]
+cat(sprintf("  NACE4d with classifiable omega: %d  (median = %.4f)\n",
+            nrow(omega_nace), med_omega))
+cat(sprintf("  high_omega == 1: %d   high_omega == 0: %d\n",
+            sum(omega_nace$high_omega == 1L),
+            sum(omega_nace$high_omega == 0L)))
+
+# Long-form NACE4d attribute table
+nace_attr <- data.table(nace4d = unique(b2b$seller_nace4d[!is.na(b2b$seller_nace4d)]))
+nace_attr[, ets_treated := as.integer(nace4d %in% ets_treated_nace4d)]
+nace_attr <- merge(nace_attr,
+                   omega_nace[, .(nace4d, omega, high_omega)],
+                   by = "nace4d", all.x = TRUE)
+
+# ---------------------------------------------------------------------------
+# 3. Build buyer-NACE4d-year panel
+# ---------------------------------------------------------------------------
+# For each (buyer, year), total spend across ALL sellers (denominator).
+# For each (buyer, NACE4d, year) with NACE4d in b2b, sum sales (numerator).
+# share_jnt = numerator / denominator.
+# ---------------------------------------------------------------------------
+cat("\nBuilding buyer-NACE4d-year aggregates...\n")
+
+buyer_year_total <- b2b[, .(total_spend = sum(sales)),
+                        by = .(buyer, year)]
+
+buyer_nace_year <- b2b[!is.na(seller_nace4d) & seller_nace4d != "",
+                       .(spend = sum(sales)),
+                       by = .(buyer, nace4d = seller_nace4d, year)]
+cat(sprintf("  unique (buyer, nace4d, year): %d\n", nrow(buyer_nace_year)))
+
+# ---------------------------------------------------------------------------
+# 4. Helper: build one (cell x year) panel for a given variant
+# ---------------------------------------------------------------------------
+build_panel <- function(spec) {
+  # Cell inclusion: (buyer, NACE4d) pairs where buyer bought from NACE4d
+  # in any pre-year. NACE4d sample depends on treatment_kind.
+  if (spec$treatment_kind == "ets") {
+    eligible_nace <- nace_attr$nace4d   # ETS-treated U non-ETS
+  } else {  # "omega"
+    eligible_nace <- nace_attr[!is.na(high_omega), nace4d]  # ETS-treated with omega
+  }
+
+  pre_cells <- buyer_nace_year[year %in% spec$pre_years &
+                               nace4d %in% eligible_nace &
+                               spend > 0,
+                               .(buyer, nace4d)]
+  pre_cells <- unique(pre_cells)
+
+  # Expand to (cell, year) panel over the regression window
+  panel <- pre_cells[, .(year = spec$reg_lo:spec$reg_hi),
+                     by = .(buyer, nace4d)]
+
+  # Attach numerator (zero-filled) and denominator
+  panel <- merge(panel, buyer_nace_year,
+                 by = c("buyer", "nace4d", "year"), all.x = TRUE)
+  panel[is.na(spend), spend := 0]
+  panel <- merge(panel, buyer_year_total,
+                 by = c("buyer", "year"), all.x = TRUE)
+  panel <- panel[!is.na(total_spend) & total_spend > 0]
+  panel[, share := spend / total_spend]
+
+  # Attach treatment label
+  panel <- merge(panel, nace_attr[, .(nace4d, ets_treated, high_omega)],
+                 by = "nace4d", all.x = TRUE)
+  if (spec$treatment_kind == "ets") {
+    panel[, treatment := ets_treated]
+  } else {
+    panel[, treatment := high_omega]
+  }
+  panel[, post       := as.integer(year >= spec$treat_year)]
+  panel[, cell_id    := paste(buyer, nace4d, sep = "::")]
+  panel[, nace2d     := substr(nace4d, 1L, 2L)]
+  panel[, tau        := year - spec$treat_year]
+  panel
+}
+
+# ---------------------------------------------------------------------------
+# 5. Static DiD for each variant
+# ---------------------------------------------------------------------------
+cat("\n=== Static DiD ===\n")
+
+static_results <- list()
+for (label in names(VARIANTS)) {
+  cat(sprintf("\n--- variant: %s ---\n", label))
+  spec <- VARIANTS[[label]]
+  d    <- build_panel(spec)
+  cat(sprintf("  cells: %d   buyers: %d   nace4d: %d   panel rows: %d\n",
+              uniqueN(d$cell_id), uniqueN(d$buyer), uniqueN(d$nace4d),
+              nrow(d)))
+
+  for (fe_lab in names(FE_SPECS)) {
+    cat(sprintf("  > FE spec: %s\n", fe_lab))
+    form <- as.formula(paste0("share ~ i(post, treatment, ref = 0) | ",
+                              FE_SPECS[[fe_lab]]))
+    fit <- feols(form, data = d, cluster = ~ cell_id)
+    print(summary(fit))
+
+    ct <- as.data.table(coeftable(fit), keep.rownames = "term")
+    static_results[[paste(label, fe_lab, sep = "::")]] <- cbind(
+      variant       = label,
+      fe_spec       = fe_lab,
+      n_obs         = nobs(fit),
+      n_cells       = uniqueN(d$cell_id),
+      n_buyers      = uniqueN(d$buyer),
+      n_nace4d      = uniqueN(d$nace4d),
+      ct
+    )
+  }
+}
+
+coefs <- rbindlist(static_results, use.names = TRUE, fill = TRUE)
+setnames(coefs,
+         old = c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
+         new = c("estimate", "std_error", "t_stat", "p_value"),
+         skip_absent = TRUE)
+fwrite(coefs,
+       file.path(OUTPUT_TAB,
+                 "phase4_across_nace4d_intensive_DiD_coefs.csv"))
+write_tex_table(coefs,
+                file.path(OUTPUT_TAB,
+                          "phase4_across_nace4d_intensive_DiD_coefs.tex"),
+                caption = "Across-NACE4d intensive-margin DiD on buyer portfolio share. 2005 event: binary ETS-treated vs non-ETS. 2017 variants: high-omega vs low-omega within ETS-treated.")
+
+# ---------------------------------------------------------------------------
+# 6. Event-study (per event), tau in [-5, +5] with reference tau = -1
+# ---------------------------------------------------------------------------
+cat("\n=== Event-study ===\n")
+
+es_results <- list()
+for (label in names(ES_SPECS)) {
+  cat(sprintf("\n--- event-study: %s ---\n", label))
+  spec <- ES_SPECS[[label]]
+  d    <- build_panel(spec)
+  d    <- d[tau %between% c(spec$tau_lo, spec$tau_hi)]
+  cat(sprintf("  cells: %d   panel rows: %d   tau range: [%d, %d]\n",
+              uniqueN(d$cell_id), nrow(d), spec$tau_lo, spec$tau_hi))
+
+  for (fe_lab in names(FE_SPECS)) {
+    cat(sprintf("  > FE spec: %s\n", fe_lab))
+    form <- as.formula(paste0("share ~ i(tau, treatment, ref = -1) | ",
+                              FE_SPECS[[fe_lab]]))
+    fit <- feols(form, data = d, cluster = ~ cell_id)
+    print(summary(fit))
+
+    ct <- as.data.table(coeftable(fit), keep.rownames = "term")
+    ct[, tau := as.integer(sub(".*tau::(-?[0-9]+).*", "\\1", term))]
+    ct[, event   := label]
+    ct[, fe_spec := fe_lab]
+    es_results[[paste(label, fe_lab, sep = "::")]] <- ct
+  }
+}
+
+es_coefs <- rbindlist(es_results, use.names = TRUE, fill = TRUE)
+setnames(es_coefs,
+         old = c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
+         new = c("estimate", "std_error", "t_stat", "p_value"),
+         skip_absent = TRUE)
+es_coefs[, ci_lo := estimate - 1.96 * std_error]
+es_coefs[, ci_hi := estimate + 1.96 * std_error]
+
+# Add the reference period (tau = -1, estimate = 0) explicitly for plotting,
+# one row per (event, fe_spec).
+ref_rows <- rbindlist(lapply(names(ES_SPECS), function(lab) {
+  rbindlist(lapply(names(FE_SPECS), function(fl) {
+    data.table(event = lab, fe_spec = fl,
+               term = "tau::-1:treatment",
+               tau = -1L,
+               estimate = 0, std_error = NA_real_,
+               t_stat = NA_real_, p_value = NA_real_,
+               ci_lo = 0, ci_hi = 0)
+  }))
+}))
+es_coefs_plot <- rbind(es_coefs[, .(event, fe_spec, term, tau,
+                                    estimate, std_error, t_stat, p_value,
+                                    ci_lo, ci_hi)],
+                       ref_rows,
+                       use.names = TRUE)
+setorder(es_coefs_plot, event, fe_spec, tau)
+
+fwrite(es_coefs_plot,
+       file.path(OUTPUT_TAB,
+                 "phase4_across_nace4d_intensive_DiD_eventstudy.csv"))
+
+# ---------------------------------------------------------------------------
+# 7. Event-study figure
+# ---------------------------------------------------------------------------
+es_labels <- c(
+  "2005" = "2005 event (ETS vs non-ETS, regression window 2002-2010)",
+  "2017" = "2017 event (high-omega vs low-omega, regression window 2012-2022)"
+)
+fe_labels <- c(
+  "base"        = "Cell + year FE",
+  "nace2dxyear" = "Cell + NACE2d x year FE"
+)
+es_coefs_plot[, event_lab := factor(es_labels[event], levels = es_labels)]
+es_coefs_plot[, fe_lab    := factor(fe_labels[fe_spec], levels = fe_labels)]
+
+dodge <- position_dodge(width = 0.35)
+
+p <- ggplot(es_coefs_plot,
+            aes(x = tau, y = estimate, color = fe_lab, shape = fe_lab)) +
+  geom_hline(yintercept = 0, linetype = "dotted", color = "grey40") +
+  geom_vline(xintercept = -0.5, linetype = "dotted", color = "grey40") +
+  geom_errorbar(aes(ymin = ci_lo, ymax = ci_hi),
+                width = 0.15, position = dodge) +
+  geom_point(size = 2.2, position = dodge) +
+  facet_wrap(~ event_lab, scales = "free_x") +
+  scale_color_manual(values = c("Cell + year FE" = "#1f77b4",
+                                "Cell + NACE2d x year FE" = "#d62728")) +
+  labs(x = expression(tau ~ "(years from treatment)"),
+       y = expression(beta[tau] ~ "(share on treated NACE4d)"),
+       title = "Across-NACE4d intensive-margin DiD: event-study",
+       subtitle = "Reference tau = -1; 95% CI from cell-clustered SE",
+       color = NULL, shape = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(plot.title    = element_text(face = "bold"),
+        strip.text    = element_text(face = "bold"),
+        legend.position = "bottom")
+
+ggsave(file.path(OUTPUT_FIG,
+                 "phase4_across_nace4d_intensive_DiD.png"),
+       p, width = 11, height = 5, dpi = 150)
+ggsave(file.path(OUTPUT_FIG,
+                 "phase4_across_nace4d_intensive_DiD.pdf"),
+       p, width = 11, height = 5)
+
+cat("\nDone.\n")
+cat("  Tables:  ", OUTPUT_TAB, "\n", sep = "")
+cat("  Figures: ", OUTPUT_FIG, "\n", sep = "")
