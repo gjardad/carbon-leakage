@@ -1,5 +1,5 @@
 % latex table generated in R 4.4.1 by xtable 1.8-4 package
-% Fri May 15 22:41:54 2026
+% Fri May 15 23:31:46 2026
 \begin{table}[ht]
 \centering
 \caption{Supplier-level decomposition tests. TEST 2 (cross-section): does pre-event popularity correlate with abatement? Negative coefficient on log(1 + n\_new\_pre) means popular suppliers abated more. TEST 1 (supplier-period DiD): do abaters gain more new buyers post-tau? Positive coefficient on post:abater means yes (Story B; behavior change). SEs clustered at the appropriate level.} 
@@ -9,6 +9,14 @@ test & tau & term & estimate & se & p & n\\_obs \\
   \midrule
 TEST\\_3\\_rank\\_mean\\_reversion &  2005 & rank\\_pre & -0.9457 & 0.1340 & 0.0000 &    89 \\ 
   TEST\\_3\\_rank\\_mean\\_reversion &  2017 & rank\\_pre & -0.5364 & 0.1149 & 0.0001 &   120 \\ 
+  TEST\\_4\\_dlog\\_emissions &  2005 & rank\\_pre & -0.8256 & 0.4097 & 0.0569 &    88 \\ 
+  TEST\\_4\\_dlog\\_allocated &  2005 & rank\\_pre & -0.0078 & 0.1983 & 0.9691 &    89 \\ 
+  TEST\\_4\\_dlog\\_cost &  2005 & rank\\_pre & -0.4652 & 0.2454 & 0.0719 &    89 \\ 
+  TEST\\_4\\_dlog\\_intensity &  2005 & rank\\_pre & -0.3603 & 0.5753 & 0.5379 &    88 \\ 
+  TEST\\_4\\_dlog\\_emissions &  2017 & rank\\_pre & -0.4227 & 0.1644 & 0.0160 &   119 \\ 
+  TEST\\_4\\_dlog\\_allocated &  2017 & rank\\_pre & 0.0521 & 0.1245 & 0.6792 &   110 \\ 
+  TEST\\_4\\_dlog\\_cost &  2017 & rank\\_pre & -0.1863 & 0.2789 & 0.5100 &   120 \\ 
+  TEST\\_4\\_dlog\\_intensity &  2017 & rank\\_pre & -0.2289 & 0.3593 & 0.5293 &   119 \\ 
   TEST\\_2\\_popularity\\_vs\\_abatement &  2005 & log\\_n\\_pre & -0.0126 & 0.0201 & 0.5375 &    89 \\ 
   TEST\\_2\\_popularity\\_vs\\_abatement &  2017 & log\\_n\\_pre & -0.0116 & 0.0160 & 0.4766 &   120 \\ 
   TEST\\_1\\_storyA\\_vs\\_B &  2005 & post:abater & 0.3335 & 0.2997 & 0.2680 &   238 \\ 
