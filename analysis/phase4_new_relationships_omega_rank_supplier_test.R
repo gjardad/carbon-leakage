@@ -162,9 +162,10 @@ rank_yearly <- rank_yearly[, .(seller, year, seller_nace4d, rank)]
 # ---------------------------------------------------------------------------
 # 2. Per-tau: build supplier-level dataset + run two tests
 # ---------------------------------------------------------------------------
-test1_list <- list()
-test2_list <- list()
-test3_list <- list()
+test1_list    <- list()
+test1_es_list <- list()
+test2_list    <- list()
+test3_list    <- list()
 
 for (tau in TAUS) {
   cat(sprintf("\n========== tau = %d ==========\n", tau))
@@ -304,10 +305,96 @@ for (tau in TAUS) {
   t1[, tau   := tau]
   t1[, test  := "TEST_1_storyA_vs_B"]
   test1_list[[as.character(tau)]] <- t1
+
+  # -------------------------------------------------------------------------
+  # TEST 1 (event-time version): same DiD but with rel-year interactions.
+  #
+  #   For each (supplier i, calendar year y in [tau-WINDOW, tau+WINDOW]):
+  #     n_pairs_iy = count of new buyer pairs with supplier i in year y
+  #
+  #   log(1 + n_pairs_iy) ~ Sigma_e beta_e * 1{rel_year_y = e} * abater_i
+  #                          + alpha_i + delta_y + eps_iy           (ref e=-1)
+  #
+  #   beta_e captures the differential new-buyer count between abaters and
+  #   non-abaters at rel-year e, relative to rel-year = -1. Pre-trends
+  #   parallel iff beta_e ~ 0 for e < -1. Story B iff beta_e > 0 for e >= 0.
+  # -------------------------------------------------------------------------
+  panel_es <- CJ(seller     = suppliers$seller,
+                 year_first = (tau - WINDOW):(tau + WINDOW))
+  n_pairs_iy <- new_rel[year_first %between% c(tau - WINDOW, tau + WINDOW),
+                        .(n_pairs = .N), by = .(seller, year_first)]
+  panel_es <- merge(panel_es, n_pairs_iy,
+                    by = c("seller", "year_first"), all.x = TRUE)
+  panel_es[is.na(n_pairs), n_pairs := 0L]
+  panel_es <- merge(panel_es,
+                    suppliers[, .(seller, seller_nace4d, abater)],
+                    by = "seller")
+  panel_es[, rel_year    := year_first - tau]
+  panel_es[, log1p_pairs := log1p(n_pairs)]
+
+  m_t1_es <- feols(log1p_pairs ~ i(rel_year, abater, ref = -1) |
+                                seller + year_first,
+                   cluster = ~ seller,
+                   data    = panel_es)
+  cat("\n-- TEST 1 (event-time): log(1+n_pairs) ~ i(rel_year, abater, ref=-1) | seller + year FE --\n")
+  print(coeftable(m_t1_es))
+
+  t1_es <- as.data.table(coeftable(m_t1_es), keep.rownames = "term")
+  setnames(t1_es, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
+           c("estimate", "se", "t", "p"))
+  # Parse rel_year out of feols i() term names (e.g., "rel_year::-5:abater")
+  t1_es[, rel_year := as.integer(sub("rel_year::(-?\\d+):.*", "\\1", term))]
+  t1_es[, tau     := tau]
+  t1_es[, test    := "TEST_1_storyA_vs_B_eventtime"]
+  # Add the omitted reference row (rel_year = -1, β = 0)
+  t1_es <- rbind(t1_es,
+                 data.table(term = "rel_year::-1:abater",
+                            estimate = 0, se = NA_real_,
+                            t = NA_real_, p = NA_real_,
+                            rel_year = -1L, tau = tau,
+                            test = "TEST_1_storyA_vs_B_eventtime"),
+                 fill = TRUE)
+  setorder(t1_es, rel_year)
+  t1_es[, ci_lo := estimate - 1.96 * se]
+  t1_es[, ci_hi := estimate + 1.96 * se]
+  test1_es_list[[as.character(tau)]] <- t1_es
 }
 
 # ---------------------------------------------------------------------------
-# 3. Combined output
+# 3. TEST 1 event-time: combined CSV + per-tau plot
+# ---------------------------------------------------------------------------
+es_all <- rbindlist(test1_es_list, use.names = TRUE, fill = TRUE)
+fwrite(es_all,
+       file.path(OUTPUT_TAB,
+                 "phase4_new_relationships_omega_rank_supplier_test_event_study.csv"))
+
+for (this_tau in TAUS) {
+  d <- es_all[tau == this_tau]
+  p <- ggplot(d, aes(x = rel_year, y = estimate)) +
+    geom_hline(yintercept = 0, linetype = "dotted", color = "grey30") +
+    geom_vline(xintercept = -0.5, linetype = "dashed", color = "firebrick") +
+    geom_errorbar(aes(ymin = ci_lo, ymax = ci_hi),
+                  width = 0.25, color = "steelblue") +
+    geom_point(color = "steelblue", size = 2) +
+    scale_x_continuous(breaks = seq(-WINDOW, WINDOW, 1)) +
+    labs(title    = sprintf("TEST 1 event-time: abater vs non-abater new-buyer count (tau = %d)",
+                            this_tau),
+         subtitle = sprintf("log(1+n_pairs_iy) ~ i(rel_year, abater, ref = -1) | seller + year FE. 95%% CIs from supplier-clustered SEs. Abater = supplier with below-median Delta_rank between %d and %d.",
+                            ref_year_for_tau(this_tau), end_year_for_tau(this_tau)),
+         x = sprintf("Year relative to tau = %d", this_tau),
+         y = "Coefficient on rel_year:abater") +
+    theme_minimal(base_size = 11) +
+    theme(panel.grid.minor = element_blank())
+  ggsave(file.path(OUTPUT_FIG,
+                   sprintf("phase4_new_relationships_omega_rank_supplier_test_event_study_%d.png", this_tau)),
+         p, width = 9, height = 5, dpi = 200)
+  ggsave(file.path(OUTPUT_FIG,
+                   sprintf("phase4_new_relationships_omega_rank_supplier_test_event_study_%d.pdf", this_tau)),
+         p, width = 9, height = 5)
+}
+
+# ---------------------------------------------------------------------------
+# 4. Combined output (pooled tests)
 # ---------------------------------------------------------------------------
 all_coefs <- rbindlist(c(test3_list, test2_list, test1_list),
                        use.names = TRUE, fill = TRUE)
