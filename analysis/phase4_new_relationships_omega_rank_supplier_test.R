@@ -142,6 +142,10 @@ b2b[is.na(seller_nace4d), seller_nace4d := modal_nace4d]
 b2b[, modal_nace4d := NULL]
 b2b <- b2b[!is.na(seller_nace4d) & seller_nace4d %in% ets_treated_nace4d]
 
+# Supplier B2B tenure proxy: first year each seller appears anywhere in b2b
+supplier_first_b2b <- b2b[, .(supplier_first_b2b_year = min(year)),
+                          by = seller]
+
 # First-year-observed and new pairs
 first_year <- b2b[, .(year_first = min(year)), by = .(buyer, seller)]
 new_rel <- first_year[year_first > B2B_YEAR_LO]
@@ -190,6 +194,7 @@ for (tau in TAUS) {
                     .(n_new_post = .N), by = seller]
   suppliers <- merge(suppliers, n_pre,  by = "seller", all.x = TRUE)
   suppliers <- merge(suppliers, n_post, by = "seller", all.x = TRUE)
+  suppliers <- merge(suppliers, supplier_first_b2b, by = "seller", all.x = TRUE)
   suppliers[is.na(n_new_pre),  n_new_pre  := 0L]
   suppliers[is.na(n_new_post), n_new_post := 0L]
   cat(sprintf("  suppliers with n_new_pre > 0:  %d (mean = %.2f)\n",
@@ -278,10 +283,39 @@ for (tau in TAUS) {
               median_dr, sum(suppliers$abater == 1L),
               sum(suppliers$abater == 0L)))
 
+  # -------------------------------------------------------------------------
+  # Pre-event size measures per supplier (for the size-confound check below).
+  # Activity = number of distinct buyers per year, averaged over [tau-5, tau-1].
+  # Total transactions = rows in b2b per year, averaged over the same window.
+  # -------------------------------------------------------------------------
+  size_pre <- b2b[year %between% c(tau - WINDOW, tau - 1L),
+                  .(customers_yr   = uniqueN(buyer),
+                    n_trans_yr     = .N),
+                  by = .(seller, year)]
+  size_pre <- size_pre[, .(mean_customers_pre = mean(customers_yr),
+                           mean_trans_pre     = mean(n_trans_yr)),
+                       by = seller]
+  suppliers <- merge(suppliers, size_pre, by = "seller", all.x = TRUE)
+  suppliers[is.na(mean_customers_pre), mean_customers_pre := 0]
+  suppliers[is.na(mean_trans_pre),     mean_trans_pre     := 0]
+  suppliers[, log_customers_pre := log1p(mean_customers_pre)]
+  suppliers[, log_trans_pre     := log1p(mean_trans_pre)]
+
+  # Descriptive: abater vs non-abater means
+  size_desc <- suppliers[, .(
+    n_suppliers           = .N,
+    mean_customers_pre    = mean(mean_customers_pre),
+    median_customers_pre  = median(mean_customers_pre),
+    mean_trans_pre        = mean(mean_trans_pre),
+    median_trans_pre      = median(mean_trans_pre)
+  ), by = abater]
+  cat("\n  Pre-event size: abater vs non-abater\n")
+  print(size_desc)
+
   supplier_long <- rbind(
-    suppliers[, .(seller, seller_nace4d, tau, abater,
+    suppliers[, .(seller, seller_nace4d, tau, abater, log_customers_pre, log_trans_pre,
                   period = "pre",  n_pairs = n_new_pre)],
-    suppliers[, .(seller, seller_nace4d, tau, abater,
+    suppliers[, .(seller, seller_nace4d, tau, abater, log_customers_pre, log_trans_pre,
                   period = "post", n_pairs = n_new_post)]
   )
   supplier_long[, post        := as.integer(period == "post")]
@@ -307,6 +341,28 @@ for (tau in TAUS) {
   test1_list[[as.character(tau)]] <- t1
 
   # -------------------------------------------------------------------------
+  # TEST 1 with size control: same pooled DiD but with post:log_customers_pre
+  # absorbing differential pre/post drift for larger vs smaller suppliers.
+  # If the post:abater coefficient shrinks after adding this control, then
+  # the abater indicator was partly picking up size-driven activity growth
+  # that supplier FE can't absorb (supplier FE absorbs levels, not trends).
+  # -------------------------------------------------------------------------
+  m_t1_sizectrl <- feols(log1p_pairs ~ post:abater + post:log_customers_pre |
+                                      seller + period,
+                         cluster = ~ seller,
+                         data = supplier_long)
+  cat("\n-- TEST 1 + size control: log(1+n_pairs) ~ post:abater + post:log_customers_pre | seller + period --\n")
+  print(coeftable(m_t1_sizectrl))
+
+  t1_sc <- as.data.table(coeftable(m_t1_sizectrl), keep.rownames = "term")
+  setnames(t1_sc, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
+           c("estimate", "se", "t", "p"))
+  t1_sc[, n_obs := m_t1_sizectrl$nobs]
+  t1_sc[, tau   := tau]
+  t1_sc[, test  := "TEST_1_storyA_vs_B_size_ctrl"]
+  test1_list[[paste0(tau, "_sc")]] <- t1_sc
+
+  # -------------------------------------------------------------------------
   # TEST 1 (event-time version): same DiD but with rel-year interactions.
   #
   #   For each (supplier i, calendar year y in [tau-WINDOW, tau+WINDOW]):
@@ -327,36 +383,81 @@ for (tau in TAUS) {
                     by = c("seller", "year_first"), all.x = TRUE)
   panel_es[is.na(n_pairs), n_pairs := 0L]
   panel_es <- merge(panel_es,
-                    suppliers[, .(seller, seller_nace4d, abater)],
+                    suppliers[, .(seller, seller_nace4d, abater,
+                                  log_customers_pre, log_trans_pre,
+                                  supplier_first_b2b_year)],
                     by = "seller")
   panel_es[, rel_year    := year_first - tau]
   panel_es[, log1p_pairs := log1p(n_pairs)]
 
+  # Four event-time specs run on the same panel, all with the same
+  # rel_year:abater coefficients of interest. Each spec adds one control
+  # to isolate which (if any) flattens the pre-trends.
+  #   base       : seller + year FE only
+  #   +size      : + i(rel_year, log_customers_pre) -- pre-event size trend
+  #   +nace4d    : + seller_nace4d^year_first FE     -- sectoral year trends
+  #   +vintage   : + i(rel_year, supplier_first_b2b_year) -- supplier-age trend
   m_t1_es <- feols(log1p_pairs ~ i(rel_year, abater, ref = -1) |
                                 seller + year_first,
                    cluster = ~ seller,
                    data    = panel_es)
-  cat("\n-- TEST 1 (event-time): log(1+n_pairs) ~ i(rel_year, abater, ref=-1) | seller + year FE --\n")
+  cat("\n-- TEST 1 (event-time, base): log(1+n_pairs) ~ i(rel_year, abater, ref=-1) | seller + year FE --\n")
   print(coeftable(m_t1_es))
 
-  t1_es <- as.data.table(coeftable(m_t1_es), keep.rownames = "term")
-  setnames(t1_es, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
-           c("estimate", "se", "t", "p"))
-  # Parse rel_year out of feols i() term names (e.g., "rel_year::-5:abater")
-  t1_es[, rel_year := as.integer(sub("rel_year::(-?\\d+):.*", "\\1", term))]
-  t1_es[, tau     := tau]
-  t1_es[, test    := "TEST_1_storyA_vs_B_eventtime"]
-  # Add the omitted reference row (rel_year = -1, β = 0)
-  t1_es <- rbind(t1_es,
-                 data.table(term = "rel_year::-1:abater",
-                            estimate = 0, se = NA_real_,
-                            t = NA_real_, p = NA_real_,
-                            rel_year = -1L, tau = tau,
-                            test = "TEST_1_storyA_vs_B_eventtime"),
-                 fill = TRUE)
-  setorder(t1_es, rel_year)
-  t1_es[, ci_lo := estimate - 1.96 * se]
-  t1_es[, ci_hi := estimate + 1.96 * se]
+  m_t1_es_sc <- feols(log1p_pairs ~ i(rel_year, abater, ref = -1) +
+                                    i(rel_year, log_customers_pre, ref = -1) |
+                                   seller + year_first,
+                      cluster = ~ seller,
+                      data    = panel_es)
+  cat("\n-- TEST 1 event-time + size control (pre-event customers x rel_year) --\n")
+  print(coeftable(m_t1_es_sc))
+
+  m_t1_es_nace <- feols(log1p_pairs ~ i(rel_year, abater, ref = -1) |
+                                     seller + year_first + seller_nace4d^year_first,
+                        cluster = ~ seller,
+                        data    = panel_es)
+  cat("\n-- TEST 1 event-time + NACE4d x year FE --\n")
+  print(coeftable(m_t1_es_nace))
+
+  m_t1_es_vin <- feols(log1p_pairs ~ i(rel_year, abater, ref = -1) +
+                                     i(rel_year, supplier_first_b2b_year, ref = -1) |
+                                    seller + year_first,
+                       cluster = ~ seller,
+                       data    = panel_es)
+  cat("\n-- TEST 1 event-time + supplier vintage x rel_year --\n")
+  print(coeftable(m_t1_es_vin))
+
+  tidy_t1_es <- function(fit, spec_label) {
+    d <- as.data.table(coeftable(fit), keep.rownames = "term")
+    setnames(d, c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
+             c("estimate", "se", "t", "p"))
+    # Keep only abater interactions, drop the log_customers_pre × rel_year
+    # controls (we only want abater coefs in the plot/output).
+    d <- d[grepl("^rel_year::.*:abater$", term)]
+    d[, rel_year := as.integer(sub("rel_year::(-?\\d+):.*", "\\1", term))]
+    d[, tau     := tau]
+    d[, spec    := spec_label]
+    d[, test    := "TEST_1_storyA_vs_B_eventtime"]
+    # Add the omitted reference row
+    d <- rbind(d,
+               data.table(term = "rel_year::-1:abater",
+                          estimate = 0, se = NA_real_,
+                          t = NA_real_, p = NA_real_,
+                          rel_year = -1L, tau = tau,
+                          spec = spec_label,
+                          test = "TEST_1_storyA_vs_B_eventtime"),
+               fill = TRUE)
+    setorder(d, rel_year)
+    d[, ci_lo := estimate - 1.96 * se]
+    d[, ci_hi := estimate + 1.96 * se]
+    d
+  }
+  t1_es <- rbindlist(list(
+    tidy_t1_es(m_t1_es,      "base"),
+    tidy_t1_es(m_t1_es_sc,   "size_ctrl"),
+    tidy_t1_es(m_t1_es_nace, "nace4d_year_FE"),
+    tidy_t1_es(m_t1_es_vin,  "vintage_ctrl")
+  ), use.names = TRUE)
   test1_es_list[[as.character(tau)]] <- t1_es
 }
 
@@ -368,29 +469,49 @@ fwrite(es_all,
        file.path(OUTPUT_TAB,
                  "phase4_new_relationships_omega_rank_supplier_test_event_study.csv"))
 
+spec_levels <- c("base", "size_ctrl", "nace4d_year_FE", "vintage_ctrl")
+spec_labels <- c(
+  "Base (seller + year FE)",
+  "+ size x rel_year",
+  "+ NACE4d x year FE",
+  "+ supplier vintage x rel_year"
+)
+spec_colors <- c(
+  "Base (seller + year FE)"        = "steelblue",
+  "+ size x rel_year"               = "firebrick",
+  "+ NACE4d x year FE"              = "forestgreen",
+  "+ supplier vintage x rel_year"   = "purple"
+)
+
 for (this_tau in TAUS) {
   d <- es_all[tau == this_tau]
-  p <- ggplot(d, aes(x = rel_year, y = estimate)) +
+  d[, spec_lab := factor(spec, levels = spec_levels, labels = spec_labels)]
+  p <- ggplot(d,
+              aes(x = rel_year, y = estimate,
+                  color = spec_lab, group = spec_lab)) +
     geom_hline(yintercept = 0, linetype = "dotted", color = "grey30") +
     geom_vline(xintercept = -0.5, linetype = "dashed", color = "firebrick") +
     geom_errorbar(aes(ymin = ci_lo, ymax = ci_hi),
-                  width = 0.25, color = "steelblue") +
-    geom_point(color = "steelblue", size = 2) +
+                  width = 0.25,
+                  position = position_dodge(width = 0.6)) +
+    geom_point(size = 2, position = position_dodge(width = 0.6)) +
     scale_x_continuous(breaks = seq(-WINDOW, WINDOW, 1)) +
+    scale_color_manual(values = spec_colors, name = NULL) +
     labs(title    = sprintf("TEST 1 event-time: abater vs non-abater new-buyer count (tau = %d)",
                             this_tau),
-         subtitle = sprintf("log(1+n_pairs_iy) ~ i(rel_year, abater, ref = -1) | seller + year FE. 95%% CIs from supplier-clustered SEs. Abater = supplier with below-median Delta_rank between %d and %d.",
+         subtitle = sprintf("Abater = supplier with below-median Delta_rank between %d and %d.",
                             ref_year_for_tau(this_tau), end_year_for_tau(this_tau)),
          x = sprintf("Year relative to tau = %d", this_tau),
          y = "Coefficient on rel_year:abater") +
     theme_minimal(base_size = 11) +
-    theme(panel.grid.minor = element_blank())
+    theme(panel.grid.minor = element_blank(),
+          legend.position  = "bottom")
   ggsave(file.path(OUTPUT_FIG,
                    sprintf("phase4_new_relationships_omega_rank_supplier_test_event_study_%d.png", this_tau)),
-         p, width = 9, height = 5, dpi = 200)
+         p, width = 10, height = 6, dpi = 200)
   ggsave(file.path(OUTPUT_FIG,
                    sprintf("phase4_new_relationships_omega_rank_supplier_test_event_study_%d.pdf", this_tau)),
-         p, width = 9, height = 5)
+         p, width = 10, height = 6)
 }
 
 # ---------------------------------------------------------------------------
