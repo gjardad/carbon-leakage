@@ -1,5 +1,5 @@
 % latex table generated in R 4.4.1 by xtable 1.8-4 package
-% Fri May 15 22:08:20 2026
+% Fri May 15 22:41:54 2026
 \begin{table}[ht]
 \centering
 \caption{Supplier-level decomposition tests. TEST 2 (cross-section): does pre-event popularity correlate with abatement? Negative coefficient on log(1 + n\_new\_pre) means popular suppliers abated more. TEST 1 (supplier-period DiD): do abaters gain more new buyers post-tau? Positive coefficient on post:abater means yes (Story B; behavior change). SEs clustered at the appropriate level.} 
@@ -12,7 +12,11 @@ TEST\\_3\\_rank\\_mean\\_reversion &  2005 & rank\\_pre & -0.9457 & 0.1340 & 0.0
   TEST\\_2\\_popularity\\_vs\\_abatement &  2005 & log\\_n\\_pre & -0.0126 & 0.0201 & 0.5375 &    89 \\ 
   TEST\\_2\\_popularity\\_vs\\_abatement &  2017 & log\\_n\\_pre & -0.0116 & 0.0160 & 0.4766 &   120 \\ 
   TEST\\_1\\_storyA\\_vs\\_B &  2005 & post:abater & 0.3335 & 0.2997 & 0.2680 &   238 \\ 
+  TEST\\_1\\_storyA\\_vs\\_B\\_size\\_ctrl &  2005 & post:abater & 0.3801 & 0.2718 & 0.1646 &   238 \\ 
+  TEST\\_1\\_storyA\\_vs\\_B\\_size\\_ctrl &  2005 & post:log\\_customers\\_pre & -0.3522 & 0.1030 & 0.0009 &   238 \\ 
   TEST\\_1\\_storyA\\_vs\\_B &  2017 & post:abater & 0.0524 & 0.1382 & 0.7054 &   292 \\ 
+  TEST\\_1\\_storyA\\_vs\\_B\\_size\\_ctrl &  2017 & post:abater & 0.0255 & 0.1375 & 0.8529 &   292 \\ 
+  TEST\\_1\\_storyA\\_vs\\_B\\_size\\_ctrl &  2017 & post:log\\_customers\\_pre & -0.0854 & 0.0609 & 0.1631 &   292 \\ 
    \bottomrule
 \end{tabular}
 \end{table}
