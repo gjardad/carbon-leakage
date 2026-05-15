@@ -634,31 +634,32 @@ if (length(test5_es_list) > 0L) {
          file.path(OUTPUT_TAB,
                    "phase4_new_relationships_omega_rank_supplier_test_stable_yeartrank_event_study.csv"))
 
-  es5[, spec_lab := factor(threshold_rho,
-                           levels = c(1.0, 0.9, 0.8),
-                           labels = c("rho == 1.0",
-                                      "rho >= 0.9",
-                                      "rho >= 0.8"))]
-  p5 <- ggplot(es5, aes(x = rel_year, y = estimate,
-                        color = spec_lab, group = spec_lab)) +
+  # Paper-ready figure: rho >= {0.9, 0.8} on rel_year in [-4, +4].
+  es5_plot <- es5[threshold_rho %in% c(0.9, 0.8) & rel_year %between% c(-4, 4)]
+  es5_plot[, spec_lab := factor(threshold_rho,
+                                levels = c(0.9, 0.8),
+                                labels = c("0.9", "0.8"))]
+  p5 <- ggplot(es5_plot, aes(x = rel_year, y = estimate,
+                             color = spec_lab, group = spec_lab)) +
     geom_hline(yintercept = 0, linetype = "dotted", color = "grey30") +
     geom_vline(xintercept = -0.5, linetype = "dashed", color = "firebrick") +
     geom_errorbar(aes(ymin = ci_lo, ymax = ci_hi),
                   width = 0.25,
                   position = position_dodge(width = 0.6)) +
     geom_point(size = 2, position = position_dodge(width = 0.6)) +
-    scale_x_continuous(breaks = seq(-WINDOW, WINDOW, 1)) +
-    scale_color_manual(values = c("rho == 1.0"  = "steelblue",
-                                  "rho >= 0.9"  = "firebrick",
-                                  "rho >= 0.8"  = "forestgreen"),
+    scale_x_continuous(breaks = seq(-4, 4, 1)) +
+    scale_color_manual(values = c("0.9" = "firebrick",
+                                  "0.8" = "forestgreen"),
                        name = NULL) +
-    labs(title    = "Year-t-rank event study at tau=2017, restricted to stable-NACE4d",
-         subtitle = "Stable = within-NACE4d Spearman rho between 2016 and 2022 ranks above threshold. Coefs on rel_year dummies (ref = -1).",
-         x = "Year relative to tau = 2017",
-         y = "Coefficient on year-t rank") +
-    theme_minimal(base_size = 11) +
-    theme(panel.grid.minor = element_blank(),
-          legend.position  = "bottom")
+    labs(x = "Year relative to 2017",
+         y = NULL) +
+    theme_classic(base_size = 15) +
+    theme(panel.grid       = element_blank(),
+          axis.title.x     = element_text(size = 18, margin = margin(t = 18)),
+          axis.text        = element_text(size = 15),
+          axis.ticks.length = unit(6, "pt"),
+          legend.position  = "bottom",
+          legend.text      = element_text(size = 16))
   ggsave(file.path(OUTPUT_FIG,
                    "phase4_new_relationships_omega_rank_supplier_test_stable_yeartrank_event_study.png"),
          p5, width = 10, height = 6, dpi = 200)

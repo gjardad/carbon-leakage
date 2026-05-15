@@ -668,7 +668,7 @@ Together these rule out "wave of newly-reporting suppliers" and point to **a wav
 
 Script: `analysis/phase4_new_relationships_omega_rank_supplier_test.R`. Output: [`_supplier_test_coefs.tex`](output_rmd/tables/phase4_new_relationships_omega_rank_supplier_test_coefs.tex).
 
-A natural alternative LHS is the supplier's rank in the year the pair forms (year-t rank). The descriptive trajectory under year-t rank shows a ~5pp decline in mean pick rank from pre- to post-2017 (see [`_def2.png`](output_rmd/figures/phase4_new_relationships_omega_rank_def2.png)). Two supplier-level tests show this decline cannot be interpreted as evidence of buyer behavior change.
+A natural alternative LHS is the supplier's rank in the year the pair forms (year-t rank). The descriptive trajectory shows a ~5pp decline in mean pick rank from pre- to post-2017 (see [`_def2.png`](output_rmd/figures/phase4_new_relationships_omega_rank_def2.png)). Two supplier-level tests rule out interpreting this as buyer-behavior change.
 
 **TEST 3: mean reversion in rank.** Δrank ~ rank_at_(τ−1) | NACE4d FE, where Δrank = rank_at_(τ+5) − rank_at_(τ−1).
 
@@ -677,7 +677,28 @@ A natural alternative LHS is the supplier's rank in the year the pair forms (yea
 | 2005 | **−0.946** | 0.13 | <0.001 | 89 | 0.05 |
 | 2017 | **−0.536** | 0.11 | <0.001 | 120 | 0.46 |
 
-The rank distribution is not stable at the firm level. At τ=2005, rank in 2005 is essentially uncorrelated with rank in 2010 (ρ ≈ 0.05). At τ=2017, modest persistence (ρ ≈ 0.46). Mechanically: even under unchanged buyer behavior, if buyers slightly prefer high-rank suppliers (descriptive mean pick rank ≈ 0.55) and high-rank suppliers tend to drop in rank, the year-t rank of picks declines by roughly `(mean_pick_rank − 0.5) × (1 − ρ)` ≈ 2.7 pp purely from mean reversion. The observed ~5 pp decline is in that ballpark. **Year-t rank conflates behavior change with mean reversion and within-firm abatement; we don't use it as a clean regression LHS for that reason.**
+The rank distribution is not stable at the firm level. At τ=2005, rank in 2005 is essentially uncorrelated with rank in 2010 (ρ ≈ 0.05). At τ=2017, modest persistence (ρ ≈ 0.46). Even under unchanged buyer behavior, if buyers slightly prefer high-rank suppliers (descriptive mean pick rank ≈ 0.55) and high-rank suppliers tend to drop in rank, the year-t rank of picks declines mechanically — making any year-t decline observationally consistent with Story A (no behavior change).
+
+**TEST 4: rank-change decomposition.** Why is rank unstable? `omega = (emissions − allocated_free) / total_cost`, so rank can shift because the supplier's emissions, free allocations, or total cost change. We regress Δlog(X)_i ~ rank_pre_i | NACE4d FE for each X.
+
+| τ | Channel | β | SE | p | n |
+|---|---|---:|---:|---:|---:|
+| 2005 | Δlog(emissions) | **−0.826** | 0.41 | 0.06 | 88 |
+| 2005 | Δlog(allocated_free) | −0.008 | 0.20 | 0.97 | 89 |
+| 2005 | Δlog(total_cost) | **−0.465** | 0.25 | 0.07 | 89 |
+| 2005 | Δlog(emissions/cost) | −0.360 | 0.58 | 0.54 | 88 |
+| 2017 | Δlog(emissions) | **−0.423** | 0.16 | **0.02** | 119 |
+| 2017 | Δlog(allocated_free) | +0.052 | 0.12 | 0.68 | 110 |
+| 2017 | Δlog(total_cost) | −0.186 | 0.28 | 0.51 | 120 |
+| 2017 | Δlog(emissions/cost) | −0.229 | 0.36 | 0.53 | 119 |
+
+Three observations:
+
+1. **Allocations are unrelated to rank at both events.** Free-allocation cuts are *not* the mechanism driving rank changes — the rank decline of high-rank firms is not a mechanical policy artefact via allocation revisions.
+2. **Emissions decline correlates strongly with high pre-rank.** At τ=2017, β = −0.42 (p = 0.02): a 1-unit increase in rank_pre (full percentile range) is associated with a 42 log-point larger reduction in emissions. At τ=2005, β = −0.83 (p = 0.06).
+3. **Part of the emissions decline is output shrinkage, part is intensity reduction.** At τ=2005 cost and emissions decline together (β = −0.47, −0.83) — high-rank firms shrunk. At τ=2017 emissions decline outpaces cost (−0.42 vs −0.19), and intensity Δlog(emissions/cost) is itself negative on rank_pre (β = −0.23, though insignificant) — consistent with some real intensity-reducing abatement among high-rank firms.
+
+**The takeaway**: rank changes are not pure measurement noise — they reflect a behavioural channel (emissions reductions among high-rank firms, mix of output shrinkage and intensity-reducing abatement). Using year-t rank as the LHS would therefore conflate buyer behaviour with this supplier-side abatement channel. The fixed-at-τ−1 LHS (used as a robustness reference in this section) is the cleaner choice by construction; the supplier-level Test 1 below is the cleanest *direct* test of buyer behaviour change.
 
 **TEST 2: popularity ↔ abatement.** Δrank ~ log(1 + n_new_pre) | NACE4d FE.
 
@@ -686,7 +707,36 @@ The rank distribution is not stable at the firm level. At τ=2005, rank in 2005 
 | 2005 | −0.013 | 0.020 | 0.54 | 89 |
 | 2017 | −0.012 | 0.016 | 0.48 | 120 |
 
-Pre-event popular suppliers do not differentially abate at either event. So the tighter version of the year-t-rank concern (the specific suppliers buyers prefer are the ones cleaning up) doesn't hold — but Test 3 alone is sufficient to invalidate year-t rank as a clean LHS regardless.
+Pre-event popular suppliers do not differentially abate at either event. The supplier-side abatement documented in Test 4 is general (correlated with pre-rank itself, not with pre-popularity). Test 4 already rules out year-t rank as a clean LHS; Test 2 just confirms the same conclusion under a tighter framing.
+
+#### TEST 5 — Year-t-rank event study restricted to stable-NACE4d (robustness)
+
+Script: same. Outputs: [`_supplier_test_stable_nace4d_summary.csv`](output_rmd/tables/phase4_new_relationships_omega_rank_supplier_test_stable_nace4d_summary.csv), [`_supplier_test_stable_yeartrank_event_study.png`](output_rmd/figures/phase4_new_relationships_omega_rank_supplier_test_stable_yeartrank_event_study.png).
+
+A complementary check: in NACE4d where supplier rank order is *preserved* between τ−1 and τ+5, year-t rank ≈ rank-at-τ−1 by construction, so the year-t-rank LHS is not confounded by within-firm rank evolution. We identify these NACE4d at τ=2017 by Spearman ρ of (rank_2016, rank_2022) within each NACE4d with ≥ 3 EUTL firms at both endpoints.
+
+Stable-NACE4d counts at τ=2017 (out of 17 NACE4d with ≥ 3 EUTL firms tracked):
+
+| Threshold | # NACE4d stable | # EUTL firms | # new pairs in [2012, 2022] window |
+|---|---:|---:|---:|
+| ρ = 1.0 | 4 | 13 | small |
+| ρ ≥ 0.9 | 5 | 18 | ~950 |
+| ρ ≥ 0.8 | 7 | 28 | ~1,030 |
+
+(At τ=2005, no NACE4d are stable at any threshold — consistent with the −0.95 Test 3 coefficient. The stable-NACE4d robustness only applies at τ=2017.)
+
+Within each stable-NACE4d subsample, run the year-t-rank event study:
+
+```
+rank_year_first_ij = Σ_{e ≠ −1} β_e · 1{year_first − 2017 = e}
+                       + α_buyer + γ_NACE4d + ε_ij      (ref e = −1)
+```
+
+SE two-way clustered: buyer × supplier-NACE4d.
+
+The event-study figure shows post-period coefficients hovering near zero (0 to +0.10) at all three thresholds, with CIs straddling zero throughout. Pre-trends are not perfectly flat — rel-year=−5 (2012) shows a ~+0.19 spike at the ρ ≥ 0.8 and ρ ≥ 0.9 thresholds — but the post-period coefficients are small and centred at zero, supporting the headline null. ρ = 1.0 is too noisy (4 NACE4d) to interpret.
+
+Reading: in the subsample of NACE4d where the year-t-rank LHS is logically valid (supplier rank is stable), the post-event coefficients do not differ from zero — consistent with the supplier-level Test 1 null below.
 
 #### Supplier-level Story A vs B DiD
 
