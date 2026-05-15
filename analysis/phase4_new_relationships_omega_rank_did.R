@@ -188,6 +188,22 @@ run_one_tau <- function(tau) {
              by = c("seller", "seller_nace4d"))
   d[, rel_year := year_first - tau]
   d[, supplier_tenure := year_first - supplier_first_b2b_year]
+
+  # Sample restriction at tau = 2005: keep only suppliers that were already
+  # in B2B at the panel start (2002). Reason: at tau = 2005 the rel-year
+  # window is [-2, +5] and supplier_tenure is nearly collinear with rel-year
+  # for early cohorts (tenure <= year_first - 2002), so the continuous
+  # tenure control is poorly identified. Restricting to panel-start
+  # suppliers makes the LHS-survivor concern symmetric across rel-years.
+  if (tau == 2005L) {
+    n_before <- nrow(d)
+    d <- d[supplier_first_b2b_year == B2B_YEAR_LO]
+    cat(sprintf("  tau = 2005 restriction: keep suppliers with first_b2b_year == %d. "
+                , B2B_YEAR_LO))
+    cat(sprintf("rows %d -> %d (%.1f%%)\n",
+                n_before, nrow(d), 100 * nrow(d) / n_before))
+  }
+
   cat(sprintf("  in-sample new pairs in [%d, %d]: %d (%d buyers, %d sellers, %d NACE4d)\n",
               window[1], window[2], nrow(d),
               uniqueN(d$buyer), uniqueN(d$seller), uniqueN(d$seller_nace4d)))
@@ -196,6 +212,21 @@ run_one_tau <- function(tau) {
               mean(d$supplier_tenure, na.rm = TRUE),
               suppressWarnings(max(d$supplier_tenure, na.rm = TRUE)),
               mean(is.na(d$supplier_tenure))))
+
+  # Cohort-composition diagnostic: by year_first cohort, n_pairs and mean
+  # supplier_first_b2b_year. Shows whether the cohort at any year_first is
+  # an outlier in size and/or supplier vintage.
+  cohort_summary <- d[, .(
+    n_pairs                  = .N,
+    mean_supplier_first_b2b  = mean(supplier_first_b2b_year, na.rm = TRUE),
+    mean_supplier_tenure     = mean(supplier_tenure, na.rm = TRUE),
+    mean_rank_fixed          = mean(rank_fixed, na.rm = TRUE)
+  ), by = year_first]
+  setorder(cohort_summary, year_first)
+  cohort_summary[, tau := tau]
+  fwrite(cohort_summary,
+         file.path(OUTPUT_TAB,
+                   sprintf("phase4_new_relationships_omega_rank_did_cohort_%d.csv", tau)))
 
   # Event study, two specs: base and with supplier_tenure control
   m_es <- feols(rank_fixed ~ i(rel_year, ref = -1) | buyer + seller_nace4d,
@@ -353,6 +384,62 @@ for (this_tau in TAUS) {
   ggsave(file.path(OUTPUT_FIG,
                    sprintf("phase4_new_relationships_omega_rank_did_event_study_%d.pdf", this_tau)),
          p, width = 9, height = 5)
+}
+
+# ---------------------------------------------------------------------------
+# 6. Cohort-composition diagnostic plots (one per tau)
+#    Two-panel plot per tau:
+#      Left:  n_pairs by year_first (linear scale, bar)
+#      Right: mean supplier_first_b2b_year by year_first (line)
+#    Lets you eyeball whether any year_first cohort is anomalous in size
+#    and/or in supplier vintage. The 2016 cohort in tau = 2017 is a known
+#    candidate (B2B reporting-threshold change).
+# ---------------------------------------------------------------------------
+for (this_tau in TAUS) {
+  this_ref <- ref_year_for_tau(this_tau)
+  csv_path <- file.path(OUTPUT_TAB,
+                        sprintf("phase4_new_relationships_omega_rank_did_cohort_%d.csv", this_tau))
+  if (!file.exists(csv_path)) next
+  cs <- fread(csv_path)
+
+  p_count <- ggplot(cs, aes(x = year_first, y = n_pairs)) +
+    geom_col(fill = "steelblue", alpha = 0.85) +
+    geom_vline(xintercept = this_tau - 0.5,
+               linetype = "dashed", color = "firebrick") +
+    scale_x_continuous(breaks = seq(this_tau - WINDOW, this_tau + WINDOW, 1)) +
+    scale_y_continuous(labels = scales::comma_format()) +
+    labs(title    = sprintf("Cohort size: new pairs by year_first (tau = %d)",
+                            this_tau),
+         subtitle = "Red dashed = treatment year.",
+         x = "year_first", y = "n_pairs") +
+    base_theme
+
+  p_vintage <- ggplot(cs, aes(x = year_first, y = mean_supplier_first_b2b)) +
+    geom_line(color = "darkorange", linewidth = 0.95) +
+    geom_point(color = "darkorange", size = 1.6) +
+    geom_abline(intercept = 0, slope = 1,
+                linetype = "dotted", color = "grey50") +
+    geom_vline(xintercept = this_tau - 0.5,
+               linetype = "dashed", color = "firebrick") +
+    scale_x_continuous(breaks = seq(this_tau - WINDOW, this_tau + WINDOW, 1)) +
+    labs(title    = sprintf("Mean supplier vintage by cohort (tau = %d)",
+                            this_tau),
+         subtitle = "y = mean(supplier_first_b2b_year). Grey dotted = y == year_first (would mean every supplier first appears at year_first).",
+         x = "year_first", y = "mean supplier_first_b2b_year") +
+    base_theme
+
+  ggsave(file.path(OUTPUT_FIG,
+                   sprintf("phase4_new_relationships_omega_rank_did_cohort_count_%d.png", this_tau)),
+         p_count, width = 9, height = 4.5, dpi = 200)
+  ggsave(file.path(OUTPUT_FIG,
+                   sprintf("phase4_new_relationships_omega_rank_did_cohort_count_%d.pdf", this_tau)),
+         p_count, width = 9, height = 4.5)
+  ggsave(file.path(OUTPUT_FIG,
+                   sprintf("phase4_new_relationships_omega_rank_did_cohort_vintage_%d.png", this_tau)),
+         p_vintage, width = 9, height = 4.5, dpi = 200)
+  ggsave(file.path(OUTPUT_FIG,
+                   sprintf("phase4_new_relationships_omega_rank_did_cohort_vintage_%d.pdf", this_tau)),
+         p_vintage, width = 9, height = 4.5)
 }
 
 cat("\nDone.\n")
