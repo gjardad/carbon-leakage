@@ -112,7 +112,7 @@ build_firm_omega <- function(yrs) {
              sum_short = sum(shortage),
              sum_cost  = sum(total_cost)),
          by = vat]
-  o <- o[n_yrs == 2L & sum_cost > 0]
+  o <- o[n_yrs == length(yrs) & sum_cost > 0]
   o[, omega := sum_short / sum_cost]
   o[, .(vat, omega)]
 }
@@ -250,15 +250,9 @@ write_tex_table(coefs,
 # 7. Plot
 # ---------------------------------------------------------------------------
 version_labels <- c(
-  "treat_2008" = "Treatment 2008 (omega from 2006-07)",
-  "treat_2013" = "Treatment 2013 (omega from 2011-12)",
-  "treat_2017" = "Treatment 2017 (omega from 2015-16)"
+  "treat_2005" = "2005 Treatment",
+  "treat_2017" = "2017 Treatment"
 )
-
-base_theme <- theme_minimal(base_size = 11) +
-  theme(strip.text = element_text(face = "bold"),
-        panel.grid.minor = element_blank(),
-        legend.position = "bottom")
 
 treat_lines <- data.table(
   version_lab = factor(version_labels, levels = version_labels),
@@ -271,40 +265,43 @@ d_plot[, version_lab := factor(version,
                                labels = version_labels)]
 d_plot[, supplier_role := factor(supplier_role,
                                  levels = c("top", "bot"),
-                                 labels = c("Top-omega supplier",
-                                            "Bottom-omega supplier"))]
+                                 labels = c("Most exposed supplier",
+                                            "Least exposed supplier"))]
 
 p <- ggplot(d_plot, aes(x = year, y = mean_transact,
                         color = supplier_role, fill = supplier_role)) +
   geom_ribbon(aes(ymin = ci_lo, ymax = ci_hi), alpha = 0.18, color = NA) +
   geom_line(linewidth = 0.9) +
-  geom_point(size = 1.1) +
+  geom_point(size = 1.4) +
   geom_vline(data = treat_lines,
              aes(xintercept = treat_year - 0.5),
              linetype = "dashed", color = "firebrick",
              inherit.aes = FALSE) +
   facet_wrap(~ version_lab, ncol = 1, scales = "free_y") +
   scale_x_continuous(breaks = seq(YEAR_LO, YEAR_HI, by = 2)) +
-  scale_y_continuous(limits = c(0, 1),
-                     labels = scales::percent_format(accuracy = 1)) +
-  scale_color_manual(values = c("Top-omega supplier"    = "firebrick",
-                                "Bottom-omega supplier" = "navy"),
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_color_manual(values = c("Most exposed supplier"  = "firebrick",
+                                "Least exposed supplier" = "navy"),
                      name = NULL) +
-  scale_fill_manual(values = c("Top-omega supplier"    = "firebrick",
-                               "Bottom-omega supplier" = "navy"),
+  scale_fill_manual(values = c("Most exposed supplier"  = "firebrick",
+                               "Least exposed supplier" = "navy"),
                     name = NULL) +
-  labs(title = "Within-NACE4d extensive margin: supplier survival",
-       subtitle = "P(buyer transacts with this supplier in year t) across treated cells; 95% bootstrap CI; red dashed = treatment year.",
-       x = NULL,
+  labs(x = NULL,
        y = "Share of cells where buyer transacts with this supplier") +
-  base_theme
+  theme_classic(base_size = 15) +
+  theme(panel.grid       = element_blank(),
+        axis.title.y     = element_text(size = 18, margin = margin(r = 18)),
+        axis.text        = element_text(size = 15),
+        strip.text       = element_text(face = "bold", size = 16),
+        legend.position  = "bottom",
+        legend.text      = element_text(size = 14))
 
 ggsave(file.path(OUTPUT_FIG,
                  "phase4_within_nace4d_extensive_DiD.png"),
-       p, width = 9, height = 10, dpi = 200)
+       p, width = 9, height = 8, dpi = 200)
 ggsave(file.path(OUTPUT_FIG,
                  "phase4_within_nace4d_extensive_DiD.pdf"),
-       p, width = 9, height = 10)
+       p, width = 9, height = 8)
 
 cat("\nAll DiD coefficients (extensive margin):\n")
 print(coefs[, .(version, term,

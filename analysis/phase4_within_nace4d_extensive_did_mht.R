@@ -1,40 +1,40 @@
 ###############################################################################
-# phase4_within_intensive_did_mht.R
+# phase4_within_nace4d_extensive_did_mht.R
 #
 # PURPOSE
-#   Multiple-hypothesis-testing correction on the within-NACE4d /
-#   intensive-margin DiD table. Runs all 56 cells = 2 omega definitions
-#   (shortage; emissions) x 2 specifications (unconditional;
-#   size_controlled with year x log(pre-period sales)) x 7 cuts x 2
-#   treatment periods (2005; 2017).
+#   Extensive-margin analog of phase4_within_intensive_did_mht.R. Same cells,
+#   same heterogeneity cuts, same specifications, same Romano-Wolf MHT --
+#   only the outcome changes:
+#
+#       intensive : share_ijt = sales_ijt / total_buyer_nace4d_spend_jt
+#       extensive : transact_ijt = 1{sales_ijt > 0}
+#
+#   Runs 56 cells = 2 omega definitions (shortage; emissions) x 2
+#   specifications (unconditional; size_controlled with year x log(pre-period
+#   sales)) x 7 cuts (pooled + 3 scores x {top 25%, top 10%}) x 2 treatment
+#   periods (2005; 2017).
 #
 #   For each of the 4 families of 14 tests (one per omega_def x spec
-#   combination), applies Romano-Wolf step-down adjusted p-values using
-#   a cluster-bootstrap on buyer. The headline-reported family is
-#   shortage x size_controlled. Also reports Bonferroni, Holm-Bonferroni,
-#   and Benjamini-Hochberg over the full 56-test pool for reference.
+#   combination), applies Romano-Wolf step-down adjusted p-values using a
+#   cluster-bootstrap on buyer. Headline-reported family is shortage x
+#   size_controlled. Also reports Bonferroni, Holm, BH over the full 56-test
+#   pool for reference, and a bootstrap joint Wald test of the global null.
 #
-#   Also reports a bootstrap joint Wald test of the global null that
-#   all 56 coefficients equal zero, useful as a single "any leakage
-#   anywhere" check.
-#
-# DEPENDENCIES (same as phase4_within_intensive_figures.R)
+# DEPENDENCIES
 #   - b2b_selected_sample.RData
 #   - annual_accounts_selected_sample.RData
 #   - annual_accounts_selected_sample_key_variables.RData
 #   - phase3_firm_exposure.RData
 #
 # OUTPUTS (output_<machine>/tables/)
-#   - phase4_within_nace4d_intensive_mht_results.csv
+#   - phase4_within_nace4d_extensive_mht_results.csv
 #       56-row CSV: omega_def, spec, cut, version, n_treated_cells,
 #       beta, se, t_stat, p_unadj, p_bonf, p_holm, p_bh, p_rw
-#   - phase4_within_nace4d_intensive_mht_wald.txt
-#       Joint Wald W statistic and p-value
-#   - phase4_within_nace4d_intensive_mht_notes.tex
-#       LaTeX snippet for the table notes
-#   - phase4_within_nace4d_reallocation_did_table_size_rw.tex
-#       Paper-ready LaTeX table: size-controlled DiD with Romano-Wolf
-#       adjusted significance stars (shortage family)
+#   - phase4_within_nace4d_extensive_mht_wald.txt
+#   - phase4_within_nace4d_extensive_mht_notes.tex
+#   - phase4_within_nace4d_extensive_did_table_combined.tex
+#       Paper-ready LaTeX table: size-controlled extensive DiD with
+#       Romano-Wolf adjusted significance stars (shortage family)
 #
 # RUNTIME
 #   Bootstrap is dispatched in parallel across workers (multisession plan;
@@ -60,18 +60,14 @@ suppressPackageStartupMessages({
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-set.seed(20260513)
+set.seed(20260514)
 
-YEAR_LO <- 2002L  # B2B panel starts in 2002. Extended below 2005 for the EU ETS-launch pre-period.
+YEAR_LO <- 2002L  # B2B panel starts in 2002
 YEAR_HI <- 2022L
-B       <- 500L  # bootstrap replicates; bump for production runs
+B       <- 500L   # bootstrap replicates
 # Leave a few cores idle for the OS and for fixest's internal threading.
 N_WORKERS <- max(1L, parallel::detectCores() - 4L)
 
-# Two treatment periods (matching phase4_within_intensive_figures.R):
-#   treat_2005: omega from 2005, post = 1 from 2005 onwards
-#               pre-period uses pre-policy 2002-2004 B2B data.
-#   treat_2017: omega from 2015-16, post = 1 from 2017 onwards
 INTERVALS <- list(
   "treat_2005" = list(years = c(2005L),         treat_year = 2005L),
   "treat_2017" = list(years = c(2015L, 2016L),  treat_year = 2017L)
@@ -82,7 +78,7 @@ CUT_LABELS <- c("pooled",
                 "exposure_gap_q", "exposure_gap_d")
 
 # ---------------------------------------------------------------------------
-# 1. Load data (mirror phase4_within_intensive_figures.R)
+# 1. Load data
 # ---------------------------------------------------------------------------
 cat("Loading data...\n")
 
@@ -124,9 +120,6 @@ fe <- as.data.table(firm_exposure)[, .(vat = as.character(vat),
                                        year, shortage, emissions,
                                        total_cost, allocated_free)]
 rm(firm_exposure)
-# Two firm-year omega definitions (matches the table_and_distributions
-# script): omega_sh = shortage/cost (cost-shock; headline), omega_em =
-# emissions/cost (physical intensity; falsification benchmark).
 fe[, omega_sh := ifelse(!is.na(total_cost) & total_cost > 0,
                         pmax(shortage, 0) / total_cost, NA_real_)]
 fe[, omega_em := ifelse(!is.na(total_cost) & total_cost > 0,
@@ -136,18 +129,17 @@ b2b <- merge(b2b, aa, by.x = c("seller", "year"), by.y = c("vat", "year"),
              all.x = TRUE)
 setnames(b2b, "nace4d", "seller_nace4d")
 b2b <- b2b[!is.na(seller_nace4d) & seller_nace4d != ""]
-b2b[, total_buyer_nace4d_spend := sum(sales),
-    by = .(buyer, seller_nace4d, year)]
 
 cat(sprintf("  B2B rows after seller-NACE4d merge: %s\n",
             format(nrow(b2b), big.mark = ",")))
 
 # ---------------------------------------------------------------------------
-# 2. Build cells per interval with all three heterogeneity scores
+# 2. Build cells per interval with all heterogeneity scores
+#    Identical logic to phase4_within_intensive_did_mht.R.
 # ---------------------------------------------------------------------------
 build_cells_interval <- function(version_label, years, treat_year,
                                   omega_col = "omega_sh") {
-  yrs <- years  # vector of pre-event years for computing omega
+  yrs <- years
   seller_int <- b2b[year %in% yrs,
                     .(int_sales = sum(sales)),
                     by = .(buyer, seller_nace4d, seller)]
@@ -204,7 +196,6 @@ build_cells_interval <- function(version_label, years, treat_year,
                                        !is.na(omega_gap)]
   cells_top_bot[, topQ_buyertotal  := shock_buyertotal    >= qtl_buy &
                                        !is.na(shock_buyertotal)]
-  # Top-decile flags (>= 90th percentile)
   dec_share <- quantile(cells_top_bot$nace4d_input_share, 0.90, na.rm = TRUE)
   dec_gap   <- quantile(cells_top_bot$omega_gap,           0.90, na.rm = TRUE)
   dec_buy   <- quantile(cells_top_bot$shock_buyertotal,    0.90, na.rm = TRUE)
@@ -237,9 +228,10 @@ for (def_name in names(OMEGA_DEFS)) {
 
 # ---------------------------------------------------------------------------
 # 3. Build long panels for each (cut, event-year, omega_def) combination
+#    Outcome = transact_ijt = 1{sales_ijt > 0}. Panel includes every year
+#    in [YEAR_LO, YEAR_HI] for every (cell, role) row, with transact = 0
+#    when the pair did not transact in that year.
 # ---------------------------------------------------------------------------
-yr_denom <- unique(b2b[, .(buyer, seller_nace4d, year,
-                           total_buyer_nace4d_spend)])
 yr_sales <- b2b[, .(buyer, seller_nace4d, seller, year, sales)]
 
 build_long_for_cut <- function(cut_label, cells_dt) {
@@ -259,8 +251,6 @@ build_long_for_cut <- function(cut_label, cells_dt) {
   }
   if (nrow(sub) == 0L) return(data.table())
 
-  # pre_sales_role = interval-period sales of the chosen supplier in the cell.
-  # Used to build the log_pre_sales × year interaction for the size_controlled spec.
   long <- rbind(
     sub[, .(buyer, seller_nace4d, version, treat_year,
             seller = top_supplier, supplier_role = "top",
@@ -272,23 +262,17 @@ build_long_for_cut <- function(cut_label, cells_dt) {
   panel <- long[, .(year = YEAR_LO:YEAR_HI),
                 by = .(buyer, seller_nace4d, version, treat_year,
                        seller, supplier_role, pre_sales_role)]
-  panel <- merge(panel, yr_denom,
-                 by = c("buyer", "seller_nace4d", "year"), all.x = TRUE)
   panel <- merge(panel, yr_sales,
                  by = c("buyer", "seller_nace4d", "seller", "year"),
                  all.x = TRUE)
-  panel[is.na(sales), sales := 0]
-  panel[, share := ifelse(is.na(total_buyer_nace4d_spend) |
-                            total_buyer_nace4d_spend <= 0,
-                          NA_real_,
-                          sales / total_buyer_nace4d_spend)]
+  panel[, transact := as.integer(!is.na(sales) & sales > 0)]
   panel[, top  := as.integer(supplier_role == "top")]
   panel[, post := as.integer(year >= treat_year)]
   panel[, log_pre_sales := log1p(pmax(pre_sales_role, 0))]
   panel[]
 }
 
-cat("Building long panels (2 omega defs x 4 cuts)...\n")
+cat("Building long panels (2 omega defs x 7 cuts)...\n")
 panels_by_def <- list()
 for (def_name in names(OMEGA_DEFS)) {
   panels_by_def[[def_name]] <- list()
@@ -302,28 +286,23 @@ for (def_name in names(OMEGA_DEFS)) {
 
 # ---------------------------------------------------------------------------
 # 4. Baseline DiD: 56 coefficients
-#    (2 omega defs x 7 cuts x 2 versions x 2 specs)
-#
-#    - unconditional  : share ~ i(post, top, ref=0) | cell_role + year
-#    - size_controlled: adds i(year, log_pre_sales) -- allows large vs
-#      small suppliers to follow different secular trends, removing
-#      the size-confound channel between top-omega and bottom-omega.
+#    (2 omega defs x 7 cuts x 2 versions x 2 specs). Linear probability model.
 # ---------------------------------------------------------------------------
 SPECS <- c("unconditional", "size_controlled")
 
 run_did <- function(dt, size_control = FALSE) {
-  d <- dt[!is.na(share)]
-  if (nrow(d) == 0L || uniqueN(d$post) < 2L || uniqueN(d$top) < 2L) {
+  if (nrow(dt) == 0L || uniqueN(dt$post) < 2L || uniqueN(dt$top) < 2L) {
     return(c(beta = NA_real_, se = NA_real_))
   }
+  d <- copy(dt)
   d[, cell_id      := paste(buyer, seller_nace4d, sep = "::")]
   d[, cell_role_id := paste(cell_id, supplier_role, sep = "::")]
   if (size_control && "log_pre_sales" %in% names(d) &&
       uniqueN(d$log_pre_sales) > 1L) {
-    fml <- share ~ i(post, top, ref = 0) + i(year, log_pre_sales) |
+    fml <- transact ~ i(post, top, ref = 0) + i(year, log_pre_sales) |
                   cell_role_id + year
   } else {
-    fml <- share ~ i(post, top, ref = 0) | cell_role_id + year
+    fml <- transact ~ i(post, top, ref = 0) | cell_role_id + year
   }
   fit <- tryCatch(
     feols(fml, data = d, cluster = ~ cell_id, notes = FALSE),
@@ -361,7 +340,6 @@ print(baseline)
 cat(sprintf("\nCluster bootstrap (B = %d, cluster = buyer, %d cells per iter)...\n",
             B, nrow(baseline)))
 
-# Union of buyers across all panels = clustering universe
 all_buyers <- unique(rbindlist(
   lapply(unlist(panels_by_def, recursive = FALSE),
          function(p) p[, .(buyer)])
@@ -424,12 +402,7 @@ cat(sprintf("Bootstrap done in %s (B = %d, workers = %d).\n",
             format(Sys.time() - t0, digits = 1), B, N_WORKERS))
 
 # ---------------------------------------------------------------------------
-# 6. Romano-Wolf step-down adjusted p-values
-#
-#    Applied SEPARATELY for each (omega_def, spec) family of 14 tests.
-#    The reported table is one such family (shortage, size_controlled);
-#    correcting across all 56 tests would over-correct because the
-#    shortage and emissions families are not jointly reported.
+# 6. Romano-Wolf step-down adjusted p-values (within each family of 14)
 # ---------------------------------------------------------------------------
 rw_one_family <- function(idx) {
   abs_t_obs  <- abs(baseline$t_stat[idx])
@@ -464,8 +437,6 @@ for (def_name in names(OMEGA_DEFS)) {
   }
 }
 
-# Other corrections (computed across the FULL 56-test pool for completeness;
-# the headline table uses RW within family).
 n_tests <- nrow(baseline)
 baseline[, p_bonf := pmin(p_unadj * n_tests, 1)]
 baseline[, p_holm := p.adjust(p_unadj, method = "holm")]
@@ -493,8 +464,6 @@ cat(sprintf("  W = %.2f, p_wald = %.4f (chi-sq df %d ref crit at 0.05 = %.2f)\n"
 # ---------------------------------------------------------------------------
 # 8. Outputs
 # ---------------------------------------------------------------------------
-# Cells N (treated cells, for the LaTeX table). Counts unique (buyer, NACE4d)
-# cells in the panel for each (omega_def, cut, version).
 cell_counts <- list()
 for (def_name in names(OMEGA_DEFS)) {
   for (cut_lab in CUT_LABELS) {
@@ -518,7 +487,7 @@ baseline <- merge(baseline, cell_counts,
 out <- baseline[, .(omega_def, spec, cut, version, n_treated_cells,
                     beta, se, t_stat, p_unadj, p_bonf, p_holm, p_bh, p_rw)]
 fwrite(out, file.path(OUTPUT_TAB,
-       "phase4_within_nace4d_intensive_mht_results.csv"))
+       "phase4_within_nace4d_extensive_mht_results.csv"))
 
 writeLines(c(
   sprintf("Joint Wald test of the global null (all %d coefficients = 0)", n_tests),
@@ -526,9 +495,8 @@ writeLines(c(
   sprintf("  bootstrap p = %.4f", p_wald),
   sprintf("  chi-sq(%d) 95%% critical value = %.2f", n_tests, qchisq(0.95, n_tests)),
   sprintf("  B = %d cluster-bootstrap iterations (cluster = buyer)", B)
-), file.path(OUTPUT_TAB, "phase4_within_nace4d_intensive_mht_wald.txt"))
+), file.path(OUTPUT_TAB, "phase4_within_nace4d_extensive_mht_wald.txt"))
 
-# LaTeX snippet for the table notes
 sig_rows <- baseline[p_unadj < 0.05]
 cut_display_lookup <- c(
   "pooled"         = "Pooled",
@@ -555,21 +523,15 @@ rw_lines <- sig_rows[, sprintf(
   version_display_lookup[version],
   p_rw)]
 writeLines(c(
-  "% MHT notes (auto-generated by phase4_within_intensive_did_mht.R)",
+  "% MHT notes (auto-generated by phase4_within_nace4d_extensive_did_mht.R)",
   sprintf("\\textit{Multiple-testing correction.} Joint Wald test of the global null (all %d coefficients $=0$): $W = %.2f$, bootstrap $p = %.3f$ (cluster-bootstrap on buyer, $B = %d$). Romano-Wolf step-down adjusted $p$-values applied within each (omega definition, specification) family of 14 tests. Cells significant at $p < 0.05$ before correction:",
           n_tests, W_obs, p_wald, B),
   paste(rw_lines, collapse = "; "),
   "."
-), file.path(OUTPUT_TAB, "phase4_within_nace4d_intensive_mht_notes.tex"))
+), file.path(OUTPUT_TAB, "phase4_within_nace4d_extensive_mht_notes.tex"))
 
 # ---------------------------------------------------------------------------
 # 9. LaTeX table: size-controlled + Romano-Wolf adjusted stars
-#
-#     Same layout as phase4_within_nace4d_reallocation_did_table_combined.tex
-#     (rows = 2 treatment periods; columns = pooled + 6 cut x restriction)
-#     but uses the size_controlled spec (controls for year x log_pre_sales)
-#     and stars are based on the within-family Romano-Wolf adjusted p-value
-#     across the 14 shortage cells.
 # ---------------------------------------------------------------------------
 build_latex_size_rw <- function(d14) {
   versions    <- c("treat_2005", "treat_2017")
@@ -599,17 +561,11 @@ build_latex_size_rw <- function(d14) {
                      cell_fmt(r$beta, r$se, r$p_rw, r$n_treated_cells))
     }
     body <- paste0(body, " \\\\\\addlinespace")
-    # Horizontal rule between treatment-period rows, spanning columns 2-8 only
-    # (leaves column 1 -- the treatment label -- ungrouped). Skip after the
-    # last row since \bottomrule follows.
-    if (i < length(versions)) {
-      body <- paste0(body, "\n\\cmidrule(lr){2-8}")
-    }
   }
 
   header <- paste0(
     "% Requires \\usepackage{makecell,booktabs} in main.tex\n",
-    "% Size-controlled DiD with Romano-Wolf adjusted significance.\n",
+    "% Size-controlled extensive-margin DiD with Romano-Wolf adjusted significance.\n",
     "\\begin{tabular}{lccccccc}\n",
     "\\toprule\n",
     " & & \\multicolumn{2}{c}{Cost shock} & \\multicolumn{2}{c}{Input share} & \\multicolumn{2}{c}{Exposure gap} \\\\\n",
@@ -620,7 +576,7 @@ build_latex_size_rw <- function(d14) {
   footer <- paste0(
     "\n\\bottomrule\n",
     "\\end{tabular}\n",
-    sprintf("%% Notes: Size-controlled within-cell DiD (cell-role FE + year FE + year $\\times$ log(pre-period sales) interaction). Cluster-robust SE in parentheses (cluster = buyer $\\times$ NACE4d cell). Stars use Romano-Wolf step-down adjusted $p$-values from a cluster-bootstrap on buyer with $B = %d$ replicates, applied within the 14-test shortage family. Significance: $^{\\dagger}\\,p^{\\mathrm{RW}}<0.10$, $^{*}\\,p^{\\mathrm{RW}}<0.05$, $^{**}\\,p^{\\mathrm{RW}}<0.01$, $^{***}\\,p^{\\mathrm{RW}}<0.001$.", B)
+    sprintf("%% Notes: Size-controlled within-cell extensive-margin DiD (LPM with outcome = $\\mathbf{1}\\{\\text{sales}_{ijt}>0\\}$; cell-role FE + year FE + year $\\times$ log(pre-period sales) interaction). Cluster-robust SE in parentheses (cluster = buyer $\\times$ NACE4d cell). Stars use Romano-Wolf step-down adjusted $p$-values from a cluster-bootstrap on buyer with $B = %d$ replicates, applied within the 14-test shortage family. Significance: $^{\\dagger}\\,p^{\\mathrm{RW}}<0.10$, $^{*}\\,p^{\\mathrm{RW}}<0.05$, $^{**}\\,p^{\\mathrm{RW}}<0.01$, $^{***}\\,p^{\\mathrm{RW}}<0.001$.", B)
   )
 
   paste0(header, body, footer)
@@ -628,19 +584,17 @@ build_latex_size_rw <- function(d14) {
 
 shortage_size <- baseline[omega_def == "shortage" & spec == "size_controlled"]
 tex_did_combined <- build_latex_size_rw(shortage_size)
-# Overwrites the same filename the paper already references; this is the
-# headline DiD table (size-controlled, Romano-Wolf adjusted significance).
 writeLines(tex_did_combined,
            file.path(OUTPUT_TAB,
-                     "phase4_within_nace4d_reallocation_did_table_combined.tex"))
+                     "phase4_within_nace4d_extensive_did_table_combined.tex"))
 
 cat("\nAll outputs:\n")
 cat("  CSV    :", file.path(OUTPUT_TAB,
-       "phase4_within_nace4d_intensive_mht_results.csv"), "\n")
+       "phase4_within_nace4d_extensive_mht_results.csv"), "\n")
 cat("  Wald   :", file.path(OUTPUT_TAB,
-       "phase4_within_nace4d_intensive_mht_wald.txt"), "\n")
+       "phase4_within_nace4d_extensive_mht_wald.txt"), "\n")
 cat("  Notes  :", file.path(OUTPUT_TAB,
-       "phase4_within_nace4d_intensive_mht_notes.tex"), "\n")
+       "phase4_within_nace4d_extensive_mht_notes.tex"), "\n")
 cat("  Table  :", file.path(OUTPUT_TAB,
-       "phase4_within_nace4d_reallocation_did_table_combined.tex"), "\n")
+       "phase4_within_nace4d_extensive_did_table_combined.tex"), "\n")
 cat("Done.\n")
