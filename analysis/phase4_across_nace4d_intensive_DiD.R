@@ -15,16 +15,20 @@
 #       share_jnt = alpha_jn + delta_t + beta * treatment_n * post_t + eps
 #       buyer x NACE4d FE + year FE, SE clustered on cell (buyer x NACE4d).
 #
-#   Two events, four variants:
-#       - 2005:        treatment_n = ets_treated_n (binary).
-#                      Sample: NACE4d the buyer bought from in 2002-04
-#                      (ETS-treated and non-ETS pooled).
-#                      Regression window: 2002-22.
-#       - 2017-tight:  treatment_n = high_omega_n (median split among ETS).
-#                      Sample: ETS-treated NACE4d the buyer bought from in
-#                      2015-16. Regression window: 2013-22.
-#       - 2017-sym:    same as 2017-tight, regression window 2012-22.
-#       - 2017-long:   same as 2017-tight, regression window 2002-22.
+#   Two events, five variants:
+#       - 2005:                 treatment_n = ets_treated_n (binary).
+#                               Sample: NACE4d the buyer bought from in 2002-04
+#                               (ETS-treated and non-ETS pooled).
+#                               Regression window: 2002-22.
+#       - 2017-tight:           treatment_n = high_omega_n (median split among ETS).
+#                               Sample: ETS-treated NACE4d the buyer bought from
+#                               in 2015-16. Regression window: 2013-22.
+#       - 2017-sym:             same as 2017-tight, regression window 2012-22.
+#       - 2017-long:            same as 2017-tight, regression window 2002-22.
+#       - 2017-topq-vs-nonets:  treatment_n = 1{NACE4d in top quartile of omega
+#                               among classifiable ETS-NACE4d}; control = non-ETS.
+#                               ETS-NACE4d below the Q75 omega threshold are
+#                               dropped from the sample. Regression window 2012-22.
 #
 #   omega_n (NACE4d-level shortage / total cost):
 #       omega_n = sum_{f in N, t in 2015-16} shortage_ft
@@ -109,6 +113,15 @@ VARIANTS <- list(
     treatment_kind  = "omega",
     pre_years       = 2015L:2016L,
     reg_lo          = 2002L, reg_hi = 2022L
+  ),
+  # Heterogeneity for 2017: top-quartile omega (most exposed ETS NACE4d) vs
+  # non-ETS NACE4d. Drops ETS NACE4d below the Q75 omega threshold from the
+  # sample so the contrast is sharp.
+  "2017-topq-vs-nonets" = list(
+    treat_year      = 2017L,
+    treatment_kind  = "top_q_omega_vs_nonets",
+    pre_years       = 2015L:2016L,
+    reg_lo          = 2012L, reg_hi = 2022L
   )
 )
 
@@ -211,17 +224,23 @@ omega_nace[, omega := sum_short / sum_cost]
 # Median split among ETS-treated NACE4d that have classifiable omega
 med_omega <- median(omega_nace$omega, na.rm = TRUE)
 omega_nace[, high_omega := as.integer(omega > med_omega)]
-cat(sprintf("  NACE4d with classifiable omega: %d  (median = %.4f)\n",
-            nrow(omega_nace), med_omega))
+# Top-quartile split (top 25% of omega among classifiable ETS-treated NACE4d)
+q75_omega <- quantile(omega_nace$omega, 0.75, na.rm = TRUE)
+omega_nace[, top_q_omega := as.integer(omega > q75_omega)]
+cat(sprintf("  NACE4d with classifiable omega: %d  (median = %.4f, Q75 = %.4f)\n",
+            nrow(omega_nace), med_omega, q75_omega))
 cat(sprintf("  high_omega == 1: %d   high_omega == 0: %d\n",
             sum(omega_nace$high_omega == 1L),
             sum(omega_nace$high_omega == 0L)))
+cat(sprintf("  top_q_omega == 1: %d   classifiable ETS but not top_q: %d\n",
+            sum(omega_nace$top_q_omega == 1L),
+            sum(omega_nace$top_q_omega == 0L)))
 
 # Long-form NACE4d attribute table
 nace_attr <- data.table(nace4d = unique(b2b$seller_nace4d[!is.na(b2b$seller_nace4d)]))
 nace_attr[, ets_treated := as.integer(nace4d %in% ets_treated_nace4d)]
 nace_attr <- merge(nace_attr,
-                   omega_nace[, .(nace4d, omega, high_omega)],
+                   omega_nace[, .(nace4d, omega, high_omega, top_q_omega)],
                    by = "nace4d", all.x = TRUE)
 
 # ---------------------------------------------------------------------------
@@ -248,9 +267,15 @@ build_panel <- function(spec) {
   # Cell inclusion: (buyer, NACE4d) pairs where buyer bought from NACE4d
   # in any pre-year. NACE4d sample depends on treatment_kind.
   if (spec$treatment_kind == "ets") {
-    eligible_nace <- nace_attr$nace4d   # ETS-treated U non-ETS
-  } else {  # "omega"
-    eligible_nace <- nace_attr[!is.na(high_omega), nace4d]  # ETS-treated with omega
+    eligible_nace <- nace_attr$nace4d                       # ETS-treated U non-ETS
+  } else if (spec$treatment_kind == "omega") {
+    eligible_nace <- nace_attr[!is.na(high_omega), nace4d]  # ETS-treated with classifiable omega
+  } else if (spec$treatment_kind == "top_q_omega_vs_nonets") {
+    # Top-quartile omega (among classifiable ETS-NACE4d) PLUS all non-ETS
+    eligible_nace <- nace_attr[(!is.na(top_q_omega) & top_q_omega == 1L) |
+                               ets_treated == 0L, nace4d]
+  } else {
+    stop("Unknown treatment_kind: ", spec$treatment_kind)
   }
 
   pre_cells <- buyer_nace_year[year %in% spec$pre_years &
@@ -273,12 +298,17 @@ build_panel <- function(spec) {
   panel[, share := spend / total_spend]
 
   # Attach treatment label
-  panel <- merge(panel, nace_attr[, .(nace4d, ets_treated, high_omega)],
+  panel <- merge(panel, nace_attr[, .(nace4d, ets_treated, high_omega, top_q_omega)],
                  by = "nace4d", all.x = TRUE)
   if (spec$treatment_kind == "ets") {
     panel[, treatment := ets_treated]
-  } else {
+  } else if (spec$treatment_kind == "omega") {
     panel[, treatment := high_omega]
+  } else if (spec$treatment_kind == "top_q_omega_vs_nonets") {
+    # 1 if top-quartile omega ETS NACE4d; 0 if non-ETS NACE4d
+    panel[, treatment := fifelse(!is.na(top_q_omega) & top_q_omega == 1L, 1L,
+                                 fifelse(ets_treated == 0L, 0L, NA_integer_))]
+    panel <- panel[!is.na(treatment)]
   }
   panel[, post       := as.integer(year >= spec$treat_year)]
   panel[, cell_id    := paste(buyer, nace4d, sep = "::")]
@@ -335,11 +365,11 @@ write_tex_table(coefs,
                 caption = "Across-NACE4d intensive-margin DiD on buyer portfolio share. 2005 event: binary ETS-treated vs non-ETS. 2017 variants: high-omega vs low-omega within ETS-treated.")
 
 # ---------------------------------------------------------------------------
-# 5b. Paper-ready table -- two events (2005, 2017-sym) x two FE specs,
-# headline numbers only (matches the paper-side mirror of the within-NACE4d
-# combined table).
+# 5b. Paper-ready table -- single FE column (NACE2d x year), three rows
+# (2005 ETS, 2017 high vs low, 2017 top-quartile vs non-ETS).
 # ---------------------------------------------------------------------------
-headline_variants <- c("2005", "2017-sym")
+headline_variants <- c("2005", "2017-sym", "2017-topq-vs-nonets")
+PAPER_FE_SPEC     <- "nace2dxyear"   # single FE column shown in the paper table
 
 format_cell <- function(est, se, pval, n) {
   stars <- ifelse(pval < 0.001, "$^{***}$",
@@ -360,46 +390,40 @@ format_cell <- function(est, se, pval, n) {
           est_str, stars, se_str, n_str)
 }
 
-paper_rows <- list()
+variant_labels <- c(
+  "2005"               = "2005 event \\\\ \\footnotesize{(ETS-treated vs non-ETS)}",
+  "2017-sym"           = "2017 event \\\\ \\footnotesize{(high-$\\omega$ vs low-$\\omega$, within ETS)}",
+  "2017-topq-vs-nonets"= "2017 event \\\\ \\footnotesize{(top-quartile $\\omega$ vs non-ETS)}"
+)
+
+paper_rows <- character(0)
 for (v in headline_variants) {
-  cells_row <- character(0)
-  for (fe_lab in names(FE_SPECS)) {
-    row <- coefs[coefs$variant == v & coefs$fe_spec == fe_lab, ]
-    if (nrow(row) != 1L) {
-      cells_row <- c(cells_row, "--")
-    } else {
-      cells_row <- c(cells_row,
-                     format_cell(row$estimate, row$std_error,
-                                 row$p_value, row$n_obs))
-    }
-  }
-  variant_label <- switch(v,
-    "2005"     = "2005 event \\\\ \\footnotesize{(ETS-treated vs non-ETS)}",
-    "2017-sym" = "2017 event \\\\ \\footnotesize{(high-$\\omega$ vs low-$\\omega$)}",
-    v)
-  paper_rows[[v]] <- paste0(
-    "\\makecell[l]{", variant_label, "} & ",
-    paste(cells_row, collapse = " & "),
-    " \\\\\\addlinespace"
-  )
+  row <- coefs[coefs$variant == v & coefs$fe_spec == PAPER_FE_SPEC, ]
+  cell <- if (nrow(row) != 1L) "--" else
+    format_cell(row$estimate, row$std_error, row$p_value, row$n_obs)
+  paper_rows <- c(paper_rows,
+                  paste0("\\makecell[l]{", variant_labels[[v]], "} & ",
+                         cell, " \\\\\\addlinespace"))
 }
 
 paper_tex <- c(
   "% Requires \\usepackage{makecell,booktabs} in main.tex",
   "% Across-NACE4d intensive-margin DiD: headline static-DiD coefficients.",
-  "\\begin{tabular}{lcc}",
+  "% Single FE specification: cell + NACE2d x year (absorbs sector-aggregate cycles).",
+  "\\begin{tabular}{lc}",
   "\\toprule",
-  " & Cell + year FE & Cell + NACE2d $\\times$ year FE \\\\",
+  " & Cell + NACE2d $\\times$ year FE \\\\",
   "\\midrule",
-  paper_rows[["2005"]],
-  paper_rows[["2017-sym"]],
+  paper_rows,
   "\\bottomrule",
   "\\end{tabular}",
   "% Notes: Outcome is buyer's share of total B2B spend directed at NACE4d $n$.",
-  "% Unit of observation is buyer $\\times$ NACE4d $\\times$ year.",
-  "% 2005 event uses regression window 2002--2022 with NACE4d sample = ETS-treated $\\cup$ non-ETS.",
-  "% 2017 event uses the 2017-sym window (2012--2022) with NACE4d sample = ETS-treated and $\\omega$ measured over 2015--2016 EUTL.",
-  "% Cluster-robust SE in parentheses (cluster = buyer $\\times$ NACE4d cell).",
+  "% Unit of observation is buyer $\\times$ NACE4d $\\times$ year. Cell = buyer $\\times$ NACE4d.",
+  "% 2005 event: regression window 2002--2022, NACE4d sample = ETS-treated $\\cup$ non-ETS.",
+  "% 2017 high-vs-low: regression window 2012--2022, NACE4d sample = ETS-treated with classifiable $\\omega$, median split.",
+  "% 2017 top-quartile vs non-ETS: regression window 2012--2022, NACE4d sample = top-25\\% $\\omega$ ETS-treated $\\cup$ non-ETS (ETS NACE4d below Q75 dropped).",
+  "% $\\omega_n$ aggregated to NACE4d from firm-level shortage / total cost over 2015--2016 EUTL.",
+  "% Cluster-robust SE in parentheses (cluster = cell).",
   "% Significance: $^{\\dagger}\\,p<0.10$, $^{*}\\,p<0.05$, $^{**}\\,p<0.01$, $^{***}\\,p<0.001$."
 )
 writeLines(paper_tex,
@@ -469,48 +493,39 @@ fwrite(es_coefs_plot,
 # ---------------------------------------------------------------------------
 # 7. Event-study figure
 # ---------------------------------------------------------------------------
-fe_labels <- c(
-  "base"        = "Cell + year FE",
-  "nace2dxyear" = "Cell + NACE2d × year FE"
-)
 event_lab_lookup <- list(
   "2005" = "2005 event: ETS-treated vs non-ETS",
   "2017" = "2017 event: high-ω vs low-ω"
 )
-es_coefs_plot[, event_lab := factor(unlist(event_lab_lookup[event]),
-                                    levels = unlist(event_lab_lookup))]
-es_coefs_plot[, fe_lab    := factor(fe_labels[fe_spec], levels = fe_labels)]
+# Paper figure shows only the NACE2d x year FE specification (the one with
+# absorbed sector-aggregate cycles, i.e. credible pre-trends).
+es_coefs_paper <- es_coefs_plot[fe_spec == "nace2dxyear"]
+es_coefs_paper[, event_lab := factor(unlist(event_lab_lookup[event]),
+                                     levels = unlist(event_lab_lookup))]
 
-dodge <- position_dodge(width = 0.35)
-
-p <- ggplot(es_coefs_plot,
-            aes(x = tau, y = estimate, color = fe_lab, shape = fe_lab)) +
+p <- ggplot(es_coefs_paper,
+            aes(x = tau, y = estimate)) +
   geom_hline(yintercept = 0, linetype = "dotted", color = "grey40") +
   geom_vline(xintercept = -0.5, linetype = "dotted", color = "grey40") +
   geom_errorbar(aes(ymin = ci_lo, ymax = ci_hi),
-                width = 0.15, position = dodge) +
-  geom_point(size = 2.2, position = dodge) +
+                width = 0.15, color = "#1f77b4") +
+  geom_point(size = 2.4, color = "#1f77b4") +
   facet_wrap(~ event_lab, scales = "free_x") +
-  scale_color_manual(values = setNames(c("#1f77b4", "#d62728"),
-                                       fe_labels)) +
-  scale_shape_manual(values = setNames(c(16, 17), fe_labels)) +
   labs(x = expression(tau ~ "(years from treatment)"),
-       y = expression(beta[tau]),
-       color = NULL, shape = NULL) +
+       y = expression(beta[tau])) +
   theme_classic(base_size = 12) +
   theme(strip.text       = element_text(face = "bold"),
         strip.background = element_rect(fill = "grey95", color = "grey80"),
-        legend.position  = "bottom",
         panel.border     = element_rect(color = "grey80", fill = NA))
 
 # Use Cairo to embed Unicode (ω, ×) reliably across devices.
 ggsave(file.path(OUTPUT_FIG,
                  "phase4_across_nace4d_intensive_DiD.png"),
-       p, width = 10, height = 4.2, dpi = 200,
+       p, width = 10, height = 4.0, dpi = 200,
        type = "cairo")
 ggsave(file.path(OUTPUT_FIG,
                  "phase4_across_nace4d_intensive_DiD.pdf"),
-       p, width = 10, height = 4.2,
+       p, width = 10, height = 4.0,
        device = cairo_pdf)
 
 cat("\nDone.\n")
