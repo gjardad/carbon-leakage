@@ -24,17 +24,23 @@
 #                          + alpha_buyer + gamma_NACE4d + eps_ij
 #         SEs clustered two-way at buyer x supplier-NACE4d.
 #         Coefficients e = -5,...,-2 trace the pre-trend; e = 0,...,+5
-#         trace the post effect.
+#         trace the post effect. Two specs reported side-by-side:
+#           base   - no supplier-level controls
+#           tenure - add supplier_tenure = year_first - supplier_first_b2b_year
+#                    as a continuous control. Absorbs survivor-bias selection
+#                    in the tau-1-fixed-rank LHS (pairs at rel_year = -5
+#                    require the supplier to have persisted 5+ years).
 #
 #   (2) Pooled post indicator:
-#         rank_ij,tau-1  =  beta * 1{year_first >= tau}
+#         rank_ij,tau-1  =  beta * 1{year_first >= tau} (+ supplier_tenure)
 #                          + alpha_buyer + gamma_NACE4d + eps_ij
-#         beta is the average post-tau shift.
+#         beta is the average post-tau shift. Reported for {base, tenure}.
 #
 #   (3) LOO-drop-3511 robustness: same as (2) but dropping NACE 3511
-#       (electricity). On RMD the full-sample 2013 LOO showed 3511 is the
-#       only sector whose removal flips the sign -- the basic null should
-#       become even cleaner without it.
+#       (electricity). On the 3-event spec the full-sample 2013 LOO showed
+#       3511 is the only sector whose removal flips the sign -- the basic
+#       null should become even cleaner without it. Also run for {base,
+#       tenure}.
 #
 # OUTPUTS
 #   - phase4_new_relationships_omega_rank_did_event_study_<tau>.{png,pdf}
@@ -98,6 +104,15 @@ b2b <- b2b[year %between% c(B2B_YEAR_LO, B2B_YEAR_HI) &
              buyer  = as.character(buyer),
              year   = as.integer(year))]
 
+# Supplier B2B tenure control: first year the supplier appears anywhere in
+# B2B (across all sectors). Used to absorb survivor-bias selection in the
+# tau-1-fixed-rank LHS: pairs in rel_year = -5 require the supplier to have
+# been around for 5+ years before tau, which selects on a non-random subset
+# of long-tenured suppliers. Cross-supplier tenure variation identifies the
+# control.
+supplier_first_b2b <- b2b[, .(supplier_first_b2b_year = min(year)),
+                          by = seller]
+
 load(file.path(PROC_DATA, "annual_accounts_selected_sample.RData"))
 aa <- as.data.table(df_annual_accounts_selected_sample)[, .(
   vat = as.character(vat_ano),
@@ -141,8 +156,10 @@ new_rel <- merge(new_rel,
                  b2b[, .(buyer, seller, year, seller_nace4d)],
                  by.x = c("buyer", "seller", "year_first"),
                  by.y = c("buyer", "seller", "year"))
-cat(sprintf("  new relationships %d-%d: %d\n",
-            B2B_YEAR_LO + 1L, B2B_YEAR_HI, nrow(new_rel)))
+new_rel <- merge(new_rel, supplier_first_b2b, by = "seller", all.x = TRUE)
+cat(sprintf("  new relationships %d-%d: %d (%.1f%% have supplier_first_b2b_year)\n",
+            B2B_YEAR_LO + 1L, B2B_YEAR_HI, nrow(new_rel),
+            100 * mean(!is.na(new_rel$supplier_first_b2b_year))))
 
 # ---------------------------------------------------------------------------
 # 2. Helper: build LHS panel for a given tau and run regressions
@@ -170,63 +187,98 @@ run_one_tau <- function(tau) {
   d <- merge(d, rank_at,
              by = c("seller", "seller_nace4d"))
   d[, rel_year := year_first - tau]
+  d[, supplier_tenure := year_first - supplier_first_b2b_year]
   cat(sprintf("  in-sample new pairs in [%d, %d]: %d (%d buyers, %d sellers, %d NACE4d)\n",
               window[1], window[2], nrow(d),
               uniqueN(d$buyer), uniqueN(d$seller), uniqueN(d$seller_nace4d)))
+  cat(sprintf("  supplier_tenure summary: min=%d, mean=%.1f, max=%d, frac with NA=%.3f\n",
+              suppressWarnings(min(d$supplier_tenure, na.rm = TRUE)),
+              mean(d$supplier_tenure, na.rm = TRUE),
+              suppressWarnings(max(d$supplier_tenure, na.rm = TRUE)),
+              mean(is.na(d$supplier_tenure))))
 
-  # Event study
+  # Event study, two specs: base and with supplier_tenure control
   m_es <- feols(rank_fixed ~ i(rel_year, ref = -1) | buyer + seller_nace4d,
                 cluster = ~ buyer + seller_nace4d,
                 data = d)
+  m_es_tenure <- feols(rank_fixed ~ i(rel_year, ref = -1) + supplier_tenure |
+                         buyer + seller_nace4d,
+                       cluster = ~ buyer + seller_nace4d,
+                       data = d)
 
-  # Pooled post indicator
+  # Pooled DiD: 4 specs = {full, drop NACE 3511} x {base, tenure}
   d[, post := as.integer(rel_year >= 0L)]
-  m_did <- feols(rank_fixed ~ post | buyer + seller_nace4d,
-                 cluster = ~ buyer + seller_nace4d,
-                 data = d)
-
-  # Drop NACE 3511 (electricity) robustness
   d_no3511 <- d[seller_nace4d != "3511"]
-  m_did_no3511 <- feols(rank_fixed ~ post | buyer + seller_nace4d,
-                        cluster = ~ buyer + seller_nace4d,
-                        data = d_no3511)
+  m_did               <- feols(rank_fixed ~ post |
+                                 buyer + seller_nace4d,
+                               cluster = ~ buyer + seller_nace4d, data = d)
+  m_did_tenure        <- feols(rank_fixed ~ post + supplier_tenure |
+                                 buyer + seller_nace4d,
+                               cluster = ~ buyer + seller_nace4d, data = d)
+  m_did_no3511        <- feols(rank_fixed ~ post |
+                                 buyer + seller_nace4d,
+                               cluster = ~ buyer + seller_nace4d, data = d_no3511)
+  m_did_no3511_tenure <- feols(rank_fixed ~ post + supplier_tenure |
+                                 buyer + seller_nace4d,
+                               cluster = ~ buyer + seller_nace4d, data = d_no3511)
 
-  cat("\n  Event study coefficients (ref = -1):\n")
+  cat("\n  Event study (base):\n")
   print(coeftable(m_es))
-  cat("\n  Pooled DiD (full sample):\n")
-  print(coeftable(m_did))
-  cat(sprintf("\n  Pooled DiD (drop NACE 3511, n=%d):\n",
-              nrow(d_no3511)))
+  cat("\n  Event study (+ supplier_tenure):\n")
+  print(coeftable(m_es_tenure))
+  cat("\n  Pooled DiD (full sample, base):\n");          print(coeftable(m_did))
+  cat("\n  Pooled DiD (full sample, + tenure):\n");      print(coeftable(m_did_tenure))
+  cat(sprintf("\n  Pooled DiD (drop NACE 3511, base, n=%d):\n", nrow(d_no3511)))
   print(coeftable(m_did_no3511))
+  cat(sprintf("\n  Pooled DiD (drop NACE 3511, + tenure, n=%d):\n", nrow(d_no3511)))
+  print(coeftable(m_did_no3511_tenure))
 
-  # Return tidied results
-  es_tbl <- as.data.table(coeftable(m_es), keep.rownames = "term")
-  setnames(es_tbl,
-           c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
-           c("estimate", "se", "t", "p"))
-  es_tbl[, term := gsub("^rel_year::", "", term)]
-  es_tbl[, rel_year := as.integer(term)]
-  es_tbl[, tau := tau]
-  # Add the omitted reference row
-  es_tbl <- rbind(es_tbl,
-                  data.table(term = "-1", estimate = 0, se = NA_real_,
-                             t = NA_real_, p = NA_real_,
-                             rel_year = -1L, tau = tau),
-                  fill = TRUE)
-  setorder(es_tbl, rel_year)
-  es_tbl[, ci_lo := estimate - 1.96 * se]
-  es_tbl[, ci_hi := estimate + 1.96 * se]
+  # Tidy event-study results for both specs
+  tidy_es <- function(fit, spec_label) {
+    es <- as.data.table(coeftable(fit), keep.rownames = "term")
+    setnames(es,
+             c("Estimate", "Std. Error", "t value", "Pr(>|t|)"),
+             c("estimate", "se", "t", "p"))
+    # Keep only rel_year coefficients (drop supplier_tenure if present)
+    es <- es[grepl("^rel_year::", term)]
+    es[, term := gsub("^rel_year::", "", term)]
+    es[, rel_year := as.integer(term)]
+    es[, tau := tau]
+    es[, spec := spec_label]
+    es <- rbind(es,
+                data.table(term = "-1", estimate = 0, se = NA_real_,
+                           t = NA_real_, p = NA_real_,
+                           rel_year = -1L, tau = tau, spec = spec_label),
+                fill = TRUE)
+    setorder(es, rel_year)
+    es[, ci_lo := estimate - 1.96 * se]
+    es[, ci_hi := estimate + 1.96 * se]
+    es
+  }
+  es_tbl <- rbindlist(list(
+    tidy_es(m_es,        "base"),
+    tidy_es(m_es_tenure, "tenure")
+  ), use.names = TRUE)
 
   did_tbl <- data.table(
-    tau = tau, sample = c("full", "drop NACE 3511"),
-    n_obs = c(m_did$nobs, m_did_no3511$nobs),
-    beta  = c(coef(m_did)["post"], coef(m_did_no3511)["post"]),
-    se    = c(se(m_did)["post"],   se(m_did_no3511)["post"]),
-    p     = c(pvalue(m_did)["post"], pvalue(m_did_no3511)["post"])
+    tau    = tau,
+    sample = c("full", "full", "drop NACE 3511", "drop NACE 3511"),
+    spec   = c("base", "tenure", "base", "tenure"),
+    n_obs  = c(m_did$nobs, m_did_tenure$nobs,
+               m_did_no3511$nobs, m_did_no3511_tenure$nobs),
+    beta   = c(coef(m_did)["post"], coef(m_did_tenure)["post"],
+               coef(m_did_no3511)["post"], coef(m_did_no3511_tenure)["post"]),
+    se     = c(se(m_did)["post"], se(m_did_tenure)["post"],
+               se(m_did_no3511)["post"], se(m_did_no3511_tenure)["post"]),
+    p      = c(pvalue(m_did)["post"], pvalue(m_did_tenure)["post"],
+               pvalue(m_did_no3511)["post"], pvalue(m_did_no3511_tenure)["post"])
   )
 
-  list(es = es_tbl, did = did_tbl, m_es = m_es,
-       m_did = m_did, m_did_no3511 = m_did_no3511)
+  list(es = es_tbl, did = did_tbl,
+       m_es = m_es, m_es_tenure = m_es_tenure,
+       m_did = m_did, m_did_tenure = m_did_tenure,
+       m_did_no3511 = m_did_no3511,
+       m_did_no3511_tenure = m_did_no3511_tenure)
 }
 
 # ---------------------------------------------------------------------------
@@ -269,19 +321,31 @@ base_theme <- theme_minimal(base_size = 11) +
 for (this_tau in TAUS) {
   this_ref <- ref_year_for_tau(this_tau)
   d_es <- es_all[tau == this_tau]
-  p <- ggplot(d_es, aes(x = rel_year, y = estimate)) +
+  # Dodge base vs tenure specs side by side at each rel_year
+  d_es[, spec_lab := factor(spec,
+                            levels = c("base", "tenure"),
+                            labels = c("Base (buyer + NACE4d FE)",
+                                       "+ Supplier B2B tenure"))]
+  p <- ggplot(d_es,
+              aes(x = rel_year, y = estimate,
+                  color = spec_lab, group = spec_lab)) +
     geom_hline(yintercept = 0, linetype = "dotted", color = "grey30") +
     geom_vline(xintercept = -0.5, linetype = "dashed", color = "firebrick") +
     geom_errorbar(aes(ymin = ci_lo, ymax = ci_hi),
-                  width = 0.2, color = "steelblue") +
-    geom_point(color = "steelblue", size = 2) +
+                  width = 0.25,
+                  position = position_dodge(width = 0.4)) +
+    geom_point(size = 2, position = position_dodge(width = 0.4)) +
     scale_x_continuous(breaks = seq(-WINDOW, WINDOW, 1)) +
+    scale_color_manual(values = c("Base (buyer + NACE4d FE)" = "steelblue",
+                                  "+ Supplier B2B tenure"   = "firebrick"),
+                       name = NULL) +
     labs(title    = sprintf("Event study: new-supplier omega-rank around tau = %d (LHS fixed at %d, Def 1)",
                             this_tau, this_ref),
          subtitle = "Coefficients on rel_year dummies (ref = -1). 95% CIs from two-way clustered SEs (buyer, supplier-NACE4d).",
          x = sprintf("Year relative to tau = %d", this_tau),
          y = sprintf("Coefficient on supplier rank fixed at %d", this_ref)) +
-    base_theme
+    base_theme +
+    theme(legend.position = "bottom")
 
   ggsave(file.path(OUTPUT_FIG,
                    sprintf("phase4_new_relationships_omega_rank_did_event_study_%d.png", this_tau)),
