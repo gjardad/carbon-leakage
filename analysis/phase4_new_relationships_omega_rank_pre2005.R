@@ -60,7 +60,7 @@ YEAR_LO_EXT <- 2002L
 YEAR_LO     <- 2003L         # first year of "new pair" observations
 YEAR_HI     <- 2022L
 N_BOOT      <- 1000L
-EVENT_YEARS <- c(2008L, 2013L, 2017L)
+EVENT_YEARS <- c(2005L, 2017L)
 BASELINE_YEAR <- 2005L
 
 # ---------------------------------------------------------------------------

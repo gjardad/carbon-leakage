@@ -73,10 +73,10 @@ write_tex_table <- function(dt, file, digits = 4, caption = NULL) {
 
 set.seed(20260508)
 
-YEAR_LO <- 2005L
+YEAR_LO <- 2002L  # B2B panel start; pairs first observed in 2002 are dropped as left-censored
 YEAR_HI <- 2022L
 N_BOOT  <- 1000L
-EVENT_YEARS <- c(2008L, 2013L, 2017L)
+EVENT_YEARS <- c(2005L, 2017L)
 PRE_POST_WINDOW <- 5L
 
 # ---------------------------------------------------------------------------

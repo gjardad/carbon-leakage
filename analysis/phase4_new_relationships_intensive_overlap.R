@@ -47,7 +47,7 @@ set.seed(20260511)
 
 YEAR_LO     <- 2005L
 YEAR_HI     <- 2022L
-EVENT_YEARS <- c(2008L, 2013L, 2017L)
+EVENT_YEARS <- c(2005L, 2017L)
 
 # ---------------------------------------------------------------------------
 # 1. Load data (B2B with sales kept this time)

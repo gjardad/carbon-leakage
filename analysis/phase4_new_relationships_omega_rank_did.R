@@ -2,13 +2,17 @@
 # phase4_new_relationships_omega_rank_did.R
 #
 # PURPOSE
-#   Formal DiD / event study around the three ETS event years (Phase II 2008,
-#   Phase III auctioning 2013, MSR decision 2017). For each tau in
-#   {2008, 2013, 2017}, the LHS is the supplier's within-NACE4d allowance-
-#   shortage rank (Def 1: shortage / total_cost) FIXED at year tau-1. This
-#   strips out within-firm omega evolution entirely -- any movement in
-#   coefficients across event-time is composition (which suppliers buyers
-#   pick), not suppliers cleaning up.
+#   Formal DiD / event study around the two ETS event years (Phase I launch
+#   2005, MSR decision 2017). For tau = 2017, LHS is the supplier's
+#   within-NACE4d allowance-shortage rank (Def 1: shortage / total_cost)
+#   FIXED at year tau-1 = 2016. This strips out within-firm omega evolution
+#   entirely -- any movement in coefficients across event-time is composition
+#   (which suppliers buyers pick), not suppliers cleaning up.
+#   For tau = 2005 the LHS is fixed at year 2005 (EUTL data starts in 2005;
+#   no pre-period rank exists). Interpretation at tau = 2005 mixes the
+#   composition channel with first-year omega noise, but the dominant
+#   identification still asks: are buyers picking systematically different
+#   suppliers post-policy?
 #
 #   Sample: every new (buyer, supplier, year_first) omega-matched pair with
 #   year_first in [tau - WINDOW, tau + WINDOW] and a non-missing tau-1 rank
@@ -55,10 +59,17 @@ suppressPackageStartupMessages({
 
 set.seed(20260512)
 
-TAUS   <- c(2008L, 2013L, 2017L)
+TAUS   <- c(2005L, 2017L)
 WINDOW <- 5L
 B2B_YEAR_LO <- 2002L
 B2B_YEAR_HI <- 2022L
+
+# Reference year for the LHS-fixed rank.
+#   tau = 2017 -> ref_year = 2016 (pre-treatment, strips within-firm omega evolution)
+#   tau = 2005 -> ref_year = 2005 (EUTL starts in 2005; no pre-period data available)
+ref_year_for_tau <- function(tau) {
+  if (tau == 2005L) 2005L else tau - 1L
+}
 
 write_tex_table <- function(dt, file, digits = 4, caption = NULL) {
   x <- xtable(as.data.frame(dt), digits = digits, caption = caption)
@@ -137,7 +148,7 @@ cat(sprintf("  new relationships %d-%d: %d\n",
 # 2. Helper: build LHS panel for a given tau and run regressions
 # ---------------------------------------------------------------------------
 build_rank_at <- function(tau) {
-  ref_year <- tau - 1L
+  ref_year <- ref_year_for_tau(tau)
   d <- fe[year == ref_year & !is.na(omega1)]
   if (nrow(d) == 0L) stop(sprintf("No firm_exposure rows in ref_year %d", ref_year))
   d[, rank_fixed := frank(omega1, ties.method = "average") / .N, by = nace4d]
@@ -146,11 +157,12 @@ build_rank_at <- function(tau) {
 }
 
 run_one_tau <- function(tau) {
-  cat(sprintf("\n========== tau = %d (ref year %d) ==========\n", tau, tau - 1L))
+  ref_year <- ref_year_for_tau(tau)
+  cat(sprintf("\n========== tau = %d (ref year %d) ==========\n", tau, ref_year))
 
   rank_at <- build_rank_at(tau)
   cat(sprintf("  rankable suppliers in %d: %d (across %d NACE4d)\n",
-              tau - 1L, nrow(rank_at), uniqueN(rank_at$seller_nace4d)))
+              ref_year, nrow(rank_at), uniqueN(rank_at$seller_nace4d)))
 
   # New pairs in window, with a rank in tau-1
   window <- c(tau - WINDOW, tau + WINDOW)
@@ -255,6 +267,7 @@ base_theme <- theme_minimal(base_size = 11) +
   theme(panel.grid.minor = element_blank())
 
 for (this_tau in TAUS) {
+  this_ref <- ref_year_for_tau(this_tau)
   d_es <- es_all[tau == this_tau]
   p <- ggplot(d_es, aes(x = rel_year, y = estimate)) +
     geom_hline(yintercept = 0, linetype = "dotted", color = "grey30") +
@@ -264,10 +277,10 @@ for (this_tau in TAUS) {
     geom_point(color = "steelblue", size = 2) +
     scale_x_continuous(breaks = seq(-WINDOW, WINDOW, 1)) +
     labs(title    = sprintf("Event study: new-supplier omega-rank around tau = %d (LHS fixed at %d, Def 1)",
-                            this_tau, this_tau - 1L),
+                            this_tau, this_ref),
          subtitle = "Coefficients on rel_year dummies (ref = -1). 95% CIs from two-way clustered SEs (buyer, supplier-NACE4d).",
          x = sprintf("Year relative to tau = %d", this_tau),
-         y = sprintf("Coefficient on supplier rank fixed at %d", this_tau - 1L)) +
+         y = sprintf("Coefficient on supplier rank fixed at %d", this_ref)) +
     base_theme
 
   ggsave(file.path(OUTPUT_FIG,
