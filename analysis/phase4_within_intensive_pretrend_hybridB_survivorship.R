@@ -1,0 +1,328 @@
+###############################################################################
+# phase4_within_intensive_pretrend_hybridB_survivorship.R
+#
+# PURPOSE
+#   Survivorship robustness for the Hybrid B + portfolio-bot trajectory.
+#   The post-2014 widening that remains after the Hybrid B + portfolio-bot
+#   fix may be a measurement artifact of differential attrition between
+#   top-ω and bot-ω suppliers (ω=0 suppliers in the 2010-14 pool are smaller
+#   and more fragile, so they dissolve faster for non-carbon reasons). The
+#   portfolio bot averages across all 2010-14 ω=0 suppliers and imputes 0
+#   for dissolved relationships — so attrition mechanically depresses the
+#   bot trajectory.
+#
+#   This script re-runs the τ=2017 Hybrid B + portfolio-bot construction
+#   under two variants:
+#
+#     (i)  Bot-side filter: bot pool restricted to ω=0 suppliers with
+#          positive sales to the buyer in SURVIVE_YEAR (= 2018).
+#          Top supplier unchanged.
+#
+#     (ii) Symmetric filter (recommended for interpretation): both top
+#          and bot restricted to suppliers with positive sales to the
+#          buyer in SURVIVE_YEAR. Holds the relationship-attrition channel
+#          constant for both sides.
+#
+#   Outputs:
+#     - 2-panel trajectory figure with both variants (bot-only / symmetric).
+#     - Sample-size diagnostic per panel.
+#     - CSV with the trajectories.
+#
+# RUN ON RMD
+#   git pull, then:
+#     Rscript analysis/phase4_within_intensive_pretrend_hybridB_survivorship.R
+#   Writes to output_rmd/figures and output_rmd/tables. git add + commit + push.
+#
+# DEPENDENCIES (same as phase4_within_intensive_pretrend_hybridB_final.R)
+###############################################################################
+
+rm(list = ls())
+
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
+
+suppressPackageStartupMessages({
+  library(data.table)
+  library(ggplot2)
+})
+
+set.seed(20260518)
+
+YEAR_LO      <- 2002L
+YEAR_HI      <- 2022L
+PRE_WINDOW   <- 2010L:2014L
+OMEGA_WIN    <- c(2015L, 2016L)
+TREAT_YEAR   <- 2017L
+SURVIVE_YEAR <- 2018L
+
+# ---------------------------------------------------------------------------
+# Load data (same as the main figure script)
+# ---------------------------------------------------------------------------
+cat("Loading data...\n")
+load(file.path(PROC_DATA, "b2b_selected_sample.RData"))
+b2b <- as.data.table(df_b2b_selected_sample)
+rm(df_b2b_selected_sample)
+setnames(b2b,
+         old = c("vat_i_ano", "vat_j_ano", "corr_sales_ij"),
+         new = c("seller", "buyer", "sales"),
+         skip_absent = TRUE)
+b2b <- b2b[year %between% c(YEAR_LO, YEAR_HI) & !is.na(sales) & sales > 0,
+           .(seller = as.character(seller),
+             buyer  = as.character(buyer),
+             year   = as.integer(year),
+             sales)]
+
+load(file.path(PROC_DATA, "annual_accounts_selected_sample.RData"))
+aa <- as.data.table(df_annual_accounts_selected_sample)[, .(
+  vat = as.character(vat_ano), year = as.integer(year),
+  nace4d = substr(nace5d, 1, 4))]
+rm(df_annual_accounts_selected_sample)
+aa <- unique(aa[!is.na(nace4d) & nace4d != ""])
+
+load(file.path(OUT_DATA, "phase3_firm_exposure.RData"))
+fe <- as.data.table(firm_exposure)[, .(vat = as.character(vat),
+                                       year, shortage, total_cost)]
+rm(firm_exposure)
+fe[, omega_sh := ifelse(!is.na(total_cost) & total_cost > 0,
+                        pmax(shortage, 0) / total_cost, NA_real_)]
+
+b2b <- merge(b2b, aa, by.x = c("seller", "year"), by.y = c("vat", "year"),
+             all.x = TRUE)
+setnames(b2b, "nace4d", "seller_nace4d")
+b2b <- b2b[!is.na(seller_nace4d) & seller_nace4d != ""]
+b2b[, total_buyer_nace4d_spend := sum(sales),
+    by = .(buyer, seller_nace4d, year)]
+
+# ---------------------------------------------------------------------------
+# Hybrid B pool + omega + top + bot pool (same as hybridB_final.R)
+# ---------------------------------------------------------------------------
+cat("Building Hybrid B pool (pre-window 2010-2014, any year)...\n")
+pre_active <- b2b[year %in% PRE_WINDOW,
+                  .(pre_sales = sum(sales)),
+                  by = .(buyer, seller_nace4d, seller)]
+omega_byvat <- fe[year %in% OMEGA_WIN,
+                  .(omega_anchor = mean(omega_sh, na.rm = TRUE)),
+                  by = vat]
+pre_active <- merge(pre_active, omega_byvat,
+                    by.x = "seller", by.y = "vat", all.x = TRUE)
+pre_active[is.na(omega_anchor), omega_anchor := 0]
+
+cell_ok <- pre_active[, .(n = .N, max_omega = max(omega_anchor)),
+                      by = .(buyer, seller_nace4d)][n >= 2L & max_omega > 0]
+pool <- merge(pre_active, cell_ok[, .(buyer, seller_nace4d)],
+              by = c("buyer", "seller_nace4d"))
+
+setorder(pool, buyer, seller_nace4d, -omega_anchor, -pre_sales, seller)
+pool[, rk := seq_len(.N), by = .(buyer, seller_nace4d)]
+top_sup <- pool[rk == 1L, .(buyer, seller_nace4d,
+                            top_supplier = seller,
+                            omega_top    = omega_anchor)]
+bot_pool <- pool[omega_anchor == 0,
+                 .(buyer, seller_nace4d, seller)]
+cat(sprintf("  Hybrid B cells: %d  |  ω=0 suppliers: %d\n",
+            nrow(cell_ok), nrow(bot_pool)))
+
+# ---------------------------------------------------------------------------
+# Survivorship filter: positive sales in SURVIVE_YEAR
+# ---------------------------------------------------------------------------
+cat(sprintf("Applying survivorship filter (positive sales in %d)...\n",
+            SURVIVE_YEAR))
+survive_pairs <- b2b[year == SURVIVE_YEAR & sales > 0,
+                     .(buyer, seller_nace4d, seller)]
+survive_pairs[, surviving := TRUE]
+
+# Bot pool with survival filter
+bot_pool_surv <- merge(bot_pool, survive_pairs,
+                       by = c("buyer", "seller_nace4d", "seller"))
+# Top supplier with survival filter
+top_sup_surv <- merge(top_sup,
+                      survive_pairs[, .(buyer, seller_nace4d, seller)],
+                      by.x = c("buyer", "seller_nace4d", "top_supplier"),
+                      by.y = c("buyer", "seller_nace4d", "seller"))
+
+cat(sprintf("  Surviving ω=0 suppliers (in cells)        : %d / %d (%.1f%%)\n",
+            nrow(bot_pool_surv), nrow(bot_pool),
+            100 * nrow(bot_pool_surv) / nrow(bot_pool)))
+cat(sprintf("  Surviving top-ω suppliers (cells)         : %d / %d (%.1f%%)\n",
+            nrow(top_sup_surv), nrow(top_sup),
+            100 * nrow(top_sup_surv) / nrow(top_sup)))
+
+# ---------------------------------------------------------------------------
+# Trajectory helpers
+# ---------------------------------------------------------------------------
+yr_denom <- unique(b2b[, .(buyer, seller_nace4d, year,
+                           total_buyer_nace4d_spend)])
+yr_sales <- b2b[, .(buyer, seller_nace4d, seller, year, sales)]
+
+top_trajectory <- function(top_dt) {
+  panel <- top_dt[, .(year = YEAR_LO:YEAR_HI),
+                  by = .(buyer, seller_nace4d, top_supplier)]
+  setnames(panel, "top_supplier", "seller")
+  panel <- merge(panel, yr_denom,
+                 by = c("buyer", "seller_nace4d", "year"), all.x = TRUE)
+  panel <- merge(panel, yr_sales,
+                 by = c("buyer", "seller_nace4d", "seller", "year"),
+                 all.x = TRUE)
+  panel[is.na(sales), sales := 0]
+  panel[, share := ifelse(is.na(total_buyer_nace4d_spend) |
+                            total_buyer_nace4d_spend <= 0,
+                          NA_real_, sales / total_buyer_nace4d_spend)]
+  panel[, role := "top"]
+  panel[, .(buyer, seller_nace4d, year, role, share)]
+}
+
+bot_trajectory <- function(bot_dt) {
+  panel_long <- bot_dt[, .(year = YEAR_LO:YEAR_HI),
+                       by = .(buyer, seller_nace4d, seller)]
+  panel_long <- merge(panel_long, yr_denom,
+                      by = c("buyer", "seller_nace4d", "year"), all.x = TRUE)
+  panel_long <- merge(panel_long, yr_sales,
+                      by = c("buyer", "seller_nace4d", "seller", "year"),
+                      all.x = TRUE)
+  panel_long[is.na(sales), sales := 0]
+  panel_long[, share := ifelse(is.na(total_buyer_nace4d_spend) |
+                                 total_buyer_nace4d_spend <= 0,
+                               NA_real_, sales / total_buyer_nace4d_spend)]
+  panel <- panel_long[!is.na(share),
+                      .(share = mean(share)),
+                      by = .(buyer, seller_nace4d, year)]
+  panel[, role := "bot"]
+  panel[, .(buyer, seller_nace4d, year, role, share)]
+}
+
+build_variant <- function(variant_label, top_dt, bot_dt) {
+  top_p <- top_trajectory(top_dt)
+  bot_p <- bot_trajectory(bot_dt)
+  panel <- rbind(top_p, bot_p)
+  panel[, cell_id := paste(buyer, seller_nace4d)]
+  common <- intersect(
+    top_p[!is.na(share), unique(paste(buyer, seller_nace4d))],
+    bot_p[!is.na(share), unique(paste(buyer, seller_nace4d))]
+  )
+  panel <- panel[cell_id %in% common]
+  panel[, variant := variant_label]
+  cat(sprintf("  [%s] cells with both top and bot observable: %d\n",
+              variant_label, length(common)))
+  panel[]
+}
+
+# ---------------------------------------------------------------------------
+# Build the three variants
+# ---------------------------------------------------------------------------
+#   1. baseline       = original Hybrid B + portfolio bot (no survivorship)
+#   2. bot_survive    = bot restricted to ω=0 surviving SURVIVE_YEAR
+#   3. both_survive   = both top and bot restricted to surviving SURVIVE_YEAR
+# ---------------------------------------------------------------------------
+cat("\nBuilding variant 1: baseline (no survivorship filter)...\n")
+v_base <- build_variant("Baseline (Hybrid B + portfolio bot)",
+                         top_sup, bot_pool)
+cat(sprintf("Building variant 2: bot-only survivorship to %d...\n",
+            SURVIVE_YEAR))
+v_bot  <- build_variant(sprintf("Bot ω=0 survives to %d", SURVIVE_YEAR),
+                         top_sup, bot_pool_surv)
+cat(sprintf("Building variant 3: symmetric survivorship to %d...\n",
+            SURVIVE_YEAR))
+v_both <- build_variant(sprintf("Top and bot survive to %d", SURVIVE_YEAR),
+                         top_sup_surv, bot_pool_surv)
+
+panels <- rbind(v_base, v_bot, v_both)
+panels[, variant := factor(variant, levels = c(
+  "Baseline (Hybrid B + portfolio bot)",
+  sprintf("Bot ω=0 survives to %d", SURVIVE_YEAR),
+  sprintf("Top and bot survive to %d", SURVIVE_YEAR)
+))]
+
+# ---------------------------------------------------------------------------
+# Trajectory figure (3 facets)
+# ---------------------------------------------------------------------------
+traj <- panels[!is.na(share),
+               .(mean_share = mean(share),
+                 se_share   = sd(share) / sqrt(.N),
+                 n_cells    = .N),
+               by = .(variant, year, role)]
+traj[, lo := mean_share - 1.96 * se_share]
+traj[, hi := mean_share + 1.96 * se_share]
+traj[, role_label := fcase(
+  role == "top", "Most exposed supplier",
+  role == "bot", "Least exposed supplier (ω=0 portfolio)"
+)]
+traj[, role_label := factor(role_label,
+                            levels = c("Most exposed supplier",
+                                       "Least exposed supplier (ω=0 portfolio)"))]
+
+fwrite(traj, file.path(OUTPUT_TAB,
+       "phase4_within_intensive_hybridB_survivorship_trajectory.csv"))
+
+g <- ggplot(traj,
+            aes(x = year, y = mean_share,
+                color = role_label, fill = role_label)) +
+  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.18, color = NA) +
+  geom_line(linewidth = 0.9) +
+  geom_point(size = 1.4) +
+  geom_vline(xintercept = TREAT_YEAR - 0.5,
+             linetype = "dashed", color = "firebrick") +
+  facet_wrap(~ variant, ncol = 1, scales = "free_y") +
+  scale_x_continuous(breaks = seq(YEAR_LO, YEAR_HI, by = 2)) +
+  scale_color_manual(
+    values = c("Most exposed supplier" = "firebrick",
+               "Least exposed supplier (ω=0 portfolio)" = "navy"),
+    name = NULL) +
+  scale_fill_manual(
+    values = c("Most exposed supplier" = "firebrick",
+               "Least exposed supplier (ω=0 portfolio)" = "navy"),
+    name = NULL) +
+  labs(x = NULL, y = "Mean within-cell expenditure share") +
+  theme_classic(base_size = 15) +
+  theme(panel.grid       = element_blank(),
+        axis.title.y     = element_text(size = 20, margin = margin(r = 18)),
+        axis.text        = element_text(size = 14),
+        strip.text       = element_text(face = "bold", size = 14),
+        legend.position  = "bottom",
+        legend.text      = element_text(size = 14))
+
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_intensive_hybridB_survivorship_trajectory.png"),
+       g, width = 9, height = 11, dpi = 200)
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_intensive_hybridB_survivorship_trajectory.pdf"),
+       g, width = 9, height = 11)
+
+# Sample-size companion
+ss <- panels[, .(n_with_observed = sum(!is.na(share))),
+             by = .(variant, year, role)]
+fwrite(ss, file.path(OUTPUT_TAB,
+       "phase4_within_intensive_hybridB_survivorship_samplesize.csv"))
+
+g_ss <- ggplot(ss, aes(x = year, y = n_with_observed,
+                       color = role,
+                       linetype = role)) +
+  geom_line(linewidth = 0.9) +
+  geom_point(size = 1.2) +
+  geom_vline(xintercept = TREAT_YEAR - 0.5,
+             linetype = "dashed", color = "firebrick") +
+  facet_wrap(~ variant, ncol = 1, scales = "free_y") +
+  scale_x_continuous(breaks = seq(YEAR_LO, YEAR_HI, by = 2)) +
+  scale_color_manual(values = c("top" = "firebrick", "bot" = "navy"),
+                     labels = c("top" = "Most exposed", "bot" = "Least exposed"),
+                     name = NULL) +
+  scale_linetype_manual(values = c("top" = "solid", "bot" = "solid"),
+                        guide = "none") +
+  labs(x = NULL, y = "Number of cells (NACE-4d spend > 0 that year)") +
+  theme_classic(base_size = 15) +
+  theme(panel.grid       = element_blank(),
+        axis.title.y     = element_text(size = 18, margin = margin(r = 18)),
+        axis.text        = element_text(size = 13),
+        strip.text       = element_text(face = "bold", size = 14),
+        legend.position  = "bottom",
+        legend.text      = element_text(size = 14))
+
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_intensive_hybridB_survivorship_samplesize.png"),
+       g_ss, width = 9, height = 11, dpi = 200)
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_intensive_hybridB_survivorship_samplesize.pdf"),
+       g_ss, width = 9, height = 11)
+
+cat("\nDone.\n  figures:", OUTPUT_FIG, "\n  tables :", OUTPUT_TAB, "\n")
