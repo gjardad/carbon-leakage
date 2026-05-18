@@ -556,11 +556,11 @@ p_traj <- ggplot(traj,
        y = "Mean within-cell expenditure share") +
   theme_classic(base_size = 15) +
   theme(panel.grid       = element_blank(),
-        axis.title.y     = element_text(size = 18, margin = margin(r = 18)),
-        axis.text        = element_text(size = 15),
+        axis.title.y     = element_text(size = 22, margin = margin(r = 18)),
+        axis.text        = element_text(size = 18),
         strip.text       = element_text(face = "bold", size = 16),
         legend.position  = "bottom",
-        legend.text      = element_text(size = 14))
+        legend.text      = element_text(size = 18))
 
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_intensive_allcells_topbot_trajectory.png"),
