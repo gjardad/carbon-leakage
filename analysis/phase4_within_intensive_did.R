@@ -331,4 +331,105 @@ ggsave(file.path(OUTPUT_FIG,
        "phase4_within_intensive_did_eventstudy.pdf"),
        g_es, width = 9, height = 6)
 
+# ---------------------------------------------------------------------------
+# De-trended event study: regression that absorbs a linear pre-trend AND
+# estimates year-by-year deviations in the POST period only.
+#
+#   share = alpha_{cell,role} + delta_t
+#         + phi * (year - 2017) * top
+#         + sum_{k = 0..5} beta_k * 1[year = 2017+k] * top + eps
+#
+# Pre-period top observations are fit by the linear pre-trend (phi).
+# Post-period top observations get an additional beta_k -- the deviation
+# from the extrapolated pre-trend at that post-year. The pre-period
+# coefficients are therefore zero by construction in this spec.
+# ---------------------------------------------------------------------------
+cat("\n=== De-trended event study (linear pre-trend + post-year dummies) ===\n")
+mod_es_detr <- feols(share ~ year_centered_top +
+                              i(year, group_top, keep = TREAT_YEAR:YEAR_HI) |
+                              cell_role_id + year,
+                     data = panel, cluster = ~ cell_id, notes = FALSE)
+print(summary(mod_es_detr))
+
+es_detr_coefs <- as.data.table(coeftable(mod_es_detr), keep.rownames = "term")
+# Extract year from terms like "year::2017:group_top"
+es_detr_coefs[, is_year_top := grepl("^year::\\d+:group_top$", term)]
+es_detr_yt <- es_detr_coefs[is_year_top == TRUE]
+es_detr_yt[, year := as.integer(sub(".*year::(\\d+).*", "\\1", term))]
+es_detr_yt[, k    := year - TREAT_YEAR]
+setnames(es_detr_yt,
+         old = c("Estimate", "Std. Error"),
+         new = c("estimate", "std_error"))
+es_detr_yt[, lo := estimate - 1.96 * std_error]
+es_detr_yt[, hi := estimate + 1.96 * std_error]
+
+# Pre-period is fit by linear trend -- by construction the de-trended
+# coefficients are zero there. Add zero-rows for visualization.
+pre_rows <- data.table(year = YEAR_LO:(TREAT_YEAR - 1L))
+pre_rows[, k        := year - TREAT_YEAR]
+pre_rows[, estimate := 0]
+pre_rows[, std_error := 0]
+pre_rows[, lo := 0]
+pre_rows[, hi := 0]
+pre_rows[, term := sprintf("year::%d:group_top (pre, fit by trend)", year)]
+
+es_detr_full <- rbind(es_detr_yt, pre_rows, use.names = TRUE, fill = TRUE)
+setorder(es_detr_full, k)
+fwrite(es_detr_full, file.path(OUTPUT_TAB,
+       "phase4_within_intensive_did_eventstudy_detrended_coef.csv"))
+
+cat("\n--- De-trended event-study post-period coefficients ---\n")
+print(es_detr_yt[, .(year, k, estimate = round(estimate, 4),
+                     se = round(std_error, 4),
+                     lo = round(lo, 4), hi = round(hi, 4))])
+
+# Plot
+g_es_detr <- ggplot(es_detr_full, aes(x = year, y = estimate)) +
+  geom_hline(yintercept = 0, color = "grey50", linewidth = 0.4) +
+  geom_vline(xintercept = TREAT_YEAR - 0.5,
+             linetype = "dashed", color = "firebrick") +
+  geom_errorbar(aes(ymin = lo, ymax = hi),
+                width = 0.2, color = "navy") +
+  geom_point(size = 2.4, color = "navy") +
+  scale_x_continuous(breaks = seq(YEAR_LO, YEAR_HI, by = 1)) +
+  labs(x = NULL,
+       y = "Post-period deviation from extrapolated pre-trend (share units)") +
+  theme_classic(base_size = 15) +
+  theme(panel.grid       = element_blank(),
+        axis.title.y     = element_text(size = 16, margin = margin(r = 14)),
+        axis.text        = element_text(size = 14),
+        axis.text.x      = element_text(angle = 45, hjust = 1))
+
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_intensive_did_eventstudy_detrended.png"),
+       g_es_detr, width = 9, height = 6, dpi = 200)
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_intensive_did_eventstudy_detrended.pdf"),
+       g_es_detr, width = 9, height = 6)
+
+# Tex table for the de-trended event study
+es_detr_tex <- es_detr_yt[, .(Year        = year,
+                               k,
+                               Estimate    = sprintf("%.4f", estimate),
+                               `Std. Err.` = sprintf("%.4f", std_error),
+                               `95\\% CI`   = sprintf("[%.4f, %.4f]", lo, hi))]
+es_detr_xtable <- xtable(es_detr_tex,
+                         caption = paste("De-trended event-study coefficients.",
+                                         "Linear pre-trend (year - 2017) x top",
+                                         "is absorbed; year-by-year dummies",
+                                         "are estimated only for the post period.",
+                                         "Coefficients are deviations from the",
+                                         "extrapolated pre-policy trend. Pre-period",
+                                         "coefficients are zero by construction."),
+                         label   = "tab:phase4_within_intensive_did_eventstudy_detrended",
+                         align   = "lrrlll")
+print(es_detr_xtable,
+      file               = file.path(OUTPUT_TAB,
+                                     "phase4_within_intensive_did_eventstudy_detrended.tex"),
+      include.rownames   = FALSE,
+      booktabs           = TRUE,
+      sanitize.colnames.function = identity,
+      sanitize.text.function     = identity,
+      caption.placement  = "top")
+
 cat("\nDone.\n  figures:", OUTPUT_FIG, "\n  tables :", OUTPUT_TAB, "\n")
