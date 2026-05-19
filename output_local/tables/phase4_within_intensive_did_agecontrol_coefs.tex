@@ -1,0 +1,55 @@
+
+\begin{table}[htbp]
+   \caption{\label{tab:phase4_within_intensive_did_agecontrol} Within-NACE-4d intensive margin DiD, pair-level. Column 1 has no time/age control. Column 2 adds a linear pre-trend interaction. Column 3 adds an age fixed effect (main effect only). Column 4 adds the age x top interaction: the headline Option A spec. Clustered on cell.}
+   \centering
+   \begin{tabular}{lcccc}
+      \tabularnewline \midrule \midrule
+      Dependent Variable: & \multicolumn{4}{c}{Pair share}\\
+      Model:                           & (1)           & (2)      & (3)           & (4)\\  
+      \midrule
+      \emph{Variables}\\
+      post $\times$ top                & -0.0373$^{*}$ & -0.0202  & -0.0399$^{*}$ & 0.0074\\   
+                                       & (0.0205)      & (0.0194) & (0.0206)      & (0.0261)\\   
+      (year - 2017) $\times$ top       &               & -0.0028  &               &   \\   
+                                       &               & (0.0035) &               &   \\   
+      group\_top $\times$ Age $=$ 1    &               &          &               & 0.0192\\   
+                                       &               &          &               & (0.0189)\\   
+      group\_top $\times$ Age $=$ 2    &               &          &               & 0.0115\\   
+                                       &               &          &               & (0.0220)\\   
+      group\_top $\times$ Age $=$ 3    &               &          &               & 0.0154\\   
+                                       &               &          &               & (0.0240)\\   
+      group\_top $\times$ Age $=$ 4    &               &          &               & 0.0122\\   
+                                       &               &          &               & (0.0245)\\   
+      group\_top $\times$ Age $=$ 5    &               &          &               & -0.0046\\   
+                                       &               &          &               & (0.0263)\\   
+      group\_top $\times$ Age $=$ 6    &               &          &               & -0.0208\\   
+                                       &               &          &               & (0.0290)\\   
+      group\_top $\times$ Age $=$ 7    &               &          &               & -0.0302\\   
+                                       &               &          &               & (0.0370)\\   
+      group\_top $\times$ Age $=$ 8    &               &          &               & -0.0448\\   
+                                       &               &          &               & (0.0398)\\   
+      group\_top $\times$ Age $=$ 9    &               &          &               & -0.0594\\   
+                                       &               &          &               & (0.0413)\\   
+      group\_top $\times$ Age $=$ 10   &               &          &               & -0.0544\\   
+                                       &               &          &               & (0.0425)\\   
+      group\_top $\times$ Age $=$ 11   &               &          &               & -0.0421\\   
+                                       &               &          &               & (0.0446)\\   
+      group\_top $\times$ Age $=$ 12   &               &          &               & -0.0396\\   
+                                       &               &          &               & (0.0490)\\   
+      \midrule
+      \emph{Fixed-effects}\\
+      Cell $\times$ role               & Yes           & Yes      & Yes           & Yes\\  
+      Year                             & Yes           & Yes      & Yes           & Yes\\  
+      Age                              &               &          & Yes           & Yes\\  
+      \midrule
+      \emph{Fit statistics}\\
+      Observations                     & 11,574        & 11,574   & 11,574        & 11,574\\  
+      R$^2$                            & 0.6087        & 0.6088   & 0.6109        & 0.6111\\  
+      Within R$^2$                     & 0.0014        & 0.0015   & 0.0016        & 0.0023\\  
+      \midrule \midrule
+      \multicolumn{5}{l}{\emph{Clustered (cell\_id) standard-errors in parentheses}}\\
+      \multicolumn{5}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
+   \end{tabular}
+\end{table}
+
+
