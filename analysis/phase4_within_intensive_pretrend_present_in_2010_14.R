@@ -243,11 +243,11 @@ traj[, lo := mean_share - 1.96 * se_share]
 traj[, hi := mean_share + 1.96 * se_share]
 traj[, role_label := fcase(
   role == "top", "Most exposed supplier",
-  role == "bot", "Least exposed supplier (lowest-ω portfolio)"
+  role == "bot", "Least exposed supplier"
 )]
 traj[, role_label := factor(role_label,
                             levels = c("Most exposed supplier",
-                                       "Least exposed supplier (lowest-ω portfolio)"))]
+                                       "Least exposed supplier"))]
 
 fwrite(traj, file.path(OUTPUT_TAB,
        "phase4_within_nace4d_intensive_topbot_present_in_2010_14_trajectory.csv"))
@@ -267,11 +267,11 @@ g <- ggplot(traj,
   scale_x_continuous(breaks = seq(YEAR_LO, YEAR_HI, by = 2)) +
   scale_color_manual(
     values = c("Most exposed supplier" = "firebrick",
-               "Least exposed supplier (lowest-ω portfolio)" = "navy"),
+               "Least exposed supplier" = "navy"),
     name = NULL) +
   scale_fill_manual(
     values = c("Most exposed supplier" = "firebrick",
-               "Least exposed supplier (lowest-ω portfolio)" = "navy"),
+               "Least exposed supplier" = "navy"),
     name = NULL) +
   labs(x = NULL, y = "Mean within-cell expenditure share") +
   theme_classic(base_size = 15) +
@@ -294,7 +294,7 @@ ss <- panels[, .(n_with_observed = sum(!is.na(share))),
              by = .(version, version_label, treat_year, year, role)]
 ss[, role_label := fcase(
   role == "top", "Most exposed supplier",
-  role == "bot", "Least exposed (lowest-ω portfolio)"
+  role == "bot", "Least exposed supplier"
 )]
 
 g_ss <- ggplot(ss, aes(x = year, y = n_with_observed, color = role_label)) +
@@ -307,7 +307,7 @@ g_ss <- ggplot(ss, aes(x = year, y = n_with_observed, color = role_label)) +
   scale_x_continuous(breaks = seq(YEAR_LO, YEAR_HI, by = 2)) +
   scale_color_manual(
     values = c("Most exposed supplier" = "firebrick",
-               "Least exposed (lowest-ω portfolio)" = "navy"),
+               "Least exposed supplier" = "navy"),
     name = NULL) +
   labs(x = NULL, y = "Number of cells (NACE-4d spend > 0 that year)") +
   theme_classic(base_size = 15) +
