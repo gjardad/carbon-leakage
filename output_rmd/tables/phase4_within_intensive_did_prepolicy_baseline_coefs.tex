@@ -1,0 +1,55 @@
+
+\begin{table}[htbp]
+   \caption{\label{tab:phase4_within_intensive_did_prepolicy_baseline} Within-NACE-4d intensive margin DiD, comparison of structural-trend controls. All specs at pair-year level, clustered on cell. Naive / Linear pre-trend / Age x top FE use the raw share. Option 2A and 2B use detrended\_share = share - f\_role(age), where f\_role(age) is the pre-policy mean share by (role, age). Option 2A restricts to ages 0-6 (pre-policy overlap). Option 2B uses geometric extrapolation to ages 7-12.}
+   \centering
+   \begin{tabular}{lccccc}
+      \tabularnewline \midrule \midrule
+      Dependent Variables: & \multicolumn{3}{c}{Pair share} & \multicolumn{2}{c}{Pair share, detrended}\\
+      Model:                           & (1)                   & (2)                   & (3)             & (4)            & (5)\\  
+      \midrule
+      \emph{Variables}\\
+      post $\times$ top                & -0.0043               & -0.0075$^{*}$         & -0.0019         & 0.0258$^{***}$ & 0.0127$^{***}$\\   
+                                       & (0.0043)              & (0.0043)              & (0.0054)        & (0.0061)       & (0.0043)\\   
+      (year - 2017) $\times$ top       &                       & 0.0005                &                 &                &   \\   
+                                       &                       & (0.0008)              &                 &                &   \\   
+      group\_top $\times$ Age $=$ 1    &                       &                       & -0.0070$^{*}$   &                &   \\   
+                                       &                       &                       & (0.0037)        &                &   \\   
+      group\_top $\times$ Age $=$ 2    &                       &                       & -0.0149$^{***}$ &                &   \\   
+                                       &                       &                       & (0.0043)        &                &   \\   
+      group\_top $\times$ Age $=$ 3    &                       &                       & -0.0166$^{***}$ &                &   \\   
+                                       &                       &                       & (0.0047)        &                &   \\   
+      group\_top $\times$ Age $=$ 4    &                       &                       & -0.0172$^{***}$ &                &   \\   
+                                       &                       &                       & (0.0050)        &                &   \\   
+      group\_top $\times$ Age $=$ 5    &                       &                       & -0.0209$^{***}$ &                &   \\   
+                                       &                       &                       & (0.0053)        &                &   \\   
+      group\_top $\times$ Age $=$ 6    &                       &                       & -0.0258$^{***}$ &                &   \\   
+                                       &                       &                       & (0.0061)        &                &   \\   
+      group\_top $\times$ Age $=$ 7    &                       &                       & -0.0283$^{***}$ &                &   \\   
+                                       &                       &                       & (0.0077)        &                &   \\   
+      group\_top $\times$ Age $=$ 8    &                       &                       & -0.0270$^{***}$ &                &   \\   
+                                       &                       &                       & (0.0081)        &                &   \\   
+      group\_top $\times$ Age $=$ 9    &                       &                       & -0.0169$^{**}$  &                &   \\   
+                                       &                       &                       & (0.0086)        &                &   \\   
+      group\_top $\times$ Age $=$ 10   &                       &                       & -0.0134         &                &   \\   
+                                       &                       &                       & (0.0089)        &                &   \\   
+      group\_top $\times$ Age $=$ 11   &                       &                       & -0.0113         &                &   \\   
+                                       &                       &                       & (0.0094)        &                &   \\   
+      group\_top $\times$ Age $=$ 12   &                       &                       & -0.0011         &                &   \\   
+                                       &                       &                       & (0.0107)        &                &   \\   
+      \midrule
+      \emph{Fixed-effects}\\
+      Cell $\times$ role               & Yes                   & Yes                   & Yes             & Yes            & Yes\\  
+      Year                             & Yes                   & Yes                   & Yes             & Yes            & Yes\\  
+      Age                              &                       &                       & Yes             &                & \\  
+      \midrule
+      \emph{Fit statistics}\\
+      Observations                     & 253,683               & 253,683               & 253,683         & 156,614        & 253,683\\  
+      R$^2$                            & 0.6345                & 0.6345                & 0.6371          & 0.6236         & 0.5750\\  
+      Within R$^2$                     & $2.21\times 10^{-5}$  & $2.69\times 10^{-5}$  & 0.0004          & 0.0003         & 0.0002\\  
+      \midrule \midrule
+      \multicolumn{6}{l}{\emph{Clustered (cell\_id) standard-errors in parentheses}}\\
+      \multicolumn{6}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
+   \end{tabular}
+\end{table}
+
+
