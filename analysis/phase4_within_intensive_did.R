@@ -332,6 +332,71 @@ ggsave(file.path(OUTPUT_FIG,
        g_es, width = 9, height = 6)
 
 # ---------------------------------------------------------------------------
+# Post-hoc detrending of the raw event study (shows pre-period residuals)
+# ---------------------------------------------------------------------------
+# Fits a linear OLS trend through the pre-period raw event-study coefficients
+# (k in {-7, ..., -1}; reference year k=-1 is at zero by construction) and
+# computes residuals = raw - predicted for ALL years. Pre-period residuals
+# tell us how well the linear assumption holds; post-period residuals are
+# the policy estimate identified under that assumption.
+cat("\n=== Post-hoc detrending of raw event study ===\n")
+es_for_fit <- es_coefs[!is.na(estimate) & k <= -1]   # pre-period including ref
+trend_lm <- lm(estimate ~ k, data = es_for_fit)
+trend_intercept <- coef(trend_lm)[1]
+trend_slope     <- coef(trend_lm)[2]
+cat(sprintf("  Pre-period linear fit: intercept=%.4f, slope=%.4f per year\n",
+            trend_intercept, trend_slope))
+
+es_coefs[, predicted_trend := trend_intercept + trend_slope * k]
+es_coefs[, posthoc_resid   := estimate - predicted_trend]
+# Approximate SE on the residual: use raw SE (ignores covariance with trend fit)
+es_coefs[, posthoc_resid_se := std_error]
+es_coefs[, posthoc_lo := posthoc_resid - 1.96 * posthoc_resid_se]
+es_coefs[, posthoc_hi := posthoc_resid + 1.96 * posthoc_resid_se]
+fwrite(es_coefs[!is.na(estimate),
+                 .(year, k, raw_estimate = estimate, raw_se = std_error,
+                   predicted_trend, posthoc_resid, posthoc_resid_se,
+                   posthoc_lo, posthoc_hi)],
+       file.path(OUTPUT_TAB,
+                 "phase4_within_intensive_did_eventstudy_posthoc_detrended.csv"))
+
+cat("\n--- Post-hoc detrended event-study (pre-period residuals included) ---\n")
+print(es_coefs[!is.na(estimate),
+                .(year, k,
+                  raw       = round(estimate, 4),
+                  predicted = round(predicted_trend, 4),
+                  resid     = round(posthoc_resid, 4),
+                  resid_se  = round(posthoc_resid_se, 4))])
+
+# Plot the post-hoc detrended ES showing pre-period residuals
+es_for_plot <- es_coefs[!is.na(estimate)]
+g_es_posthoc <- ggplot(es_for_plot, aes(x = year, y = posthoc_resid)) +
+  geom_hline(yintercept = 0, color = "grey50", linewidth = 0.4) +
+  geom_vline(xintercept = TREAT_YEAR - 0.5,
+             linetype = "dashed", color = "firebrick") +
+  geom_errorbar(aes(ymin = posthoc_lo, ymax = posthoc_hi),
+                width = 0.2, color = "navy") +
+  geom_point(size = 2.4, color = "navy") +
+  scale_x_continuous(breaks = seq(YEAR_LO, YEAR_HI, by = 1)) +
+  labs(x = NULL,
+       y = "Residual from linear pre-trend (share units)",
+       title = sprintf("Pre-period fit: slope = %.4f/year. Residuals show non-linearity.",
+                       trend_slope)) +
+  theme_classic(base_size = 14) +
+  theme(panel.grid       = element_blank(),
+        axis.title.y     = element_text(size = 14, margin = margin(r = 14)),
+        axis.text        = element_text(size = 12),
+        axis.text.x      = element_text(angle = 45, hjust = 1),
+        plot.title       = element_text(size = 11, face = "italic"))
+
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_intensive_did_eventstudy_posthoc_detrended.png"),
+       g_es_posthoc, width = 9, height = 6, dpi = 200)
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_intensive_did_eventstudy_posthoc_detrended.pdf"),
+       g_es_posthoc, width = 9, height = 6)
+
+# ---------------------------------------------------------------------------
 # De-trended event study: regression that absorbs a linear pre-trend AND
 # estimates year-by-year deviations in the POST period only.
 #
