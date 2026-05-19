@@ -40,6 +40,7 @@ suppressPackageStartupMessages({
   library(data.table)
   library(ggplot2)
   library(fixest)
+  library(xtable)
 })
 
 set.seed(20260519)
@@ -245,6 +246,63 @@ cat("\n--- Event-study coefficients (year-by-year top vs bot, ref = 2016) ---\n"
 print(es_coefs[, .(year, k, estimate = round(estimate, 4),
                     se = round(std_error, 4),
                     lo = round(lo, 4), hi = round(hi, 4))])
+
+# ---------------------------------------------------------------------------
+# .tex tables (tracked by git; CSVs in OUTPUT_TAB are gitignored)
+# ---------------------------------------------------------------------------
+cat("\nWriting .tex tables...\n")
+
+# Headline coefficients table (naive + linear pre-trend, side-by-side)
+etable(list("Naive DiD"               = mod_naive,
+            "Linear pre-trend DiD"    = mod_lin),
+       tex          = TRUE,
+       file         = file.path(OUTPUT_TAB,
+                                "phase4_within_intensive_did_coefs.tex"),
+       replace      = TRUE,
+       title        = paste("Intensive margin DiD on the present-in-2010-14",
+                            "sample. Column 1 is the naive 2x2 DiD;",
+                            "column 2 adds a linear pre-trend interaction",
+                            "(year - 2017) * top to absorb the structural",
+                            "differential trend between top and bot."),
+       label        = "tab:phase4_within_intensive_did_coefs",
+       dict         = c(post_top           = "post $\\times$ top",
+                        year_centered_top  = "(year - 2017) $\\times$ top",
+                        share              = "Within-cell share",
+                        cell_role_id       = "Cell $\\times$ role",
+                        year               = "Year"),
+       cluster      = ~cell_id,
+       signif.code  = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+       digits       = 4,
+       digits.stats = 4)
+
+# Event-study coefficients table
+es_tex <- es_coefs[, .(Year        = year,
+                       k,
+                       Estimate    = sprintf("%.4f", estimate),
+                       `Std. Err.` = sprintf("%.4f", std_error),
+                       `95\\% CI`   = sprintf("[%.4f, %.4f]", lo, hi))]
+# Mark the reference row visibly
+es_tex[k == -1, `:=`(Estimate = "0 (ref)", `Std. Err.` = "--",
+                     `95\\% CI` = "--")]
+
+es_xtable <- xtable(es_tex,
+                    caption = paste("Event-study coefficients on the",
+                                    "intensive margin DiD. Year-by-year",
+                                    "top vs bot differential, relative to",
+                                    "2016 (omitted reference). Spec:",
+                                    "share $\\sim$ i(year, top, ref=2016) |",
+                                    "cell-role FE + year FE. Clustered",
+                                    "on cell."),
+                    label   = "tab:phase4_within_intensive_did_eventstudy",
+                    align   = "lrrlll")
+print(es_xtable,
+      file               = file.path(OUTPUT_TAB,
+                                     "phase4_within_intensive_did_eventstudy.tex"),
+      include.rownames   = FALSE,
+      booktabs           = TRUE,
+      sanitize.colnames.function = identity,
+      sanitize.text.function     = identity,
+      caption.placement  = "top")
 
 # ---------------------------------------------------------------------------
 # Event-study plot

@@ -1,0 +1,30 @@
+
+\begin{table}[htbp]
+   \caption{\label{tab:phase4_within_intensive_did_coefs} Intensive margin DiD on the present-in-2010-14 sample. Column 1 is the naive 2x2 DiD; column 2 adds a linear pre-trend interaction (year - 2017) * top to absorb the structural differential trend between top and bot.}
+   \centering
+   \begin{tabular}{lcc}
+      \tabularnewline \midrule \midrule
+      Dependent Variable: & \multicolumn{2}{c}{Within-cell share}\\
+      Model:                      & (1)           & (2)\\  
+      \midrule
+      \emph{Variables}\\
+      post $\times$ top           & -0.0389$^{*}$ & -0.0378\\   
+                                  & (0.0234)      & (0.0238)\\   
+      (year - 2017) $\times$ top  &               & -0.0002\\   
+                                  &               & (0.0042)\\   
+      \midrule
+      \emph{Fixed-effects}\\
+      Cell $\times$ role          & Yes           & Yes\\  
+      Year                        & Yes           & Yes\\  
+      \midrule
+      \emph{Fit statistics}\\
+      Observations                & 9,896         & 9,896\\  
+      R$^2$                       & 0.6340        & 0.6340\\  
+      Within R$^2$                & 0.0017        & 0.0017\\  
+      \midrule \midrule
+      \multicolumn{3}{l}{\emph{Clustered (cell\_id) standard-errors in parentheses}}\\
+      \multicolumn{3}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
+   \end{tabular}
+\end{table}
+
+
