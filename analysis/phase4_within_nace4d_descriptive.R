@@ -219,8 +219,7 @@ g_dens <- ggplot(dens_dt, aes(x = cost_shock_plot, color = role_label,
                                 "Least exposed supplier" = "navy"),
                     name = NULL) +
   labs(x = "Carbon cost at peak EUA (% of input cost, log scale)",
-       y = "Density",
-       subtitle = annot_text) +
+       y = "Density") +
   theme_classic(base_size = 16) +
   theme(panel.grid       = element_blank(),
         axis.title       = element_text(size = 22),
