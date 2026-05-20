@@ -204,7 +204,8 @@ annot_text <- sprintf(
 
 g_dens <- ggplot(dens_pos, aes(x = cost_shock, color = role_label,
                                 fill = role_label)) +
-  geom_density(alpha = 0.25, linewidth = 0.9) +
+  geom_density(aes(y = after_stat(scaled)),
+               alpha = 0.25, linewidth = 0.9) +
   scale_x_log10(breaks = c(1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10),
                 labels = c("0.00001%", "0.0001%", "0.001%", "0.01%",
                            "0.1%", "1%", "10%")) +
@@ -215,7 +216,7 @@ g_dens <- ggplot(dens_pos, aes(x = cost_shock, color = role_label,
                                 "Least exposed supplier" = "navy"),
                     name = NULL) +
   labs(x = "Carbon cost at peak EUA (% of input cost, log scale)",
-       y = "Density",
+       y = "Density (peak-normalized)",
        subtitle = annot_text) +
   theme_classic(base_size = 16) +
   theme(panel.grid       = element_blank(),
@@ -263,7 +264,7 @@ g_gap <- ggplot(gap_dt, aes(x = cost_shock_gap)) +
   scale_x_log10(breaks = c(1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10),
                 labels = c("0.00001%", "0.0001%", "0.001%", "0.01%",
                            "0.1%", "1%", "10%")) +
-  labs(x = "Within-cell cost-shock gap at peak EUA (% of input cost, log scale)",
+  labs(x = "Cost shock gap (% of input cost, log scale)",
        y = "Density") +
   theme_classic(base_size = 16) +
   theme(panel.grid       = element_blank(),
