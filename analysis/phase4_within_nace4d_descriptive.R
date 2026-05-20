@@ -210,7 +210,7 @@ g_dens <- ggplot(dens_dt, aes(x = cost_shock_plot, color = role_label,
   geom_density(aes(y = after_stat(scaled)),
                alpha = 0.25, linewidth = 0.9) +
   scale_x_log10(breaks = c(1e-6, 1e-3, 1e-2, 1e-1, 1, 10),
-                labels = c("0% (floor)", "0.001%", "0.01%",
+                labels = c("0%", "0.001%", "0.01%",
                            "0.1%", "1%", "10%")) +
   scale_color_manual(values = c("Most exposed supplier"  = "firebrick",
                                  "Least exposed supplier" = "navy"),
@@ -219,7 +219,7 @@ g_dens <- ggplot(dens_dt, aes(x = cost_shock_plot, color = role_label,
                                 "Least exposed supplier" = "navy"),
                     name = NULL) +
   labs(x = "Carbon cost at peak EUA (% of input cost, log scale)",
-       y = "Density (peak-normalized)",
+       y = "Density",
        subtitle = annot_text) +
   theme_classic(base_size = 16) +
   theme(panel.grid       = element_blank(),
