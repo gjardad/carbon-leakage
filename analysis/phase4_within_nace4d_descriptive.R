@@ -303,6 +303,38 @@ chars[, emission_intensity := ifelse(!is.na(mean_emissions) &
 # Indicator: is this seller in the EUTL registry (has any fe records in pre-window)?
 chars[, in_eutl := !is.na(mean_emissions)]
 
+# ---------------------------------------------------------------------------
+# Pre-policy attrition rate per role
+#
+#   Definition: average fraction of pairs alive at year t that are NOT alive
+#   at year t+1, computed over the pre-policy window 2010-2016 (so t in
+#   {2010, ..., 2015}; t+1 stays <= 2016). "Alive" means positive sales
+#   from the seller to the buyer in the cell that year.
+#
+#   The reported attrition rate per role is the simple average across t.
+# ---------------------------------------------------------------------------
+ATTR_YEARS <- 2010L:2016L
+pair_year_grid <- sample_pairs[, .(buyer, seller_nace4d, seller, role)][,
+                  .(year = ATTR_YEARS),
+                  by = .(buyer, seller_nace4d, seller, role)]
+sale_y <- b2b[year %in% ATTR_YEARS,
+              .(buyer, seller_nace4d, seller, year, alive = 1L)]
+pair_year_grid <- merge(pair_year_grid, sale_y,
+                        by = c("buyer", "seller_nace4d", "seller", "year"),
+                        all.x = TRUE)
+pair_year_grid[is.na(alive), alive := 0L]
+setorder(pair_year_grid, buyer, seller_nace4d, seller, year)
+pair_year_grid[, alive_next := shift(alive, type = "lead"),
+               by = .(buyer, seller_nace4d, seller, role)]
+
+attr_yearly <- pair_year_grid[year < max(ATTR_YEARS) & alive == 1L,
+                              .(attrition_rate = 1 - mean(alive_next)),
+                              by = .(role, year)]
+attr_role <- attr_yearly[, .(attrition_rate = 100 * mean(attrition_rate)),
+                         by = role]
+cat("Pre-policy attrition rate by role (avg across consecutive-year pairs):\n")
+print(attr_role)
+
 # Compute summary statistics per role
 summary_role <- chars[, .(
   n_obs              = .N,
@@ -323,6 +355,7 @@ summary_role <- chars[, .(
   omega_mean         = mean(omega_2015_16),
   omega_median       = median(omega_2015_16)
 ), by = role]
+summary_role <- merge(summary_role, attr_role, by = "role", all.x = TRUE)
 
 cat("Summary statistics:\n")
 print(summary_role)
@@ -390,6 +423,9 @@ body_rows <- c(
           fmt(gv("top", "rel_age_median"), 0),
           fmt(gv("bot", "rel_age_mean"),   1),
           fmt(gv("bot", "rel_age_median"), 0)),
+  count_row("Pre-policy attrition rate (\\%)",
+            fmt(gv("top", "attrition_rate"), 2),
+            fmt(gv("bot", "attrition_rate"), 2)),
   "\\midrule",
   count_row("Pct in EUTL",
             fmt(gv("top", "pct_in_eutl"), 1),
@@ -434,6 +470,7 @@ tex_lines <- c(
   "% - Wage bill (EUR thousands): pre-period mean wage bill from Annual Accounts, divided by 1000 for display.",
   "% - Firm age: years since the seller first appears in Annual Accounts, capped at 2016 (proxy for true firm age, which is not observed).",
   "% - Relationship age (years to 2017): years between the pair's first observed positive sales in the B2B panel (unrestricted; the panel starts in 2002) and the treatment year 2017. Capped from above at 15 (= 2017 - 2002).",
+  "% - Pre-policy attrition rate (\\%): average across t in {2010, ..., 2015} of the share of pairs that are alive at year t (positive sales to the buyer in the cell) but not alive at year t+1. Both t and t+1 are pre-policy; this rate is structural, not driven by the MSR.",
   "% - Pct in EUTL: share of sellers in the role with at least one positive emissions record in the EUTL registry over 2010-2014. Top suppliers are mechanically more likely to be in EUTL because omega > 0 requires an EUTL record.",
   "% - Annual emissions (tCO2e): pre-period mean emissions for sellers in the EUTL registry. Sellers not in EUTL are excluded from this calculation.",
   "% - Emission intensity: pre-period mean of (annual emissions in tCO2e) / (annual revenue in EUR thousand), for sellers in the EUTL registry.",
