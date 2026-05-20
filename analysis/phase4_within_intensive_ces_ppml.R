@@ -1,0 +1,340 @@
+###############################################################################
+# phase4_within_intensive_ces_ppml.R
+#
+# PURPOSE
+#   Structural CES estimation of the within-NACE-4d elasticity of substitution
+#   across suppliers, using Poisson PML on expenditure shares.
+#
+# MODEL
+#   Under CES with marginal-cost pricing and pass-through rho:
+#     log(share_top / share_bot) = const + (1 - sigma) * rho * K * (omega_top - omega_bot)
+#
+#   At the pair level, this maps to a Poisson regression on share:
+#     E[share_pt | X] = exp{ alpha_{cell x role} + delta_t + beta * (post_t * omega_p) }
+#
+#   where omega_p is the SELLER's 2015-16 omega (high for the top supplier;
+#   zero or near-zero for bot-pool members in most cells). The interaction
+#   (post * omega) captures the post-policy cross-pair variation in cost
+#   exposure. The cell-by-role FE absorbs time-invariant level differences;
+#   the year FE absorbs aggregate year shocks.
+#
+#   The structural mapping:
+#     beta = (1 - sigma) * rho * K
+#   so for any assumed pass-through rho and EUA-price multiplier K:
+#     sigma_hat = 1 - beta / (rho * K)
+#
+# K
+#   K captures the proportional change in the EUA price between the
+#   omega-measurement window (2015-16) and the relevant post-policy
+#   window. We report sigma for several K choices.
+#
+# SAMPLE
+#   Same as phase4_within_intensive_did_prepolicy_baseline: present-in-2010-14
+#   pair-year panel.
+#
+# OUTPUTS
+#   - phase4_within_intensive_ces_ppml_coef.tex: beta estimate from PPML.
+#   - phase4_within_intensive_ces_ppml_sigma.tex: implied sigma values for a
+#     grid of (rho, K) values.
+#   - phase4_within_intensive_ces_ppml_sigma.png: heatmap of sigma over
+#     (rho, K) grid.
+###############################################################################
+
+rm(list = ls())
+
+REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
+                     error = function(e) normalizePath(getwd(), winslash = "/"))
+while (!file.exists(file.path(REPO_DIR, "paths.R"))) REPO_DIR <- dirname(REPO_DIR)
+source(file.path(REPO_DIR, "paths.R"))
+
+suppressPackageStartupMessages({
+  library(data.table)
+  library(ggplot2)
+  library(fixest)
+  library(xtable)
+})
+
+set.seed(20260519)
+
+YEAR_LO       <- 2010L
+YEAR_HI       <- 2022L
+PRE_WINDOW    <- 2010L:2014L
+OMEGA_WIN     <- c(2015L, 2016L)
+TREAT_YEAR    <- 2017L
+
+# Pass-through and K grids
+RHO_GRID  <- c(0.25, 0.50, 0.75, 1.00)
+K_GRID    <- c(1, 2, 4, 6, 8, 10)
+
+# ---------------------------------------------------------------------------
+# Load data
+# ---------------------------------------------------------------------------
+cat("Loading data...\n")
+load(file.path(PROC_DATA, "b2b_selected_sample.RData"))
+b2b <- as.data.table(df_b2b_selected_sample)
+rm(df_b2b_selected_sample)
+setnames(b2b,
+         old = c("vat_i_ano", "vat_j_ano", "corr_sales_ij"),
+         new = c("seller", "buyer", "sales"),
+         skip_absent = TRUE)
+b2b <- b2b[year %between% c(2002L, YEAR_HI) & !is.na(sales) & sales > 0,
+           .(seller = as.character(seller),
+             buyer  = as.character(buyer),
+             year   = as.integer(year),
+             sales)]
+
+load(file.path(PROC_DATA, "annual_accounts_selected_sample.RData"))
+aa <- as.data.table(df_annual_accounts_selected_sample)[, .(
+  vat = as.character(vat_ano), year = as.integer(year),
+  nace4d = substr(nace5d, 1, 4))]
+rm(df_annual_accounts_selected_sample)
+aa <- unique(aa[!is.na(nace4d) & nace4d != ""])
+
+load(file.path(OUT_DATA, "phase3_firm_exposure.RData"))
+fe <- as.data.table(firm_exposure)[, .(vat = as.character(vat),
+                                       year, shortage, total_cost)]
+rm(firm_exposure)
+fe[, omega_sh := ifelse(!is.na(total_cost) & total_cost > 0,
+                        pmax(shortage, 0) / total_cost, NA_real_)]
+
+b2b <- merge(b2b, aa, by.x = c("seller", "year"), by.y = c("vat", "year"),
+             all.x = TRUE)
+setnames(b2b, "nace4d", "seller_nace4d")
+b2b <- b2b[!is.na(seller_nace4d) & seller_nace4d != ""]
+b2b[, total_buyer_nace4d_spend := sum(sales),
+    by = .(buyer, seller_nace4d, year)]
+
+# ---------------------------------------------------------------------------
+# Build present-in-2010-14 sample with top + bot pool
+# ---------------------------------------------------------------------------
+cat("Building present-in-2010-14 sample + role assignment...\n")
+pre_active <- b2b[year %in% PRE_WINDOW,
+                  .(pre_sales = sum(sales)),
+                  by = .(buyer, seller_nace4d, seller)]
+omega_window_active <- b2b[year %in% OMEGA_WIN,
+                            .(omega_win_sales = sum(sales)),
+                            by = .(buyer, seller_nace4d, seller)]
+pool_pairs <- merge(pre_active, omega_window_active,
+                    by = c("buyer", "seller_nace4d", "seller"))
+
+omega_byvat <- fe[year %in% OMEGA_WIN,
+                  .(omega_anchor = mean(omega_sh, na.rm = TRUE)),
+                  by = vat]
+pool_pairs <- merge(pool_pairs, omega_byvat,
+                    by.x = "seller", by.y = "vat", all.x = TRUE)
+pool_pairs[is.na(omega_anchor), omega_anchor := 0]
+
+cell_summary <- pool_pairs[, .(n = .N,
+                               max_omega = max(omega_anchor),
+                               min_omega = min(omega_anchor)),
+                           by = .(buyer, seller_nace4d)]
+cell_ok <- cell_summary[n >= 2L & max_omega > 0 & min_omega < max_omega]
+pool <- merge(pool_pairs, cell_ok[, .(buyer, seller_nace4d)],
+              by = c("buyer", "seller_nace4d"))
+
+pool[, cell_min_omega := min(omega_anchor), by = .(buyer, seller_nace4d)]
+setorder(pool, buyer, seller_nace4d, -omega_anchor, -pre_sales, seller)
+pool[, rk := seq_len(.N), by = .(buyer, seller_nace4d)]
+top_sup <- pool[rk == 1L,
+                .(buyer, seller_nace4d, seller, role = "top",
+                  omega_p = omega_anchor)]
+bot_pool <- pool[omega_anchor == cell_min_omega,
+                 .(buyer, seller_nace4d, seller, role = "bot",
+                   omega_p = omega_anchor)]
+all_pairs <- rbind(top_sup, bot_pool)
+
+t_start_dt <- b2b[year %in% PRE_WINDOW,
+                   .(t_start = min(year)),
+                   by = .(buyer, seller_nace4d, seller)]
+all_pairs <- merge(all_pairs, t_start_dt,
+                   by = c("buyer", "seller_nace4d", "seller"))
+
+# ---------------------------------------------------------------------------
+# Build pair-year share panel (same as the other DiD scripts)
+# ---------------------------------------------------------------------------
+cat("Building pair-year share panel...\n")
+yr_denom <- unique(b2b[, .(buyer, seller_nace4d, year,
+                           total_buyer_nace4d_spend)])
+yr_sales <- b2b[, .(buyer, seller_nace4d, seller, year, sales)]
+
+panel <- all_pairs[, .(year = YEAR_LO:YEAR_HI),
+                   by = .(buyer, seller_nace4d, seller, role, t_start, omega_p)]
+panel[, age := year - t_start]
+panel <- panel[age >= 0L]
+
+panel <- merge(panel, yr_denom,
+               by = c("buyer", "seller_nace4d", "year"), all.x = TRUE)
+panel <- merge(panel, yr_sales,
+               by = c("buyer", "seller_nace4d", "seller", "year"),
+               all.x = TRUE)
+panel[is.na(sales), sales := 0]
+panel[, share := ifelse(is.na(total_buyer_nace4d_spend) |
+                          total_buyer_nace4d_spend <= 0,
+                        NA_real_, sales / total_buyer_nace4d_spend)]
+panel <- panel[!is.na(share)]
+panel[, post := as.integer(year >= TREAT_YEAR)]
+panel[, post_omega := post * omega_p]
+panel[, cell_id := paste(buyer, seller_nace4d, sep = "::")]
+panel[, cell_role_id := paste(cell_id, role, sep = "::")]
+cat(sprintf("  Pair-year panel: %s rows (%d cells, %d pairs)\n",
+            format(nrow(panel), big.mark = ","),
+            uniqueN(panel$cell_id),
+            uniqueN(panel[, .(buyer, seller_nace4d, seller)])))
+cat(sprintf("  Pre-policy:  %s rows. Post-policy: %s rows.\n",
+            format(nrow(panel[year < TREAT_YEAR]), big.mark = ","),
+            format(nrow(panel[year >= TREAT_YEAR]), big.mark = ",")))
+cat(sprintf("  Zero shares: %d / %d (%.1f%%)\n",
+            nrow(panel[share == 0]),
+            nrow(panel),
+            100 * nrow(panel[share == 0]) / nrow(panel)))
+cat("  Pair-omega distribution (by role):\n")
+print(panel[, .(mean_omega = mean(omega_p),
+                p25 = quantile(omega_p, 0.25),
+                p50 = quantile(omega_p, 0.50),
+                p75 = quantile(omega_p, 0.75),
+                p90 = quantile(omega_p, 0.90),
+                max = max(omega_p)),
+            by = role])
+
+# ---------------------------------------------------------------------------
+# PPML estimation
+#
+#   E[share_pt | X] = exp[ alpha_{cell, role} + delta_t + beta * post_omega ]
+#
+#   beta = (1 - sigma) * rho * K
+# ---------------------------------------------------------------------------
+cat("\n=== PPML structural CES estimation ===\n")
+ppml_fit <- feglm(share ~ post_omega | cell_role_id + year,
+                  data    = panel,
+                  family  = poisson,
+                  cluster = ~ cell_id)
+print(summary(ppml_fit))
+
+ct <- as.data.table(coeftable(ppml_fit), keep.rownames = "term")
+beta_hat <- ct[term == "post_omega", Estimate]
+beta_se  <- ct[term == "post_omega", `Std. Error`]
+cat(sprintf("\n  beta_hat = %.4f (SE %.4f, p = %.4f)\n",
+            beta_hat, beta_se,
+            ct[term == "post_omega", `Pr(>|z|)`]))
+
+# Linear OLS version for comparison (no Poisson)
+cat("\n=== OLS comparison (same RHS, linear in shares) ===\n")
+ols_fit <- feols(share ~ post_omega | cell_role_id + year,
+                 data = panel, cluster = ~ cell_id, notes = FALSE)
+print(summary(ols_fit))
+
+# ---------------------------------------------------------------------------
+# Implied sigma for a grid of (rho, K) values
+#   sigma = 1 - beta / (rho * K)
+# ---------------------------------------------------------------------------
+cat("\n=== Implied sigma for (rho, K) grid ===\n")
+grid <- CJ(rho = RHO_GRID, K = K_GRID)
+grid[, beta_hat := beta_hat]
+grid[, beta_se  := beta_se]
+grid[, sigma_hat := 1 - beta_hat / (rho * K)]
+grid[, sigma_lo  := 1 - (beta_hat + 1.96 * beta_se) / (rho * K)]
+grid[, sigma_hi  := 1 - (beta_hat - 1.96 * beta_se) / (rho * K)]
+# For sigma intuition, also report whether the CI for sigma straddles 1
+grid[, includes_one := sigma_lo <= 1 & sigma_hi >= 1]
+setorder(grid, K, rho)
+print(grid[, .(rho, K,
+                sigma_hat = round(sigma_hat, 3),
+                CI = sprintf("[%.3f, %.3f]", sigma_lo, sigma_hi),
+                includes_one)])
+
+fwrite(grid, file.path(OUTPUT_TAB,
+       "phase4_within_intensive_ces_ppml_sigma_grid.csv"))
+
+# Write summary tex
+grid_tex <- copy(grid)
+grid_tex[, sigma_hat_str := sprintf("%.3f", sigma_hat)]
+grid_tex[, CI := sprintf("[%.3f, %.3f]", sigma_lo, sigma_hi)]
+grid_tex_wide <- dcast(grid_tex,
+                       rho ~ K,
+                       value.var = "sigma_hat_str",
+                       fun.aggregate = function(x) x[1])
+setnames(grid_tex_wide, "rho", "$\\rho$")
+xt <- xtable(grid_tex_wide,
+             caption = paste("Implied elasticity of substitution $\\sigma$",
+                             "across NACE-4d suppliers, by pass-through rate $\\rho$",
+                             "and EUA-price multiplier $K$.",
+                             "$\\sigma = 1 - \\beta / (\\rho K)$",
+                             "with $\\beta$ from PPML on pair-year shares,",
+                             "controlling for cell-by-role and year FE,",
+                             "clustered on cell."),
+             label = "tab:phase4_within_intensive_ces_ppml_sigma_grid",
+             align = paste0("ll", paste0(rep("r", length(K_GRID)), collapse = "")))
+print(xt,
+      file = file.path(OUTPUT_TAB,
+                       "phase4_within_intensive_ces_ppml_sigma_grid.tex"),
+      include.rownames = FALSE, booktabs = TRUE,
+      sanitize.colnames.function = identity,
+      sanitize.text.function = identity,
+      caption.placement = "top")
+
+# Also write a clean main coefficient table
+beta_tex <- data.table(
+  Statistic = c("$\\widehat{\\beta}$",
+                 "Std. Err. (clustered, cell)",
+                 "$p$-value",
+                 "N observations",
+                 "N cells",
+                 "N pairs"),
+  Value = c(sprintf("%.4f", beta_hat),
+            sprintf("%.4f", beta_se),
+            sprintf("%.4f", ct[term == "post_omega", `Pr(>|z|)`]),
+            format(nobs(ppml_fit), big.mark = ","),
+            uniqueN(panel$cell_id),
+            uniqueN(panel[, .(buyer, seller_nace4d, seller)]))
+)
+xt2 <- xtable(beta_tex,
+              caption = paste("Reduced-form PPML coefficient on (post $\\times$",
+                              "omega).  Spec: share $\\sim$ post:omega |",
+                              "cell-role + year, family = poisson, clustered",
+                              "on cell. $\\beta = (1 - \\sigma) \\cdot \\rho \\cdot K$",
+                              "in the CES model."),
+              label = "tab:phase4_within_intensive_ces_ppml_beta",
+              align = "lll")
+print(xt2,
+      file = file.path(OUTPUT_TAB,
+                       "phase4_within_intensive_ces_ppml_beta.tex"),
+      include.rownames = FALSE, booktabs = TRUE,
+      sanitize.colnames.function = identity,
+      sanitize.text.function = identity,
+      caption.placement = "top")
+
+# ---------------------------------------------------------------------------
+# Plot: sigma as a function of K for each rho
+# ---------------------------------------------------------------------------
+g <- ggplot(grid, aes(x = K, y = sigma_hat, color = factor(rho))) +
+  geom_hline(yintercept = 1, color = "grey60", linewidth = 0.4,
+             linetype = "dashed") +
+  geom_ribbon(aes(ymin = sigma_lo, ymax = sigma_hi, fill = factor(rho)),
+              alpha = 0.15, color = NA) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 2.2) +
+  scale_x_continuous(breaks = K_GRID) +
+  scale_color_brewer(palette = "Set1", name = expression(rho)) +
+  scale_fill_brewer(palette  = "Set1", name = expression(rho)) +
+  labs(x = "K (EUA price multiplier)",
+       y = expression(hat(sigma) ~ "(implied elasticity of substitution)"),
+       title = "Structural CES elasticity of substitution",
+       subtitle = paste("sigma = 1 - beta / (rho * K). Dashed line:",
+                        "Cobb-Douglas (sigma = 1).")) +
+  theme_classic(base_size = 14) +
+  theme(panel.grid       = element_blank(),
+        axis.title       = element_text(size = 14),
+        axis.text        = element_text(size = 12),
+        legend.position  = "bottom",
+        legend.text      = element_text(size = 12),
+        plot.title       = element_text(size = 13, face = "bold"),
+        plot.subtitle    = element_text(size = 11, face = "italic"))
+
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_intensive_ces_ppml_sigma.png"),
+       g, width = 9, height = 6, dpi = 200)
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_intensive_ces_ppml_sigma.pdf"),
+       g, width = 9, height = 6)
+
+cat("\nDone.\n  figures:", OUTPUT_FIG, "\n  tables :", OUTPUT_TAB, "\n")
