@@ -185,16 +185,16 @@ g_dens <- ggplot(dens_dt, aes(x = omega_plot, color = role_label,
   scale_fill_manual(values = c("Most exposed supplier"  = "firebrick",
                                 "Least exposed supplier" = "navy"),
                     name = NULL) +
-  labs(x = expression("Carbon-cost exposure " * omega ~ "(2015-16, log scale)"),
+  labs(x = "Allowance shortage / input costs (log scale)",
        y = "Density") +
-  theme_classic(base_size = 15) +
+  theme_classic(base_size = 16) +
   theme(panel.grid       = element_blank(),
-        axis.title       = element_text(size = 16),
-        axis.title.x     = element_text(margin = margin(t = 12)),
-        axis.title.y     = element_text(margin = margin(r = 12)),
-        axis.text        = element_text(size = 13),
+        axis.title       = element_text(size = 22),
+        axis.title.x     = element_text(margin = margin(t = 16)),
+        axis.title.y     = element_text(margin = margin(r = 16)),
+        axis.text        = element_text(size = 18),
         legend.position  = "bottom",
-        legend.text      = element_text(size = 14))
+        legend.text      = element_text(size = 17))
 
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_descriptive_omega_density.png"),
@@ -230,17 +230,14 @@ g_gap <- ggplot(gap_dt, aes(x = gap_plot)) +
   scale_x_log10(breaks = c(1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1),
                 labels = c("<0.0001%", "0.001%", "0.01%", "0.1%",
                            "1%", "10%", "100%")) +
-  labs(x = expression("Within-cell exposure gap " * omega[top] - omega[bot] ~
-                       "(2015-16, log scale)"),
-       y = "Density",
-       subtitle = "Dashed line: median across cells.") +
-  theme_classic(base_size = 15) +
+  labs(x = "Within-cell exposure gap (log scale)",
+       y = "Density") +
+  theme_classic(base_size = 16) +
   theme(panel.grid       = element_blank(),
-        axis.title       = element_text(size = 16),
-        axis.title.x     = element_text(margin = margin(t = 12)),
-        axis.title.y     = element_text(margin = margin(r = 12)),
-        axis.text        = element_text(size = 13),
-        plot.subtitle    = element_text(size = 11, face = "italic"))
+        axis.title       = element_text(size = 22),
+        axis.title.x     = element_text(margin = margin(t = 16)),
+        axis.title.y     = element_text(margin = margin(r = 16)),
+        axis.text        = element_text(size = 18))
 
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_descriptive_exposure_gap_density.png"),
@@ -324,92 +321,118 @@ print(summary_role)
 fwrite(summary_role, file.path(OUTPUT_TAB,
        "phase4_within_nace4d_descriptive_summary_table.csv"))
 
-# Build a publication-ready tex table
+# ---------------------------------------------------------------------------
+# Build a publication-ready tex table with the following structure:
+#
+#                          | Most exposed     | Least exposed    |
+#                          | Mean    | Median | Mean    | Median |
+#   N of relationships     | <multicolumn{2}: count>| <mc>      |
+#   N unique sellers       | <mc>             | <mc>             |
+#   Revenue (...)          | x       | y      | x       | y      |
+#   ...
+#
+# Count rows use \multicolumn{2}{c}{value} to span both Mean and Median.
+# ---------------------------------------------------------------------------
 fmt <- function(x, digits = 1, big.mark = ",") {
   if (is.na(x)) return("--")
   formatC(x, format = "f", digits = digits, big.mark = big.mark)
 }
 
-tex_rows <- data.table(
-  Variable = c(
-    "N (cell-seller-role obs)",
-    "N unique sellers",
-    "Revenue (EUR thousands), mean",
-    "Revenue (EUR thousands), median",
-    "Wage bill (EUR thousands), mean",
-    "Wage bill (EUR thousands), median",
-    "Firm age proxy (years since first AA), mean",
-    "Firm age proxy, median",
-    "Relationship age (years to 2017), mean",
-    "Relationship age, median",
-    "Pct in EUTL (any emissions in 2010-14)",
-    "Annual emissions (tCO2e), mean (in EUTL only)",
-    "Annual emissions, median (in EUTL only)",
-    "Emission intensity (tCO2e / EUR thousand revenue), mean",
-    "Emission intensity, median",
-    "omega (2015-16), mean",
-    "omega (2015-16), median"
-  ),
-  Top = c(
-    fmt(summary_role[role == "top", n_obs], 0),
-    fmt(summary_role[role == "top", n_unique_sellers], 0),
-    fmt(summary_role[role == "top", rev_mean] / 1e3, 0),
-    fmt(summary_role[role == "top", rev_median] / 1e3, 0),
-    fmt(summary_role[role == "top", wage_mean] / 1e3, 0),
-    fmt(summary_role[role == "top", wage_median] / 1e3, 0),
-    fmt(summary_role[role == "top", firm_age_mean], 1),
-    fmt(summary_role[role == "top", firm_age_median], 0),
-    fmt(summary_role[role == "top", rel_age_mean], 1),
-    fmt(summary_role[role == "top", rel_age_median], 0),
-    fmt(summary_role[role == "top", pct_in_eutl], 1),
-    fmt(summary_role[role == "top", em_mean], 0),
-    fmt(summary_role[role == "top", em_median], 0),
-    fmt(summary_role[role == "top", em_int_mean], 4),
-    fmt(summary_role[role == "top", em_int_median], 4),
-    fmt(summary_role[role == "top", omega_mean], 4),
-    fmt(summary_role[role == "top", omega_median], 4)
-  ),
-  Bot = c(
-    fmt(summary_role[role == "bot", n_obs], 0),
-    fmt(summary_role[role == "bot", n_unique_sellers], 0),
-    fmt(summary_role[role == "bot", rev_mean] / 1e3, 0),
-    fmt(summary_role[role == "bot", rev_median] / 1e3, 0),
-    fmt(summary_role[role == "bot", wage_mean] / 1e3, 0),
-    fmt(summary_role[role == "bot", wage_median] / 1e3, 0),
-    fmt(summary_role[role == "bot", firm_age_mean], 1),
-    fmt(summary_role[role == "bot", firm_age_median], 0),
-    fmt(summary_role[role == "bot", rel_age_mean], 1),
-    fmt(summary_role[role == "bot", rel_age_median], 0),
-    fmt(summary_role[role == "bot", pct_in_eutl], 1),
-    fmt(summary_role[role == "bot", em_mean], 0),
-    fmt(summary_role[role == "bot", em_median], 0),
-    fmt(summary_role[role == "bot", em_int_mean], 4),
-    fmt(summary_role[role == "bot", em_int_median], 4),
-    fmt(summary_role[role == "bot", omega_mean], 4),
-    fmt(summary_role[role == "bot", omega_median], 4)
-  )
-)
-setnames(tex_rows, c("Variable", "Most exposed (top)", "Least exposed (bot)"))
+# Pull aggregates by role
+gv <- function(role_v, col) summary_role[role == role_v][[col]]
 
-xt <- xtable(tex_rows,
-             caption = paste("Pre-period (2010-2014) summary statistics by",
-                             "supplier role in the present-in-2010-14 sample.",
-                             "One observation per (cell, seller, role) combination.",
-                             "Firm-age proxy is years since the seller first appears",
-                             "in Annual Accounts, capped at 2016. Relationship age",
-                             "is years since the seller first sold to the buyer",
-                             "in 2010-2014, measured at 2017. Emissions and",
-                             "emission intensity are reported only for sellers",
-                             "in the EUTL registry. omega is the seller's",
-                             "shortage-based carbon-cost exposure measured in 2015-16."),
-             label = "tab:phase4_within_nace4d_descriptive_summary_table",
-             align = "lllr")
-print(xt,
-      file = file.path(OUTPUT_TAB,
-                       "phase4_within_nace4d_descriptive_summary_table.tex"),
-      include.rownames = FALSE, booktabs = TRUE,
-      sanitize.colnames.function = identity,
-      sanitize.text.function     = identity,
-      caption.placement = "top")
+# Helper to build a value row: "Variable & Top_Mean & Top_Median & Bot_Mean & Bot_Median \\"
+val_row <- function(label, top_mean, top_med, bot_mean, bot_med) {
+  sprintf("%s & %s & %s & %s & %s \\\\", label,
+          top_mean, top_med, bot_mean, bot_med)
+}
+# Helper to build a count row: spans both Mean/Median per role
+count_row <- function(label, top_v, bot_v) {
+  sprintf("%s & \\multicolumn{2}{c}{%s} & \\multicolumn{2}{c}{%s} \\\\",
+          label, top_v, bot_v)
+}
+
+rev_scale  <- 1e3   # display revenue / wage_bill in thousands of euros (divide by 1000)
+
+body_rows <- c(
+  count_row("N of relationships",
+            fmt(gv("top", "n_obs"), 0),
+            fmt(gv("bot", "n_obs"), 0)),
+  count_row("N unique sellers",
+            fmt(gv("top", "n_unique_sellers"), 0),
+            fmt(gv("bot", "n_unique_sellers"), 0)),
+  "\\midrule",
+  val_row("Revenue (EUR thousands)",
+          fmt(gv("top", "rev_mean")    / rev_scale, 0),
+          fmt(gv("top", "rev_median")  / rev_scale, 0),
+          fmt(gv("bot", "rev_mean")    / rev_scale, 0),
+          fmt(gv("bot", "rev_median")  / rev_scale, 0)),
+  val_row("Wage bill (EUR thousands)",
+          fmt(gv("top", "wage_mean")   / rev_scale, 0),
+          fmt(gv("top", "wage_median") / rev_scale, 0),
+          fmt(gv("bot", "wage_mean")   / rev_scale, 0),
+          fmt(gv("bot", "wage_median") / rev_scale, 0)),
+  val_row("Firm age",
+          fmt(gv("top", "firm_age_mean"),   1),
+          fmt(gv("top", "firm_age_median"), 0),
+          fmt(gv("bot", "firm_age_mean"),   1),
+          fmt(gv("bot", "firm_age_median"), 0)),
+  val_row("Relationship age (years to 2017)",
+          fmt(gv("top", "rel_age_mean"),   1),
+          fmt(gv("top", "rel_age_median"), 0),
+          fmt(gv("bot", "rel_age_mean"),   1),
+          fmt(gv("bot", "rel_age_median"), 0)),
+  "\\midrule",
+  count_row("Pct in EUTL",
+            fmt(gv("top", "pct_in_eutl"), 1),
+            fmt(gv("bot", "pct_in_eutl"), 1)),
+  val_row("Annual emissions (tCO2e)",
+          fmt(gv("top", "em_mean"),   0),
+          fmt(gv("top", "em_median"), 0),
+          fmt(gv("bot", "em_mean"),   0),
+          fmt(gv("bot", "em_median"), 0)),
+  val_row("Emission intensity (tCO2e / EUR thousand revenue)",
+          fmt(gv("top", "em_int_mean")   * rev_scale, 2),
+          fmt(gv("top", "em_int_median") * rev_scale, 2),
+          fmt(gv("bot", "em_int_mean")   * rev_scale, 2),
+          fmt(gv("bot", "em_int_median") * rev_scale, 2)),
+  val_row("Carbon pricing exposure",
+          fmt(gv("top", "omega_mean"),   4),
+          fmt(gv("top", "omega_median"), 4),
+          fmt(gv("bot", "omega_mean"),   4),
+          fmt(gv("bot", "omega_median"), 4))
+)
+
+tex_lines <- c(
+  "\\begin{table}[ht]",
+  "\\centering",
+  "\\caption{Summary statistics by supplier role}",
+  "\\label{tab:phase4_within_nace4d_descriptive_summary_table}",
+  "\\begin{tabular}{lcccc}",
+  "\\toprule",
+  " & \\multicolumn{2}{c}{Most exposed} & \\multicolumn{2}{c}{Least exposed} \\\\",
+  "\\cmidrule(lr){2-3} \\cmidrule(lr){4-5}",
+  " & Mean & Median & Mean & Median \\\\",
+  "\\midrule",
+  body_rows,
+  "\\bottomrule",
+  "\\end{tabular}",
+  "\\end{table}",
+  "%",
+  "% Row definitions:",
+  "% - N of relationships: count of (cell, seller, role) observations in the present-in-2010-14 sample.",
+  "% - N unique sellers: count of unique sellers in each role.",
+  "% - Revenue (EUR thousands): pre-period (2010-2014) mean revenue from Annual Accounts, divided by 1000 for display.",
+  "% - Wage bill (EUR thousands): pre-period mean wage bill from Annual Accounts, divided by 1000 for display.",
+  "% - Firm age: years since the seller first appears in Annual Accounts, capped at 2016 (proxy for true firm age, which is not observed).",
+  "% - Relationship age (years to 2017): years between the seller's first positive sales to the buyer in 2010-2014 and the treatment year 2017.",
+  "% - Pct in EUTL: share of sellers in the role with at least one positive emissions record in the EUTL registry over 2010-2014. Top suppliers are mechanically more likely to be in EUTL because omega > 0 requires an EUTL record.",
+  "% - Annual emissions (tCO2e): pre-period mean emissions for sellers in the EUTL registry. Sellers not in EUTL are excluded from this calculation.",
+  "% - Emission intensity: pre-period mean of (annual emissions in tCO2e) / (annual revenue in EUR thousand), for sellers in the EUTL registry.",
+  "% - Carbon pricing exposure: omega, defined as max(emissions - free allocation, 0) * EUA price / total cost, averaged over the 2015-2016 omega-measurement window."
+)
+
+writeLines(tex_lines, con = file.path(OUTPUT_TAB,
+       "phase4_within_nace4d_descriptive_summary_table.tex"))
 
 cat("\nDone.\n  figures:", OUTPUT_FIG, "\n  tables :", OUTPUT_TAB, "\n")

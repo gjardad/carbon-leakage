@@ -222,4 +222,18 @@ ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_descriptive_trajectory_2017.pdf"),
        g, width = 9, height = 5.5)
 
+# ---------------------------------------------------------------------------
+# Second version: x-axis cropped to 2012-2022
+# ---------------------------------------------------------------------------
+g_2012 <- g +
+  scale_x_continuous(breaks = seq(2012L, YEAR_HI, by = 1),
+                     limits = c(2012L, YEAR_HI))
+
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_nace4d_descriptive_trajectory_2017_2012_2022.png"),
+       g_2012, width = 9, height = 5.5, dpi = 200)
+ggsave(file.path(OUTPUT_FIG,
+       "phase4_within_nace4d_descriptive_trajectory_2017_2012_2022.pdf"),
+       g_2012, width = 9, height = 5.5)
+
 cat("\nDone.\n  figures:", OUTPUT_FIG, "\n  tables :", OUTPUT_TAB, "\n")
