@@ -137,11 +137,19 @@ pool[, role := fcase(
 )]
 sample_pairs <- pool[!is.na(role)]
 
-# Pair-level pre-period first activity year (for relationship age)
+# Pair-level pre-period first activity year (anchors the present-in-2010-14 sample)
 t_start_dt <- b2b[year %in% PRE_WINDOW,
                    .(t_start = min(year)),
                    by = .(buyer, seller_nace4d, seller)]
 sample_pairs <- merge(sample_pairs, t_start_dt,
+                      by = c("buyer", "seller_nace4d", "seller"))
+
+# Pair-level UNCONSTRAINED first activity year across the full b2b history.
+# Used for the descriptive "Relationship age" stat: the year the pair first
+# appeared in the B2B panel (could be as early as 2002, the panel start).
+rel_first_dt <- b2b[, .(rel_first_year = min(year)),
+                    by = .(buyer, seller_nace4d, seller)]
+sample_pairs <- merge(sample_pairs, rel_first_dt,
                       by = c("buyer", "seller_nace4d", "seller"))
 
 cat(sprintf("  Cells: %d.\n", nrow(cell_ok)))
@@ -277,9 +285,9 @@ setnames(em_pre, "vat", "seller")
 
 # Attach all characteristics to sample_pairs (one row per cell-seller-role)
 chars <- sample_pairs[, .(buyer, seller_nace4d, seller, role,
-                          t_start,
+                          rel_first_year,
                           omega_2015_16 = omega_anchor)]
-chars[, rel_age := as.numeric(2017L - t_start)]
+chars[, rel_age := as.numeric(2017L - rel_first_year)]
 
 chars <- merge(chars, kv_pre,    by = "seller", all.x = TRUE)
 chars <- merge(chars, firm_age,  by = "seller", all.x = TRUE)
@@ -425,7 +433,7 @@ tex_lines <- c(
   "% - Revenue (EUR thousands): pre-period (2010-2014) mean revenue from Annual Accounts, divided by 1000 for display.",
   "% - Wage bill (EUR thousands): pre-period mean wage bill from Annual Accounts, divided by 1000 for display.",
   "% - Firm age: years since the seller first appears in Annual Accounts, capped at 2016 (proxy for true firm age, which is not observed).",
-  "% - Relationship age (years to 2017): years between the seller's first positive sales to the buyer in 2010-2014 and the treatment year 2017.",
+  "% - Relationship age (years to 2017): years between the pair's first observed positive sales in the B2B panel (unrestricted; the panel starts in 2002) and the treatment year 2017. Capped from above at 15 (= 2017 - 2002).",
   "% - Pct in EUTL: share of sellers in the role with at least one positive emissions record in the EUTL registry over 2010-2014. Top suppliers are mechanically more likely to be in EUTL because omega > 0 requires an EUTL record.",
   "% - Annual emissions (tCO2e): pre-period mean emissions for sellers in the EUTL registry. Sellers not in EUTL are excluded from this calculation.",
   "% - Emission intensity: pre-period mean of (annual emissions in tCO2e) / (annual revenue in EUR thousand), for sellers in the EUTL registry.",
