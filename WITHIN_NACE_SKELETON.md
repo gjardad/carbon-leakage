@@ -162,21 +162,77 @@ Text discussion (drawing from WITHIN_NACE.md Section on differential attrition):
 
 ## 6. DiD specification
 
-**[Deferred — to be discussed.]** The natural candidates are:
+### 6.1 Sample window
 
-1. **Naive DiD (level shares)**: `share ~ post:top | cell_role + year`. No pre-trend correction. Biased by differential attrition.
-2. **Linear pre-trend DiD**: adds `(year − 2017) × top` to absorb a linear differential trend.
-3. **Age × top FE DiD**: controls for age-dependent differential between top and bot. Has collinearity issues with full event study but works for the single-coefficient DiD.
-4. **Option 2A**: pre-policy baseline `f_role(age)` subtracted from share; restrict to ages 0-6 (no extrapolation).
-5. **Option 2B**: pre-policy baseline with geometric extrapolation to ages 7-12.
-6. **HonestDiD bounds**: report Rambachan-Roth-style bounds on the post-period treatment effect under varying assumptions about the pre-trend.
-7. **Structural CES (PPML)**: estimate the elasticity of substitution σ directly, with `share ~ post:omega | cell_role + year, family = poisson`.
+Headline DiD window: **2012-2020**. The window starts at 2012 because the raw event study (without any detrending) shows clean, flat pre-period coefficients from 2012 onward, while 2010-2011 are noisy as cells "fill in" toward the 2010-14 pre-window. The window ends at 2020 to keep the post-period inside the MSR price rise (EUA went from ~7 EUR/t in 2016 to ~25 EUR/t at end-2018 to ~30 EUR/t in 2020) without contaminating the comparison with COVID-disrupted 2021-2022 or the 2021-2022 energy crisis. We include 2012-2022 as an appendix robustness.
 
-**Suggested discussion points for picking the spec(s) to include:**
-- Which is the "headline" (probably HonestDiD on the linear-pre-trend or Option 2B event study).
-- Which to include as robustness in main text vs appendix.
-- How to frame the disagreement between specs (sign-sensitive to specification).
-- Whether to also show the structural CES σ estimate in main text or appendix.
+### 6.2 Specification
+
+The headline regression is at the (cell, role, year) level:
+
+```
+share_{c,r,t}  =  α_{c,r}  +  δ_t  +  γ · (post × top)_{r,t}  +  ε_{c,r,t}
+```
+
+with:
+- α_{c,r}: cell-by-role fixed effects (absorb time-invariant level differences between top and bot in each cell).
+- δ_t: year fixed effects (absorb aggregate year shocks affecting all cells equally).
+- (post × top)_{r,t} = 1 if t ≥ 2017 and r = top, else 0.
+- γ: the treatment effect — the post-2017 change in the top-vs-bot share gap, after netting out cell-role levels and aggregate year shocks.
+- Standard errors clustered at the cell level.
+
+Outcome `share_{c,r,t}` is the within-cell expenditure share. For role = top, it's the share of the top-ω supplier. For role = bot, it's the *portfolio mean* across all suppliers tied at the cell's minimum ω.
+
+### 6.3 Identifying assumption and source of variation
+
+The identifying assumption is **parallel trends conditional on cell-role and year fixed effects**: in the absence of the MSR price rise, the post-2017 evolution of the top-bot share gap would have continued along the pre-period trajectory.
+
+The variation that identifies γ comes from cross-supplier heterogeneity in carbon-cost exposure interacted with the post-2017 timing:
+
+- *Cross-cross-cell*: the same calendar year's variation across cells — some cells have higher within-cell ω contrast than others, so the post-2017 change differs across cells under leakage.
+- *Cross-year*: within each cell, post-2017 contrast vs pre-2017 contrast.
+
+After absorbing cell-role and year FE, γ identifies the *break* in the top-bot gap at the policy date, on the assumption that the gap would have continued at its pre-period level (constant in expectation) absent MSR. We argue this assumption is plausible because (a) the descriptive trajectory shows roughly flat pre-period top-bot trajectories from 2012 onward (Figure 5.4 cropped), and (b) the cross-supplier exposure variation ω is predetermined by 2015-16 (§3), so cells with high vs low within-cell ω contrast cannot have responded to the post-2017 EUA price rise before it happened.
+
+### 6.4 Three result presentations
+
+**(A) Event-study figure.** Year-by-year coefficients from an event-study version of the spec:
+
+```
+share_{c,r,t}  =  α_{c,r}  +  δ_t  +  Σ_{k ≠ −1} β_k · 1[t = 2016 + k] · top  +  ε
+```
+
+Plot β_k vs k over k ∈ {−4, …, +3} (with 2016 = reference, post-period 2017-2020). Visual goals:
+- Pre-period β_k should be flat near zero (parallel trends).
+- Post-period β_k traces the dynamics of the policy effect.
+
+**Source figure**: a τ=2017-only event-study figure, cropped to 2012-2020. **Will need a new script**: adapt `phase4_within_intensive_did.R` to (a) restrict the panel to 2012-2020 and (b) save the event-study figure with the cleaner cropping. Current event-study figure on RMD spans 2010-2022.
+
+**(B) DiD coefficient table with heterogeneity cuts.** A table reporting γ across:
+- The full sample (no heterogeneity).
+- Top-quartile / top-decile cuts on three heterogeneity variables (as in the existing in-paper table):
+  - Cost shock at peak EUA (= ω_top × EUA_2018_real × NACE-4d input share in buyer's total cost) — biggest cost incentive.
+  - NACE-4d input share at the buyer — biggest weight on this category.
+  - Within-cell exposure gap (= ω_top − ω_bot) — biggest within-cell contrast.
+
+Cells: top quartile of each cut, top decile of each cut, plus pooled. 7 cells total. Romano-Wolf step-down adjustment for the family-wise error rate (already implemented in `phase4_within_intensive_did_mht.R`).
+
+**Multiple columns?** Maybe show the same DiD across a few key specs: (i) naive (no pre-trend correction), (ii) age × top FE controls. Different columns of the same table. This makes the disagreement-across-specs story explicit. But could clutter — we may want to keep one column in the main text and put the others in the appendix.
+
+**Source table**: `phase4_within_intensive_did_mht.R` already produces the heterogeneity table. **Needs**: restrict to 2012-2020 window, regenerate. Verify Romano-Wolf with the new window.
+
+**(C) HonestDiD robustness figure/table.** Plot of the post-period treatment effect CI as a function of `Mbar` (the Rambachan-Roth relative-magnitudes bound). The breakdown `Mbar` — the smallest value for which the CI includes zero — is the headline number.
+
+**Source**: `phase4_within_intensive_did_honestdid.R` already produces this. **Needs**: regenerate on the 2012-2020 window. Verify CIs and breakdown M.
+
+### 6.5 Implementation plan (next steps)
+
+| Artifact | Source script | Needs |
+|---|---|---|
+| (A) Event-study figure on 2012-2020 | `phase4_within_intensive_did.R` | Restrict panel to 2012-2020; save with descriptive_ prefix |
+| (B) Heterogeneity DiD table on 2012-2020 | `phase4_within_intensive_did_mht.R` | Restrict to 2012-2020; verify Romano-Wolf |
+| (C) HonestDiD bounds on 2012-2020 | `phase4_within_intensive_did_honestdid.R` | Restrict to 2012-2020; regenerate bounds |
+| (+) 2012-2022 appendix robustness | All three above with full window | Re-run with `YEAR_HI = 2022` |
 
 ---
 
