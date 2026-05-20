@@ -1,0 +1,39 @@
+\begin{table}[ht]
+\centering
+\caption{Summary statistics by supplier role}
+\label{tab:phase4_within_nace4d_descriptive_summary_table}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{Most exposed} & \multicolumn{2}{c}{Least exposed} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+ & Mean & Median & Mean & Median \\
+\midrule
+N of relationships & \multicolumn{2}{c}{4,997} & \multicolumn{2}{c}{17,912} \\
+N unique sellers & \multicolumn{2}{c}{116} & \multicolumn{2}{c}{1,818} \\
+\midrule
+Revenue (EUR thousands) & 733,240 & 123,300 & 111,499 & 9,326 \\
+Wage bill (EUR thousands) & 46,482 & 22,736 & 7,584 & 1,516 \\
+Firm age & 15.4 & 16 & 14.8 & 16 \\
+Relationship age (years to 2017) & 9.5 & 8 & 9.3 & 8 \\
+Pre-policy attrition rate (\%) & \multicolumn{2}{c}{9.37} & \multicolumn{2}{c}{12.31} \\
+\midrule
+Pct in EUTL & \multicolumn{2}{c}{85.7} & \multicolumn{2}{c}{7.4} \\
+Annual emissions (tCO2e) & 251,496 & 19,967 & 411,606 & 13,642 \\
+Emission intensity (tCO2e / EUR thousand revenue) & 0.91 & 0.14 & 1.74 & 0.31 \\
+Carbon pricing exposure & 0.0003 & 0.0000 & 0.0000 & 0.0000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+%
+% Row definitions:
+% - N of relationships: count of (cell, seller, role) observations in the present-in-2010-14 sample.
+% - N unique sellers: count of unique sellers in each role.
+% - Revenue (EUR thousands): pre-period (2010-2014) mean revenue from Annual Accounts, divided by 1000 for display.
+% - Wage bill (EUR thousands): pre-period mean wage bill from Annual Accounts, divided by 1000 for display.
+% - Firm age: years since the seller first appears in Annual Accounts, capped at 2016 (proxy for true firm age, which is not observed).
+% - Relationship age (years to 2017): years between the pair's first observed positive sales in the B2B panel (unrestricted; the panel starts in 2002) and the treatment year 2017. Capped from above at 15 (= 2017 - 2002).
+% - Pre-policy attrition rate (\%): average across t in {2010, ..., 2015} of the share of pairs that are alive at year t (positive sales to the buyer in the cell) but not alive at year t+1. Both t and t+1 are pre-policy; this rate is structural, not driven by the MSR.
+% - Pct in EUTL: share of sellers in the role with at least one positive emissions record in the EUTL registry over 2010-2014. Top suppliers are mechanically more likely to be in EUTL because omega > 0 requires an EUTL record.
+% - Annual emissions (tCO2e): pre-period mean emissions for sellers in the EUTL registry. Sellers not in EUTL are excluded from this calculation.
+% - Emission intensity: pre-period mean of (annual emissions in tCO2e) / (annual revenue in EUR thousand), for sellers in the EUTL registry.
+% - Carbon pricing exposure: omega, defined as max(emissions - free allocation, 0) * EUA price / total cost, averaged over the 2015-2016 omega-measurement window.
