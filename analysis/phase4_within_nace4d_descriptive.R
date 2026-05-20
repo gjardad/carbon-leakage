@@ -173,19 +173,30 @@ dens_dt[, role_label := factor(role_label,
                                levels = c("Most exposed supplier",
                                           "Least exposed supplier"))]
 
-# Floor at 1e-6 for log-x display (avoids log(0) issues for omega=0 mass)
-OMEGA_FLOOR <- 1e-6
-dens_dt[, omega_plot := pmax(omega, OMEGA_FLOOR)]
-
-# Report the share at omega = 0
-zero_share <- dens_dt[, .(pct_zero = 100 * mean(omega == 0)), by = role_label]
+# Report the share at omega = 0 by role
+zero_share <- dens_dt[, .(n_obs    = .N,
+                           n_zero   = sum(omega == 0),
+                           pct_zero = 100 * mean(omega == 0)),
+                      by = role_label]
 cat("  Share of pairs at omega = 0 by role:\n"); print(zero_share)
 
-g_dens <- ggplot(dens_dt, aes(x = omega_plot, color = role_label,
-                               fill = role_label)) +
+# Option (c): Filter out omega = 0 observations and plot the density of the
+# CONTINUOUS part only. Annotate the share at omega = 0 separately so the
+# reader sees both pieces of the distribution.
+dens_pos <- dens_dt[omega > 0]
+
+# Annotation text: "X% of bot at omega=0" (computed above)
+top_lbl <- zero_share[role_label == "Most exposed supplier"]
+bot_lbl <- zero_share[role_label == "Least exposed supplier"]
+annot_text <- sprintf(
+  "Mass at ω = 0:  Most exposed %.1f%%  |  Least exposed %.1f%%",
+  top_lbl$pct_zero, bot_lbl$pct_zero)
+
+g_dens <- ggplot(dens_pos, aes(x = omega, color = role_label,
+                                fill = role_label)) +
   geom_density(alpha = 0.25, linewidth = 0.9) +
   scale_x_log10(breaks = c(1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1),
-                labels = c("<0.0001%", "0.001%", "0.01%", "0.1%",
+                labels = c("0.0001%", "0.001%", "0.01%", "0.1%",
                            "1%", "10%", "100%")) +
   scale_color_manual(values = c("Most exposed supplier"  = "firebrick",
                                  "Least exposed supplier" = "navy"),
@@ -194,7 +205,8 @@ g_dens <- ggplot(dens_dt, aes(x = omega_plot, color = role_label,
                                 "Least exposed supplier" = "navy"),
                     name = NULL) +
   labs(x = "Allowance shortage / input costs (log scale)",
-       y = "Density") +
+       y = "Density",
+       subtitle = annot_text) +
   theme_classic(base_size = 16) +
   theme(panel.grid       = element_blank(),
         axis.title       = element_text(size = 22),
@@ -202,7 +214,9 @@ g_dens <- ggplot(dens_dt, aes(x = omega_plot, color = role_label,
         axis.title.y     = element_text(margin = margin(r = 16)),
         axis.text        = element_text(size = 18),
         legend.position  = "bottom",
-        legend.text      = element_text(size = 17))
+        legend.text      = element_text(size = 17),
+        plot.subtitle    = element_text(size = 14, face = "italic",
+                                         margin = margin(b = 10)))
 
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_descriptive_omega_density.png"),
