@@ -46,6 +46,14 @@ PRE_WINDOW <- 2010L:2014L       # cell-sample pre-window
 OMEGA_WIN  <- c(2015L, 2016L)   # omega-measurement window
 TREAT_YEAR <- 2017L
 
+# End-of-2018 EUA settlement price, deflated to 2016 EUR using the Belgian
+# aggregate PPI (equal-weighted geometric mean of NACE 4-digit PPI per month,
+# 2005 = 100). This is the same value used by the existing pipeline
+# (phase4_within_intensive_figures.R) as the "headline post-MSR EUA".
+# Multiplying omega (in tCO2 / EUR) by this gives carbon cost as fraction of
+# input cost at end-2018 prices.
+EUA_2018_REAL <- 23.70
+
 # ---------------------------------------------------------------------------
 # Load data
 # ---------------------------------------------------------------------------
@@ -164,7 +172,11 @@ cat(sprintf("    of which top: %d, bot: %d.\n",
 # ---------------------------------------------------------------------------
 cat("\n(5.1) Building omega density figure...\n")
 
-dens_dt <- sample_pairs[, .(omega = omega_anchor, role)]
+# Plot the distribution of "Carbon cost at peak EUA (% of input cost)".
+# cost_shock = omega * EUA_2018_REAL * 100. Same data, units rescaled
+# from raw omega to the more interpretable post-MSR percentage.
+dens_dt <- sample_pairs[, .(cost_shock = omega_anchor * EUA_2018_REAL * 100,
+                            role)]
 dens_dt[, role_label := fcase(
   role == "top", "Most exposed supplier",
   role == "bot", "Least exposed supplier"
@@ -173,38 +185,36 @@ dens_dt[, role_label := factor(role_label,
                                levels = c("Most exposed supplier",
                                           "Least exposed supplier"))]
 
-# Report the share at omega = 0 by role
+# Report the share at cost_shock = 0 by role
 zero_share <- dens_dt[, .(n_obs    = .N,
-                           n_zero   = sum(omega == 0),
-                           pct_zero = 100 * mean(omega == 0)),
+                           n_zero   = sum(cost_shock == 0),
+                           pct_zero = 100 * mean(cost_shock == 0)),
                       by = role_label]
-cat("  Share of pairs at omega = 0 by role:\n"); print(zero_share)
+cat("  Share of pairs at cost_shock = 0 by role:\n"); print(zero_share)
 
-# Option (c): Filter out omega = 0 observations and plot the density of the
-# CONTINUOUS part only. Annotate the share at omega = 0 separately so the
-# reader sees both pieces of the distribution.
-dens_pos <- dens_dt[omega > 0]
+# Option (c): plot the density of the CONTINUOUS (positive) part only.
+# Annotate the share at zero as a subtitle.
+dens_pos <- dens_dt[cost_shock > 0]
 
-# Annotation text: "X% of bot at omega=0" (computed above)
 top_lbl <- zero_share[role_label == "Most exposed supplier"]
 bot_lbl <- zero_share[role_label == "Least exposed supplier"]
 annot_text <- sprintf(
-  "Mass at ω = 0:  Most exposed %.1f%%  |  Least exposed %.1f%%",
+  "Mass at cost shock = 0:  Most exposed %.1f%%  |  Least exposed %.1f%%",
   top_lbl$pct_zero, bot_lbl$pct_zero)
 
-g_dens <- ggplot(dens_pos, aes(x = omega, color = role_label,
+g_dens <- ggplot(dens_pos, aes(x = cost_shock, color = role_label,
                                 fill = role_label)) +
   geom_density(alpha = 0.25, linewidth = 0.9) +
-  scale_x_log10(breaks = c(1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1),
-                labels = c("0.0001%", "0.001%", "0.01%", "0.1%",
-                           "1%", "10%", "100%")) +
+  scale_x_log10(breaks = c(1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10),
+                labels = c("0.00001%", "0.0001%", "0.001%", "0.01%",
+                           "0.1%", "1%", "10%")) +
   scale_color_manual(values = c("Most exposed supplier"  = "firebrick",
                                  "Least exposed supplier" = "navy"),
                      name = NULL) +
   scale_fill_manual(values = c("Most exposed supplier"  = "firebrick",
                                 "Least exposed supplier" = "navy"),
                     name = NULL) +
-  labs(x = "Allowance shortage / input costs (log scale)",
+  labs(x = "Carbon cost at peak EUA (% of input cost, log scale)",
        y = "Density",
        subtitle = annot_text) +
   theme_classic(base_size = 16) +
@@ -220,39 +230,40 @@ g_dens <- ggplot(dens_pos, aes(x = omega, color = role_label,
 
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_descriptive_omega_density.png"),
-       g_dens, width = 8.5, height = 5.5, dpi = 200)
+       g_dens, width = 10.5, height = 5.5, dpi = 200)
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_descriptive_omega_density.pdf"),
-       g_dens, width = 8.5, height = 5.5)
+       g_dens, width = 10.5, height = 5.5)
 
 # ---------------------------------------------------------------------------
 # (5.2) Kernel density of the within-cell exposure gap omega_top - omega_bot
 # ---------------------------------------------------------------------------
 cat("\n(5.2) Building exposure-gap density figure...\n")
 
+# Plot the distribution of the within-cell COST-SHOCK gap at peak EUA:
+# (omega_top - omega_bot) * EUA_2018_REAL * 100, expressed as percent.
 gap_dt <- cell_ok[, .(buyer, seller_nace4d,
-                       exposure_gap = max_omega - min_omega)]
-cat(sprintf("  Cells with nonzero gap: %d / %d\n",
-            nrow(gap_dt[exposure_gap > 0]), nrow(gap_dt)))
-cat("  Gap distribution:\n")
-print(gap_dt[, .(min = min(exposure_gap), p10 = quantile(exposure_gap, 0.10),
-                  p50 = median(exposure_gap), mean = mean(exposure_gap),
-                  p90 = quantile(exposure_gap, 0.90),
-                  max = max(exposure_gap))])
+                       cost_shock_gap = (max_omega - min_omega) *
+                                          EUA_2018_REAL * 100)]
+cat(sprintf("  Cells with nonzero cost-shock gap: %d / %d\n",
+            nrow(gap_dt[cost_shock_gap > 0]), nrow(gap_dt)))
+cat("  Cost-shock gap distribution (%):\n")
+print(gap_dt[, .(min  = min(cost_shock_gap),
+                  p10  = quantile(cost_shock_gap, 0.10),
+                  p50  = median(cost_shock_gap),
+                  mean = mean(cost_shock_gap),
+                  p90  = quantile(cost_shock_gap, 0.90),
+                  max  = max(cost_shock_gap))])
 
-# Floor at 1e-6 for log-x display
-GAP_FLOOR <- 1e-6
-gap_dt[, gap_plot := pmax(exposure_gap, GAP_FLOOR)]
-
-g_gap <- ggplot(gap_dt, aes(x = gap_plot)) +
+g_gap <- ggplot(gap_dt, aes(x = cost_shock_gap)) +
   geom_density(fill = "steelblue", color = "steelblue4",
                alpha = 0.4, linewidth = 0.9) +
-  geom_vline(aes(xintercept = median(exposure_gap)),
+  geom_vline(aes(xintercept = median(cost_shock_gap)),
              linetype = "dashed", color = "firebrick") +
-  scale_x_log10(breaks = c(1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1),
-                labels = c("<0.0001%", "0.001%", "0.01%", "0.1%",
-                           "1%", "10%", "100%")) +
-  labs(x = "Within-cell exposure gap (log scale)",
+  scale_x_log10(breaks = c(1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10),
+                labels = c("0.00001%", "0.0001%", "0.001%", "0.01%",
+                           "0.1%", "1%", "10%")) +
+  labs(x = "Within-cell cost-shock gap at peak EUA (% of input cost, log scale)",
        y = "Density") +
   theme_classic(base_size = 16) +
   theme(panel.grid       = element_blank(),
@@ -263,10 +274,10 @@ g_gap <- ggplot(gap_dt, aes(x = gap_plot)) +
 
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_descriptive_exposure_gap_density.png"),
-       g_gap, width = 8.5, height = 5.5, dpi = 200)
+       g_gap, width = 10.5, height = 5.5, dpi = 200)
 ggsave(file.path(OUTPUT_FIG,
        "phase4_within_nace4d_descriptive_exposure_gap_density.pdf"),
-       g_gap, width = 8.5, height = 5.5)
+       g_gap, width = 10.5, height = 5.5)
 
 # ---------------------------------------------------------------------------
 # (5.3) Summary statistics table by role
@@ -291,11 +302,21 @@ firm_age <- firm_first_year[vat %in% sellers_in_sample,
                                firm_age_proxy = as.numeric(2016L - first_aa_year))]
 
 # Emissions: from fe data (only ETS-registered firms appear here)
+# Pre-period (2010-14) means are used for the "Annual emissions" and
+# "Emission intensity" rows.
 em_pre <- fe[year %in% PRE_WINDOW & vat %in% sellers_in_sample,
              .(mean_emissions   = mean(emissions, na.rm = TRUE),
                mean_total_cost  = mean(total_cost, na.rm = TRUE)),
              by = vat]
 setnames(em_pre, "vat", "seller")
+
+# "In EUTL" indicator: has any EUTL records in the OMEGA-MEASUREMENT WINDOW
+# (2015-16), the same window where ω is defined. This makes Pct in EUTL
+# consistent with the top/bot role assignment: top suppliers have ω > 0 in
+# 2015-16, which mechanically implies in_eutl_omega = TRUE.
+eutl_omega <- fe[year %in% OMEGA_WIN & vat %in% sellers_in_sample,
+                 .(in_eutl_omega = TRUE), by = vat]
+setnames(eutl_omega, "vat", "seller")
 
 # Attach all characteristics to sample_pairs (one row per cell-seller-role)
 chars <- sample_pairs[, .(buyer, seller_nace4d, seller, role,
@@ -303,9 +324,11 @@ chars <- sample_pairs[, .(buyer, seller_nace4d, seller, role,
                           omega_2015_16 = omega_anchor)]
 chars[, rel_age := as.numeric(2017L - rel_first_year)]
 
-chars <- merge(chars, kv_pre,    by = "seller", all.x = TRUE)
-chars <- merge(chars, firm_age,  by = "seller", all.x = TRUE)
-chars <- merge(chars, em_pre,    by = "seller", all.x = TRUE)
+chars <- merge(chars, kv_pre,     by = "seller", all.x = TRUE)
+chars <- merge(chars, firm_age,   by = "seller", all.x = TRUE)
+chars <- merge(chars, em_pre,     by = "seller", all.x = TRUE)
+chars <- merge(chars, eutl_omega, by = "seller", all.x = TRUE)
+chars[is.na(in_eutl_omega), in_eutl_omega := FALSE]
 
 # Emission intensity = emissions / revenue (only defined when both observed)
 chars[, emission_intensity := ifelse(!is.na(mean_emissions) &
@@ -314,8 +337,13 @@ chars[, emission_intensity := ifelse(!is.na(mean_emissions) &
                                      mean_emissions / mean_revenue,
                                      NA_real_)]
 
-# Indicator: is this seller in the EUTL registry (has any fe records in pre-window)?
-chars[, in_eutl := !is.na(mean_emissions)]
+# Indicator: is this seller in the EUTL registry IN 2015-16 (omega window).
+# This is the natural window since top's role assignment is based on ω in 2015-16.
+chars[, in_eutl := in_eutl_omega]
+
+# Carbon cost at peak EUA (% of input cost): omega in tCO2/EUR multiplied by
+# the deflated end-of-2018 EUA price (23.70 EUR/tCO2), expressed as percent.
+chars[, cost_shock_pct := omega_2015_16 * EUA_2018_REAL * 100]
 
 # ---------------------------------------------------------------------------
 # Pre-policy attrition rate per role
@@ -367,7 +395,9 @@ summary_role <- chars[, .(
   em_int_mean        = mean(emission_intensity,  na.rm = TRUE),
   em_int_median      = median(emission_intensity, na.rm = TRUE),
   omega_mean         = mean(omega_2015_16),
-  omega_median       = median(omega_2015_16)
+  omega_median       = median(omega_2015_16),
+  cost_shock_mean    = mean(cost_shock_pct),
+  cost_shock_median  = median(cost_shock_pct)
 ), by = role]
 summary_role <- merge(summary_role, attr_role, by = "role", all.x = TRUE)
 
@@ -454,11 +484,11 @@ body_rows <- c(
           fmt(gv("top", "em_int_median") * rev_scale, 2),
           fmt(gv("bot", "em_int_mean")   * rev_scale, 2),
           fmt(gv("bot", "em_int_median") * rev_scale, 2)),
-  val_row("Carbon pricing exposure",
-          fmt(gv("top", "omega_mean"),   4),
-          fmt(gv("top", "omega_median"), 4),
-          fmt(gv("bot", "omega_mean"),   4),
-          fmt(gv("bot", "omega_median"), 4))
+  val_row("Carbon cost at peak EUA (\\% of input cost)",
+          fmt(gv("top", "cost_shock_mean"),   3),
+          fmt(gv("top", "cost_shock_median"), 3),
+          fmt(gv("bot", "cost_shock_mean"),   3),
+          fmt(gv("bot", "cost_shock_median"), 3))
 )
 
 tex_lines <- c(
@@ -485,10 +515,10 @@ tex_lines <- c(
   "% - Firm age: years since the seller first appears in Annual Accounts, capped at 2016 (proxy for true firm age, which is not observed).",
   "% - Relationship age (years to 2017): years between the pair's first observed positive sales in the B2B panel (unrestricted; the panel starts in 2002) and the treatment year 2017. Capped from above at 15 (= 2017 - 2002).",
   "% - Pre-policy attrition rate (\\%): average across t in {2010, ..., 2015} of the share of pairs that are alive at year t (positive sales to the buyer in the cell) but not alive at year t+1. Both t and t+1 are pre-policy; this rate is structural, not driven by the MSR.",
-  "% - Pct in EUTL: share of sellers in the role with at least one positive emissions record in the EUTL registry over 2010-2014. Top suppliers are mechanically more likely to be in EUTL because omega > 0 requires an EUTL record.",
-  "% - Annual emissions (tCO2e): pre-period mean emissions for sellers in the EUTL registry. Sellers not in EUTL are excluded from this calculation.",
+  "% - Pct in EUTL: share of sellers in the role with at least one positive emissions record in the EUTL registry in the 2015-2016 omega-measurement window. By construction, top suppliers have omega > 0, which implies in_eutl_omega = TRUE; their Pct in EUTL is therefore 100%.",
+  "% - Annual emissions (tCO2e): pre-period (2010-2014) mean emissions for sellers in the EUTL registry. Sellers not in EUTL are excluded from this calculation.",
   "% - Emission intensity: pre-period mean of (annual emissions in tCO2e) / (annual revenue in EUR thousand), for sellers in the EUTL registry.",
-  "% - Carbon pricing exposure: omega, defined as max(emissions - free allocation, 0) * EUA price / total cost, averaged over the 2015-2016 omega-measurement window."
+  "% - Carbon cost at peak EUA (% of input cost): omega multiplied by the deflated end-of-2018 EUA settlement price (23.70 EUR/tCO2, deflated to 2016 EUR using the Belgian aggregate PPI) and expressed as a percentage. The underlying omega is max(emissions - free allocation, 0) / total cost (in tCO2 / EUR), averaged over the 2015-2016 omega-measurement window."
 )
 
 writeLines(tex_lines, con = file.path(OUTPUT_TAB,
