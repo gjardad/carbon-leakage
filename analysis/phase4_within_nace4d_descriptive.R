@@ -192,9 +192,12 @@ zero_share <- dens_dt[, .(n_obs    = .N,
                       by = role_label]
 cat("  Share of pairs at cost_shock = 0 by role:\n"); print(zero_share)
 
-# Option (c): plot the density of the CONTINUOUS (positive) part only.
-# Annotate the share at zero as a subtitle.
-dens_pos <- dens_dt[cost_shock > 0]
+# Floor cost_shock = 0 observations to a small positive value for log-x display.
+# Each curve is normalized so its peak = 1 via after_stat(scaled), so the bot
+# spike at the floor and the top continuous distribution are both on the same
+# y-axis scale even though bot has 86% of its mass concentrated at 0.
+COST_SHOCK_FLOOR <- 1e-6
+dens_dt[, cost_shock_plot := pmax(cost_shock, COST_SHOCK_FLOOR)]
 
 top_lbl <- zero_share[role_label == "Most exposed supplier"]
 bot_lbl <- zero_share[role_label == "Least exposed supplier"]
@@ -202,12 +205,12 @@ annot_text <- sprintf(
   "Mass at cost shock = 0:  Most exposed %.1f%%  |  Least exposed %.1f%%",
   top_lbl$pct_zero, bot_lbl$pct_zero)
 
-g_dens <- ggplot(dens_pos, aes(x = cost_shock, color = role_label,
-                                fill = role_label)) +
+g_dens <- ggplot(dens_dt, aes(x = cost_shock_plot, color = role_label,
+                               fill = role_label)) +
   geom_density(aes(y = after_stat(scaled)),
                alpha = 0.25, linewidth = 0.9) +
-  scale_x_log10(breaks = c(1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10),
-                labels = c("0.00001%", "0.0001%", "0.001%", "0.01%",
+  scale_x_log10(breaks = c(1e-6, 1e-3, 1e-2, 1e-1, 1, 10),
+                labels = c("0% (floor)", "0.001%", "0.01%",
                            "0.1%", "1%", "10%")) +
   scale_color_manual(values = c("Most exposed supplier"  = "firebrick",
                                  "Least exposed supplier" = "navy"),
