@@ -194,45 +194,68 @@ The variation that identifies γ comes from cross-supplier heterogeneity in carb
 
 After absorbing cell-role and year FE, γ identifies the *break* in the top-bot gap at the policy date, on the assumption that the gap would have continued at its pre-period level (constant in expectation) absent MSR. We argue this assumption is plausible because (a) the descriptive trajectory shows roughly flat pre-period top-bot trajectories from 2012 onward (Figure 5.4 cropped), and (b) the cross-supplier exposure variation ω is predetermined by 2015-16 (§3), so cells with high vs low within-cell ω contrast cannot have responded to the post-2017 EUA price rise before it happened.
 
-### 6.4 Three result presentations
+### 6.4 Three result presentations (RMD numbers)
 
-**(A) Event-study figure.** Year-by-year coefficients from an event-study version of the spec:
+**(A) Event-study figure** ([`phase4_within_intensive_did_eventstudy.pdf`](output_rmd/figures/phase4_within_intensive_did_eventstudy.pdf), source `phase4_within_intensive_did.R`):
 
-```
-share_{c,r,t}  =  α_{c,r}  +  δ_t  +  Σ_{k ≠ −1} β_k · 1[t = 2016 + k] · top  +  ε
-```
+| Year | k | β_k | SE | 95% CI |
+|---|---|---|---|---|
+| 2012 | −5 | −0.0018 | 0.0079 | [−0.017, +0.014] |
+| 2013 | −4 | −0.0005 | 0.0075 | [−0.015, +0.014] |
+| 2014 | −3 | −0.0094 | 0.0069 | [−0.023, +0.004] |
+| 2015 | −2 | −0.0030 | 0.0067 | [−0.016, +0.010] |
+| 2016 | −1 | 0 (ref) | — | — |
+| 2017 | 0 | −0.0072 | 0.0055 | [−0.018, +0.004] |
+| 2018 | 1 | **+0.0141** | 0.0063 | [+0.002, +0.026] |
+| 2019 | 2 | +0.0139 | 0.0071 | [+0.000, +0.028] |
+| 2020 | 3 | **+0.0185** | 0.0075 | [+0.004, +0.033] |
 
-Plot β_k vs k over k ∈ {−4, …, +3} (with 2016 = reference, post-period 2017-2020). Visual goals:
-- Pre-period β_k should be flat near zero (parallel trends).
-- Post-period β_k traces the dynamics of the policy effect.
+Pre-trends: clean and flat at zero. Post-2017: small positive deviations (+1.4 to +1.9 pp), opposite of the leakage prediction. 2018 and 2020 are marginally significant.
 
-**Source figure**: a τ=2017-only event-study figure, cropped to 2012-2020. **Will need a new script**: adapt `phase4_within_intensive_did.R` to (a) restrict the panel to 2012-2020 and (b) save the event-study figure with the cleaner cropping. Current event-study figure on RMD spans 2010-2022.
+**(B) DiD coefficient table with heterogeneity cuts** ([`phase4_within_intensive_did_mht_heterogeneity.tex`](output_rmd/tables/phase4_within_intensive_did_mht_heterogeneity.tex), source `phase4_within_intensive_did_mht.R`):
 
-**(B) DiD coefficient table with heterogeneity cuts.** A table reporting γ across:
-- The full sample (no heterogeneity).
-- Top-quartile / top-decile cuts on three heterogeneity variables (as in the existing in-paper table):
-  - Cost shock at peak EUA (= ω_top × EUA_2018_real × NACE-4d input share in buyer's total cost) — biggest cost incentive.
-  - NACE-4d input share at the buyer — biggest weight on this category.
-  - Within-cell exposure gap (= ω_top − ω_bot) — biggest within-cell contrast.
+| Cut | N cells | γ̂ | SE | unadj p | RW p |
+|---|---|---|---|---|---|
+| Pooled | 4,997 | +0.0080 | 0.0056 | 0.155 | 0.732 |
+| **Cost shock top-Q** | 1,249 | **−0.0527** | 0.0105 | < 0.001 | 0.462 |
+| **Cost shock top-D** | 500 | **−0.0473** | 0.0151 | 0.002 | 0.606 |
+| Input share top-Q | 1,249 | +0.0076 | 0.0075 | 0.31 | 0.776 |
+| Input share top-D | 500 | +0.0030 | 0.0098 | 0.76 | 0.792 |
+| Exposure gap top-Q | 1,274 | +0.0069 | 0.0103 | 0.50 | 0.792 |
+| Exposure gap top-D | 589 | +0.0277 | 0.0155 | 0.07 | 0.732 |
 
-Cells: top quartile of each cut, top decile of each cut, plus pooled. 7 cells total. Romano-Wolf step-down adjustment for the family-wise error rate (already implemented in `phase4_within_intensive_did_mht.R`).
+Cost-shock cuts go to the leakage direction at −5 pp; other cuts go opposite. None survive Romano-Wolf multiplicity correction (all RW p > 0.10).
 
-**Multiple columns?** Maybe show the same DiD across a few key specs: (i) naive (no pre-trend correction), (ii) age × top FE controls. Different columns of the same table. This makes the disagreement-across-specs story explicit. But could clutter — we may want to keep one column in the main text and put the others in the appendix.
+**Companion two-column DiD** ([`phase4_within_intensive_did_coefs.tex`](output_rmd/tables/phase4_within_intensive_did_coefs.tex)): pooled naive vs pair-level with age × top FE.
 
-**Source table**: `phase4_within_intensive_did_mht.R` already produces the heterogeneity table. **Needs**: restrict to 2012-2020 window, regenerate. Verify Romano-Wolf with the new window.
+| Spec | γ̂ | SE | sig |
+|---|---|---|---|
+| Naive DiD | +0.0123 | 0.0055 | ** |
+| Pair-level + age × top FE | +0.0031 | 0.0056 | n.s. |
 
-**(C) HonestDiD robustness figure/table.** Plot of the post-period treatment effect CI as a function of `Mbar` (the Rambachan-Roth relative-magnitudes bound). The breakdown `Mbar` — the smallest value for which the CI includes zero — is the headline number.
+**(C) HonestDiD bounds** ([`phase4_within_intensive_did_honestdid_bounds.pdf`](output_rmd/figures/phase4_within_intensive_did_honestdid_bounds.pdf), source `phase4_within_intensive_did_honestdid.R`):
 
-**Source**: `phase4_within_intensive_did_honestdid.R` already produces this. **Needs**: regenerate on the 2012-2020 window. Verify CIs and breakdown M.
+Avg post-period γ = +0.0097.
 
-### 6.5 Implementation plan (next steps)
+| M̄ | 95% CI |
+|---|---|
+| 0 (original) | **[−0.001, +0.020]** — marginal exclusion of zero |
+| 0.25 | [−0.012, +0.032] — includes zero |
+| 0.50 | [−0.028, +0.048] |
+| 1.00 | [−0.062, +0.082] |
 
-| Artifact | Source script | Needs |
-|---|---|---|
-| (A) Event-study figure on 2012-2020 | `phase4_within_intensive_did.R` | Restrict panel to 2012-2020; save with descriptive_ prefix |
-| (B) Heterogeneity DiD table on 2012-2020 | `phase4_within_intensive_did_mht.R` | Restrict to 2012-2020; verify Romano-Wolf |
-| (C) HonestDiD bounds on 2012-2020 | `phase4_within_intensive_did_honestdid.R` | Restrict to 2012-2020; regenerate bounds |
-| (+) 2012-2022 appendix robustness | All three above with full window | Re-run with `YEAR_HI = 2022` |
+**Breakdown M̄ ≈ 0.25.** Even tiny pre-trend slack collapses the CI to zero.
+
+### 6.5 Story for the paper
+
+The within-NACE-4d intensive margin response to MSR is **small and not robustly identified**:
+
+- **Pre-trends are clean** in the 2012-2020 window — no ad-hoc detrending needed.
+- **Pooled effect is small** (+1.2 pp, anti-leakage direction) and **fragile** to pre-trend slack (breakdown M̄ ≈ 0.25).
+- **Suggestive leakage** appears in cost-shock cuts (γ̂ ≈ −5 pp where the carbon-cost incentive is largest), but doesn't survive multiplicity correction.
+- **Big effects in either direction are rejected** at reasonable M̄ values.
+
+The most obvious substitution channel — swap your steel mill for a cleaner steel mill within the same input category — is not where carbon leakage shows up. Whatever reallocation the policy did induce operated on other margins (extensive, across-NACE, or imports).
 
 ---
 
