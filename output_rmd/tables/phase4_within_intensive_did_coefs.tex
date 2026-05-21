@@ -1,26 +1,26 @@
 
 \begin{table}[htbp]
-   \caption{\label{tab:phase4_within_intensive_did_coefs} Intensive margin DiD on the present-in-2010-14 sample. Column 1 is the naive 2x2 DiD; column 2 adds a linear pre-trend interaction (year - 2017) * top to absorb the structural differential trend between top and bot.}
+   \caption{\label{tab:phase4_within_intensive_did_coefs} Within-NACE-4d intensive-margin DiD, present-in-2010-14 sample, panel 2012-2020. Column 1: naive DiD on the cell-role panel (top supplier vs portfolio-bot per cell-year). Column 2: pair-level DiD with age x top fixed effects to absorb the differential attrition between top and bot.}
    \centering
    \begin{tabular}{lcc}
       \tabularnewline \midrule \midrule
       Dependent Variable: & \multicolumn{2}{c}{Within-cell share}\\
-      Model:                      & (1)            & (2)\\  
+      Model:              & (1)           & (2)\\  
       \midrule
       \emph{Variables}\\
-      post $\times$ top           & 0.0279$^{***}$ & -0.0220$^{***}$\\   
-                                  & (0.0059)       & (0.0063)\\   
-      (year - 2017) $\times$ top  &                & 0.0080$^{***}$\\   
-                                  &                & (0.0011)\\   
+      post $\times$ top   & 0.0123$^{**}$ & 0.0031\\   
+                          & (0.0055)      & (0.0056)\\   
       \midrule
       \emph{Fixed-effects}\\
-      Cell $\times$ role          & Yes            & Yes\\  
-      Year                        & Yes            & Yes\\  
+      Cell $\times$ role  & Yes           & Yes\\  
+      Year                & Yes           & Yes\\  
+      Age                 &               & Yes\\  
+      Age-Top             &               & Yes\\  
       \midrule
       \emph{Fit statistics}\\
-      Observations                & 115,530        & 115,530\\  
-      R$^2$                       & 0.6713         & 0.6717\\  
-      Within R$^2$                & 0.0011         & 0.0025\\  
+      Observations        & 81,164        & 188,149\\  
+      R$^2$               & 0.7386        & 0.6579\\  
+      Within R$^2$        & 0.0003        & $2.33\times 10^{-6}$\\   
       \midrule \midrule
       \multicolumn{3}{l}{\emph{Clustered (cell\_id) standard-errors in parentheses}}\\
       \multicolumn{3}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
