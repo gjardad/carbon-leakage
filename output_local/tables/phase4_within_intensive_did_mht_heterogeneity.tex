@@ -1,0 +1,20 @@
+% latex table generated in R 4.5.2 by xtable 1.8-8 package
+% Thu May 21 10:00:56 2026
+\begin{table}[ht]
+\centering
+\caption{Within-NACE-4d intensive-margin DiD by heterogeneity cut.  Each row reports the post-2017 top vs bot share differential $\widehat{\gamma}$ from a separate naive DiD on the indicated subsample. Heterogeneity variables: cost shock (= $\omega_{top}$ $\times$ (top supplier's pre-window sales to buyer / buyer's pre-window total cost) $\times$ EUA at peak); input share (= NACE-4d spend / buyer total cost); exposure gap (= $\omega_{top} - \omega_{bot}$). Significance stars use Romano-Wolf step-down adjusted $p$-values (cluster-bootstrap on buyer, $B = 500$). Clustered SEs at the cell level.} 
+\label{tab:phase4_within_intensive_did_mht_heterogeneity}
+\begin{tabular}{llllr}
+  \toprule
+Cut & Cells & $\widehat{\gamma}$ & SE & RW $p$ \\ 
+  \midrule
+Pooled (no restriction) & 409 & -0.0424 & (0.0212) & 0.8100 \\ 
+  Top quartile, cost shock & 103 & -0.0628 & (0.0310) & 0.8100 \\ 
+  Top decile, cost shock &  41 & -0.0340 & (0.0395) & 0.8100 \\ 
+  Top quartile, input share & 103 & -0.0972 & (0.0330) & 0.7120 \\ 
+  Top decile, input share &  41 & -0.1299 & (0.0468) & 0.7120 \\ 
+  Top quartile, exposure gap & 110 & 0.0414 & (0.0310) & 0.8100 \\ 
+  Top decile, exposure gap &  51 & 0.0334 & (0.0433) & 0.8100 \\ 
+   \bottomrule
+\end{tabular}
+\end{table}
