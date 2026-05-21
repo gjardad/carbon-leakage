@@ -1,22 +1,22 @@
 % latex table generated in R 4.5.2 by xtable 1.8-8 package
-% Tue May 19 17:35:26 2026
+% Thu May 21 09:36:16 2026
 \begin{table}[ht]
 \centering
-\caption{HonestDiD bounds on the average post-period treatment effect (within-NACE-4d intensive margin), as a function of $\bar{M}$ (relative-magnitudes bound: post-period parallel-trends violation is at most $\bar{M}$ times the largest pre-period violation). Row at $\bar{M} = 0$, method = `Original' is the standard 95% CI assuming exact parallel trends.} 
+\caption{HonestDiD relative-magnitudes bounds on the average post-period treatment effect (within-NACE-4d intensive margin, panel 2012-2020). $\bar{M} = 0$ row is the standard 95% CI assuming exact parallel trends. For $\bar{M} > 0$, the post-period parallel-trends violation is bounded above by $\bar{M}$ times the maximum pre-period violation. The breakdown $\bar{M}$ is the smallest value for which the CI includes zero.} 
 \label{tab:phase4_within_intensive_did_honestdid_bounds}
-\begin{tabular}{llll}
+\begin{tabular}{llr}
   \toprule
-Mbar & method & Option 2B detrended & Raw event study \\ 
+$\bar{M}$ & Method & 95\% CI \\ 
   \midrule
-0.00 & HonestDiD & [-0.0691, 0.0163] & [-0.0682, 0.0163] \\ 
-  0.00 & Original (M = 0) & [-0.0696, 0.0166] & [-0.0689, 0.0173] \\ 
-  0.25 & HonestDiD & [-0.1246, 0.0673] & [-0.1396, 0.0841] \\ 
-  0.50 & HonestDiD & [-0.2020, 0.1430] & [-0.2329, 0.1757] \\ 
-  0.75 & HonestDiD & [-0.2812, 0.2223] & [-0.3271, 0.2699] \\ 
-  1.00 & HonestDiD & [-0.3613, 0.3032] & [-0.4240, 0.3659] \\ 
-  1.25 & HonestDiD & [-0.4397, 0.3842] & [-0.4399, 0.4399] \\ 
-  1.50 & HonestDiD & [-0.4397, 0.4397] & [-0.4399, 0.4399] \\ 
-  2.00 & HonestDiD & [-0.4397, 0.4397] & [-0.4399, 0.4399] \\ 
+0.00 & Original (no PT slack) & [-0.0704, 0.0190] \\ 
+  0.00 & HonestDiD (relative magnitudes) & [-0.0699, 0.0187] \\ 
+  0.25 & HonestDiD (relative magnitudes) & [-0.0827, 0.0416] \\ 
+  0.50 & HonestDiD (relative magnitudes) & [-0.1074, 0.0745] \\ 
+  0.75 & HonestDiD (relative magnitudes) & [-0.1366, 0.1119] \\ 
+  1.00 & HonestDiD (relative magnitudes) & [-0.1695, 0.1494] \\ 
+  1.25 & HonestDiD (relative magnitudes) & [-0.2069, 0.1877] \\ 
+  1.50 & HonestDiD (relative magnitudes) & [-0.2444, 0.2261] \\ 
+  2.00 & HonestDiD (relative magnitudes) & [-0.3211, 0.3020] \\ 
    \bottomrule
 \end{tabular}
 \end{table}
