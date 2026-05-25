@@ -248,39 +248,43 @@ fwrite(robust, file.path(OUTPUT_TAB,
        "phase4_within_intensive_ces_elasticity_sigma.csv"))
 
 # ---------------------------------------------------------------------------
-# Density of the imputed relative-price change, by rho (headline window)
-#   D ln(p_top/p_bot)_c = rho * K_head * gap_c   (in percent)
+# CDF of the imputed relative-price change, by rho (headline window)
+#   D ln(p_top/p_bot)_c = rho * K_head * gap_c   (fraction; log-point change)
+# Plotted as an ECDF on a log x-axis (percent labels), matching the
+# counterfactual-savings CDF style in phase4_within_intensive_figures.R.
 # ---------------------------------------------------------------------------
-cat("\nBuilding relative-price-change density figure...\n")
+cat("\nBuilding relative-price-change CDF figure...\n")
 dens <- rbindlist(lapply(RHO_GRID, function(r) {
-  data.table(rho = r,
-             dlnp_pct = 100 * r * K_HEAD * cell_gap$gap)
+  data.table(rho  = r,
+             dlnp = r * K_HEAD * cell_gap$gap)   # fractional relative-price change
 }))
-dens[, rho_label := factor(sprintf("rho = %.2f", rho),
-                           levels = sprintf("rho = %.2f", RHO_GRID))]
 
-g_dens <- ggplot(dens, aes(x = dlnp_pct, color = rho_label, fill = rho_label)) +
-  geom_density(alpha = 0.12, linewidth = 0.9, adjust = 1.2) +
-  scale_color_brewer(palette = "Set1", name = NULL) +
-  scale_fill_brewer(palette  = "Set1", name = NULL) +
-  labs(x = "Imputed change in relative price (top vs bot), percent",
-       y = "Density") +
-  coord_cartesian(xlim = c(0, quantile(dens$dlnp_pct, 0.98))) +
+x_breaks <- c(1e-6, 1e-4, 1e-2, 1)
+x_labels <- c("0.0001%", "0.01%", "1%", "100%")
+
+g_dens <- ggplot(dens[dlnp > 0], aes(x = dlnp, color = factor(rho))) +
+  stat_ecdf(geom = "step", linewidth = 0.9, alpha = 0.9) +
+  scale_x_log10(breaks = x_breaks, labels = x_labels) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_color_brewer(palette = "Set1",
+                     name = expression("Pass-through " * rho)) +
+  labs(x = "Change in relative price (top vs bot)",
+       y = "Cumulative share of cells") +
   theme_classic(base_size = 15) +
   theme(panel.grid      = element_blank(),
-        axis.title      = element_text(size = 17),
-        axis.title.x    = element_text(margin = margin(t = 12)),
-        axis.title.y    = element_text(margin = margin(r = 12)),
-        axis.text       = element_text(size = 15),
+        axis.title.x    = element_text(margin = margin(t = 12), size = 17),
+        axis.title.y    = element_text(margin = margin(r = 12), size = 17),
+        axis.text       = element_text(size = 14),
         legend.position = "bottom",
+        legend.title    = element_text(size = 15),
         legend.text     = element_text(size = 14))
 
 ggsave(file.path(OUTPUT_FIG,
-       "phase4_within_intensive_ces_elasticity_density.png"),
-       g_dens, width = 9, height = 5.5, dpi = 200)
+       "phase4_within_intensive_ces_elasticity_cdf.png"),
+       g_dens, width = 8, height = 5.5, dpi = 200)
 ggsave(file.path(OUTPUT_FIG,
-       "phase4_within_intensive_ces_elasticity_density.pdf"),
-       g_dens, width = 9, height = 5.5)
+       "phase4_within_intensive_ces_elasticity_cdf.pdf"),
+       g_dens, width = 8, height = 5.5)
 
 # ---------------------------------------------------------------------------
 # LaTeX: headline sigma table (by rho)
