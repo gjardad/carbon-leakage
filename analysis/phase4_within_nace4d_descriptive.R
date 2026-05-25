@@ -287,12 +287,16 @@ ggsave(file.path(OUTPUT_FIG,
 # ---------------------------------------------------------------------------
 cat("\n(5.3) Building summary statistics table...\n")
 
-# Pull pre-period firm-level characteristics for each seller in our sample
-# Pre-period averages computed over 2010-14
+# Pull pre-period firm-level characteristics for each seller in our sample.
+# Pre-period averages are computed over the SUMMARY_PRE_WINDOW (2012-2016),
+# which matches the pre-treatment portion of the DiD panel window (2012-2020).
+# Sample selection still uses PRE_WINDOW (2010-2014) above; only the
+# characterisation window differs.
+SUMMARY_PRE_WINDOW <- 2012L:2016L
 sellers_in_sample <- unique(sample_pairs$seller)
 
 # Revenue and wage bill (size proxies)
-kv_pre <- aa_kv[year %in% PRE_WINDOW & vat %in% sellers_in_sample,
+kv_pre <- aa_kv[year %in% SUMMARY_PRE_WINDOW & vat %in% sellers_in_sample,
                 .(mean_revenue   = mean(revenue,   na.rm = TRUE),
                   mean_value_added = mean(value_added, na.rm = TRUE),
                   mean_wage_bill = mean(wage_bill, na.rm = TRUE)),
@@ -305,9 +309,9 @@ firm_age <- firm_first_year[vat %in% sellers_in_sample,
                                firm_age_proxy = as.numeric(2016L - first_aa_year))]
 
 # Emissions: from fe data (only ETS-registered firms appear here)
-# Pre-period (2010-14) means are used for the "Annual emissions" and
+# Pre-period (2012-16) means are used for the "Annual emissions" and
 # "Emission intensity" rows.
-em_pre <- fe[year %in% PRE_WINDOW & vat %in% sellers_in_sample,
+em_pre <- fe[year %in% SUMMARY_PRE_WINDOW & vat %in% sellers_in_sample,
              .(mean_emissions   = mean(emissions, na.rm = TRUE),
                mean_total_cost  = mean(total_cost, na.rm = TRUE)),
              by = vat]
@@ -352,13 +356,14 @@ chars[, cost_shock_pct := omega_2015_16 * EUA_2018_REAL * 100]
 # Pre-policy attrition rate per role
 #
 #   Definition: average fraction of pairs alive at year t that are NOT alive
-#   at year t+1, computed over the pre-policy window 2010-2016 (so t in
-#   {2010, ..., 2015}; t+1 stays <= 2016). "Alive" means positive sales
-#   from the seller to the buyer in the cell that year.
+#   at year t+1, computed over the pre-policy window 2012-2016 (so t in
+#   {2012, ..., 2015}; t+1 stays <= 2016). "Alive" means positive sales
+#   from the seller to the buyer in the cell that year. This matches the
+#   pre-treatment portion of the DiD panel window (2012-2020).
 #
 #   The reported attrition rate per role is the simple average across t.
 # ---------------------------------------------------------------------------
-ATTR_YEARS <- 2010L:2016L
+ATTR_YEARS <- 2012L:2016L
 pair_year_grid <- sample_pairs[, .(buyer, seller_nace4d, seller, role)][,
                   .(year = ATTR_YEARS),
                   by = .(buyer, seller_nace4d, seller, role)]
@@ -513,14 +518,14 @@ tex_lines <- c(
   "% Row definitions:",
   "% - N of relationships: count of (cell, seller, exposure) observations in the present-in-2010-14 sample.",
   "% - N unique sellers: count of unique sellers in each exposure group.",
-  "% - Revenue (EUR thousands): pre-period (2010-2014) mean revenue from Annual Accounts, divided by 1000 for display.",
-  "% - Wage bill (EUR thousands): pre-period mean wage bill from Annual Accounts, divided by 1000 for display.",
+  "% - Revenue (EUR thousands): pre-period (2012-2016) mean revenue from Annual Accounts, divided by 1000 for display.",
+  "% - Wage bill (EUR thousands): pre-period (2012-2016) mean wage bill from Annual Accounts, divided by 1000 for display.",
   "% - Firm age: years since the seller first appears in Annual Accounts, capped at 2016 (proxy for true firm age, which is not observed).",
   "% - Relationship age (years to 2017): years between the pair's first observed positive sales in the B2B panel (unrestricted; the panel starts in 2002) and the treatment year 2017. Capped from above at 15 (= 2017 - 2002).",
-  "% - Pre-policy attrition rate (\\%): average across t in {2010, ..., 2015} of the share of pairs that are alive at year t (positive sales to the buyer in the cell) but not alive at year t+1. Both t and t+1 are pre-policy; this rate is structural, not driven by the MSR.",
+  "% - Pre-policy attrition rate (\\%): average across t in {2012, ..., 2015} of the share of pairs that are alive at year t (positive sales to the buyer in the cell) but not alive at year t+1. Both t and t+1 are pre-policy; this rate is structural, not driven by the MSR.",
   "% - Pct in EUTL: share of sellers in the exposure group with at least one positive emissions record in the EUTL registry in the 2015-2016 omega-measurement window. By construction, top suppliers have omega > 0, which implies in_eutl_omega = TRUE; their Pct in EUTL is therefore 100%.",
-  "% - Annual emissions (tCO2e): pre-period (2010-2014) mean emissions for sellers in the EUTL registry. Sellers not in EUTL are excluded from this calculation.",
-  "% - Emission intensity: pre-period mean of (annual emissions in tCO2e) / (annual revenue in EUR thousand), for sellers in the EUTL registry.",
+  "% - Annual emissions (tCO2e): pre-period (2012-2016) mean emissions for sellers in the EUTL registry. Sellers not in EUTL are excluded from this calculation.",
+  "% - Emission intensity: pre-period (2012-2016) mean of (annual emissions in tCO2e) / (annual revenue in EUR thousand), for sellers in the EUTL registry.",
   "% - Carbon cost at peak EUA (% of input cost): omega multiplied by the deflated end-of-2018 EUA settlement price (23.70 EUR/tCO2, deflated to 2016 EUR using the Belgian aggregate PPI) and expressed as a percentage. The underlying omega is max(emissions - free allocation, 0) / total cost (in tCO2 / EUR), averaged over the 2015-2016 omega-measurement window."
 )
 

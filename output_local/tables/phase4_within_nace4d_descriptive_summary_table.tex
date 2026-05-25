@@ -11,15 +11,15 @@
 N of relationships & \multicolumn{2}{c}{409} & \multicolumn{2}{c}{604} \\
 N unique sellers & \multicolumn{2}{c}{85} & \multicolumn{2}{c}{140} \\
 \midrule
-Revenue (EUR thousands) & 1,754,919 & 188,825 & 737,613 & 79,625 \\
-Wage bill (EUR thousands) & 52,613 & 22,736 & 28,194 & 15,468 \\
+Revenue (EUR thousands) & 1,631,917 & 175,667 & 665,409 & 101,985 \\
+Wage bill (EUR thousands) & 56,716 & 23,401 & 29,134 & 15,074 \\
 Firm age & 15.4 & 16 & 15.4 & 16 \\
 Relationship age (years to 2017) & 10.1 & 10 & 9.9 & 10 \\
-Pre-policy attrition rate (\%) & \multicolumn{2}{c}{8.11} & \multicolumn{2}{c}{8.42} \\
+Pre-policy attrition rate (\%) & \multicolumn{2}{c}{9.02} & \multicolumn{2}{c}{7.98} \\
 \midrule
 Pct in EUTL & \multicolumn{2}{c}{100.0} & \multicolumn{2}{c}{33.9} \\
-Annual emissions (tCO2e) & 462,552 & 47,370 & 483,171 & 115,561 \\
-Emission intensity (tCO2e / EUR thousand revenue) & 1.55 & 0.22 & 1.53 & 0.31 \\
+Annual emissions (tCO2e) & 443,437 & 40,868 & 477,801 & 91,978 \\
+Emission intensity (tCO2e / EUR thousand revenue) & 1.43 & 0.22 & 1.47 & 0.29 \\
 Carbon cost at peak EUA (\% of input cost) & 1.201 & 0.200 & 0.048 & 0.000 \\
 \bottomrule
 \end{tabular}
@@ -28,12 +28,12 @@ Carbon cost at peak EUA (\% of input cost) & 1.201 & 0.200 & 0.048 & 0.000 \\
 % Row definitions:
 % - N of relationships: count of (cell, seller, exposure) observations in the present-in-2010-14 sample.
 % - N unique sellers: count of unique sellers in each exposure group.
-% - Revenue (EUR thousands): pre-period (2010-2014) mean revenue from Annual Accounts, divided by 1000 for display.
-% - Wage bill (EUR thousands): pre-period mean wage bill from Annual Accounts, divided by 1000 for display.
+% - Revenue (EUR thousands): pre-period (2012-2016) mean revenue from Annual Accounts, divided by 1000 for display.
+% - Wage bill (EUR thousands): pre-period (2012-2016) mean wage bill from Annual Accounts, divided by 1000 for display.
 % - Firm age: years since the seller first appears in Annual Accounts, capped at 2016 (proxy for true firm age, which is not observed).
 % - Relationship age (years to 2017): years between the pair's first observed positive sales in the B2B panel (unrestricted; the panel starts in 2002) and the treatment year 2017. Capped from above at 15 (= 2017 - 2002).
-% - Pre-policy attrition rate (\%): average across t in {2010, ..., 2015} of the share of pairs that are alive at year t (positive sales to the buyer in the cell) but not alive at year t+1. Both t and t+1 are pre-policy; this rate is structural, not driven by the MSR.
+% - Pre-policy attrition rate (\%): average across t in {2012, ..., 2015} of the share of pairs that are alive at year t (positive sales to the buyer in the cell) but not alive at year t+1. Both t and t+1 are pre-policy; this rate is structural, not driven by the MSR.
 % - Pct in EUTL: share of sellers in the exposure group with at least one positive emissions record in the EUTL registry in the 2015-2016 omega-measurement window. By construction, top suppliers have omega > 0, which implies in_eutl_omega = TRUE; their Pct in EUTL is therefore 100%.
-% - Annual emissions (tCO2e): pre-period (2010-2014) mean emissions for sellers in the EUTL registry. Sellers not in EUTL are excluded from this calculation.
-% - Emission intensity: pre-period mean of (annual emissions in tCO2e) / (annual revenue in EUR thousand), for sellers in the EUTL registry.
+% - Annual emissions (tCO2e): pre-period (2012-2016) mean emissions for sellers in the EUTL registry. Sellers not in EUTL are excluded from this calculation.
+% - Emission intensity: pre-period (2012-2016) mean of (annual emissions in tCO2e) / (annual revenue in EUR thousand), for sellers in the EUTL registry.
 % - Carbon cost at peak EUA (% of input cost): omega multiplied by the deflated end-of-2018 EUA settlement price (23.70 EUR/tCO2, deflated to 2016 EUR using the Belgian aggregate PPI) and expressed as a percentage. The underlying omega is max(emissions - free allocation, 0) / total cost (in tCO2 / EUR), averaged over the 2015-2016 omega-measurement window.
