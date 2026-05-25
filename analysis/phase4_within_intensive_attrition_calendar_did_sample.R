@@ -229,7 +229,7 @@ g <- ggplot(surv_pt,
                                "Least exposed supplier" = "navy"),
                     name = NULL) +
   labs(x = NULL,
-       y = "Survival rate (eligible pairs with positive sales that year)") +
+       y = "Survival rate") +
   theme_classic(base_size = 15) +
   theme(panel.grid       = element_blank(),
         axis.title.y     = element_text(size = 18, margin = margin(r = 14)),
