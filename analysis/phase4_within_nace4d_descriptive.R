@@ -487,7 +487,7 @@ body_rows <- c(
           fmt(gv("top", "em_median"), 0),
           fmt(gv("bot", "em_mean"),   0),
           fmt(gv("bot", "em_median"), 0)),
-  val_row("Emission intensity (tCO2e / EUR thousand revenue)",
+  val_row("Emission intensity (tCO2e / EUR thousands)",
           fmt(gv("top", "em_int_mean")   * rev_scale, 2),
           fmt(gv("top", "em_int_median") * rev_scale, 2),
           fmt(gv("bot", "em_int_mean")   * rev_scale, 2),
