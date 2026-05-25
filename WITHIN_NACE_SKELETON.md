@@ -31,7 +31,7 @@ Key references:
 - **Aldy and Pizer (2016).** "The Impact of the European Union Emissions Trading Scheme on Regulated Firms: What Is the Evidence after Ten Years?" *Review of Environmental Economics and Policy*.
 - (Add: Känzig 2023, *AER*, on EUA price shocks as monetary-like shocks; Colmer et al. 2024, *Restud*, on EU ETS treatment effects.)
 
-**[TODO: add a brief footnote on MSR mechanics — surplus indicator, threshold, intake rule.]**
+**[DONE: footnote on MSR mechanics (TNAC, 833M/400M thresholds, 12%→24% intake doubling under 2018/410, cancellation rule) added to `paper/leakage_within_across/sections/leakage_msr.tex`.]**
 
 ---
 
@@ -61,7 +61,7 @@ Total cost in 2015-16 is from the firm's annual accounts, also predetermined.
 
 Result: ω measured in 2015-16 is a function of pre-MSR quantities. It is not a response to the MSR.
 
-**[TODO: more precise dates on Phase 3 benchmark rules; cite the EU regulation.]**
+**[DONE: footnote in `paper/leakage_within_across/sections/data.tex` cites Commission Decision 2011/278/EU, the top-10\% / 2007--08 benchmark basis, and the predetermined character of the 2014 leakage-list revision.]**
 
 ---
 
@@ -89,7 +89,7 @@ Within each cell:
 
 For each cell-year, the **bot share** is the **mean** of the individual within-cell expenditure shares of the suppliers in the bot portfolio. The portfolio approach handles tied suppliers symmetrically: when multiple suppliers qualify as bot (lowest ω), we average their shares rather than arbitrarily picking one via the sales tiebreaker (which would systematically bias bot toward small/fragile relationships — see Section 4 of WITHIN_NACE.md).
 
-**[TODO: include sample numbers — N cells, N pairs, N pair-years on RMD.]**
+**[DONE: 4,997 cells / 22,909 unique pairs / 81,164 cell-role-year obs filled into the sample-sizes table in `paper/leakage_within_across/sections/data.tex`. Across-NACE-4d row remains `\notrun{}`.]**
 
 ---
 
@@ -263,18 +263,19 @@ The most obvious substitution channel — swap your steel mill for a cleaner ste
 
 | Section | Artifact | Status |
 |---|---|---|
-| 5.1 ω density | `phase4_within_nace4d_descriptive_omega_density.pdf` | **TODO** |
-| 5.2 exposure gap | `phase4_within_nace4d_descriptive_exposure_gap_density.pdf` | **TODO** |
-| 5.3 summary table | `phase4_within_nace4d_descriptive_summary_table.tex` | **TODO** |
-| 5.4 trajectory (2017 only) | `phase4_within_nace4d_intensive_topbot_present_in_2010_14_trajectory_2017only.pdf` | **TODO** (small edit to existing) |
-| 5.5 attrition figure | `phase4_within_intensive_attrition_did_age_stratified.pdf` | **Exists** |
-| 6. DiD spec | Various | **Exists** in WITHIN_NACE.md, decision deferred |
+| 2. MSR mechanics footnote | `leakage_msr.tex` | **DONE** |
+| 3. Phase 3 benchmark provenance footnote | `data.tex` | **DONE** |
+| 4. Sample numbers in headline table | `data.tex` (within-NACE-4d row) | **DONE** |
+| 5.1 ω density | `phase4_within_nace4d_descriptive_omega_density.pdf` | **DONE** |
+| 5.2 exposure gap | `phase4_within_nace4d_descriptive_exposure_gap_density.pdf` | **DONE** |
+| 5.3 summary table | `phase4_within_nace4d_descriptive_summary_table.tex` | **DONE** |
+| 5.4 trajectory (2017 only) | `phase4_within_nace4d_descriptive_trajectory_2017_2012_2022.pdf` | **DONE** |
+| 5.5 attrition figure | `phase4_within_intensive_attrition_did_age_stratified.pdf` | **DONE** |
+| 6. DiD spec, event study, MHT, HonestDiD | `leakage_domestic.tex` | **DONE** |
 
-**Proposed next steps**:
-1. Write a single new script `analysis/phase4_within_nace4d_descriptive.R` that produces 5.1, 5.2, and 5.3 (the ω densities, exposure gap density, and summary stats table). All three share the same sample construction.
-2. Write a small variant or argument to existing `phase4_within_intensive_pretrend_present_in_2010_14.R` for 5.4 (only the τ = 2017 panel, simpler legend).
-3. Confirm 5.5 figure (`phase4_within_intensive_attrition_did_age_stratified.pdf`) is the right one — or discuss whether we want a different attrition visual.
-4. Validate this skeleton with the user, then re-discuss Section 6 (DiD spec).
+**Remaining open items**:
+1. EUTL-bot-higher-emissions footnote in §5.3 prose — the summary table makes the quirk visible (bot mean 412k vs top 251k tCO₂e) but no prose addresses it; reader may read it as a contradiction. *Deferred.*
+2. Across-NACE-4d sample sizes still `\notrun{}` in `data.tex` (outside this skeleton's scope but flagged for completeness).
 
 ---
 
