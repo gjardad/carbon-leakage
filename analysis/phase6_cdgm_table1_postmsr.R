@@ -48,6 +48,10 @@
 # Outputs (per paths.R: output_local/ on local-1, output_rmd/ on RMD):
 #   tables/phase6_cdgm_postmsr_share.csv  -- share, both schemes x {trend, no-trend} x 6 cols
 #   tables/phase6_cdgm_postmsr_prob.csv   -- probability, same layout
+#   tables/phase6_cdgm_postmsr_nested.tex -- paper-ready: nested phases, col(5), share + prob
+#   tables/phase6_cdgm_postmsr_finer.tex  -- paper-ready: finer post-2012 split, col(5)
+# The .csv files are gitignored (output_*/tables/*.csv); the .tex files are NOT,
+# so the .tex tables are the artifacts to commit, push, and \input into the paper.
 # =============================================================================
 
 REPO_DIR <- tryCatch(dirname(normalizePath(sys.frame(1)$ofile, winslash = "/")),
@@ -222,6 +226,68 @@ fwrite(share_out, out_share)
 fwrite(prob_out,  out_prob)
 cat("\nShare saved:", out_share, "\n")
 cat("Prob  saved:", out_prob,  "\n")
+
+# ---------------------------------------------------------------------------
+# 7b. Paper-ready LaTeX tables (.tex). Unlike the CSVs above, output_*/tables/
+#     *.tex is NOT gitignored -- these are the artifacts to commit/push and to
+#     \input directly into the paper. Built with fixest::etable to match the
+#     house table style. Preferred FE col(5) only; columns (1)-(2) = import
+#     share, (3)-(4) = sourcing probability; even columns add the trend control.
+# ---------------------------------------------------------------------------
+fe5  <- "firm_prod_country + country_year + sector_year"
+fit5 <- function(outcome, rhs)
+  feols(as.formula(sprintf("%s ~ %s | %s", outcome, rhs, fe5)),
+        data = d, cluster = ~ vat + partner_iso2)
+
+tex_dict <- c(
+  treat_p1    = "Phase 1 (2005--08)",
+  treat_p2    = "Phase 2 (2009--12)",
+  treat_p3    = "Phase 3 (2013--19)",
+  treat_p3e   = "Phase 3a (2013--17)",
+  treat_p3l   = "Phase 3b (2018--19)",
+  treat_p4    = "Phase IV (2020--22)",
+  treat_yearc = "Regulated $\\times$ linear trend",
+  firm_prod_country = "Firm $\\times$ product $\\times$ country",
+  country_year      = "Country $\\times$ year",
+  sector_year       = "Sector $\\times$ year"
+)
+
+write_postmsr_tex <- function(rhs, rhs_tr, file, title, label) {
+  ms0 <- fit5("share", rhs);       ms1 <- fit5("share", rhs_tr)
+  mp0 <- fit5("prob_active", rhs); mp1 <- fit5("prob_active", rhs_tr)
+  etable(ms0, ms1, mp0, mp1,
+         tex = TRUE, file = file, replace = TRUE,
+         title = title, label = label, dict = tex_dict,
+         fitstat = ~ n,
+         extralines = list("Outcome"       = c("Share", "Share", "Prob.", "Prob."),
+                           "Trend control" = c("No", "Yes", "No", "Yes")),
+         digits = "r4", digits.stats = 0)
+  cat("LaTeX table saved:", file, "\n")
+}
+
+tex_nested <- file.path(OUT_TAB, sprintf("phase6_cdgm_postmsr_nested%s.tex", mock_tag))
+tex_finer  <- file.path(OUT_TAB, sprintf("phase6_cdgm_postmsr_finer%s.tex",  mock_tag))
+
+tryCatch({
+  write_postmsr_tex(
+    rhs_nested, rhs_nested_tr, tex_nested,
+    paste("Belgian import switching, CdGM specification through the post-MSR window.",
+          "Columns (1)--(2): import share; (3)--(4): probability of sourcing.",
+          "Even columns add a regulated-product $\\times$ linear-trend control.",
+          "Preferred fixed effects throughout; two-way clustered on firm and country.",
+          "France benchmark (CdGM 2024), Phase~3 import share: $+0.121$ (0.029)."),
+    "tab:cdgm_postmsr_nested")
+  write_postmsr_tex(
+    rhs_finer, rhs_finer_tr, tex_finer,
+    paste("Belgian import switching, post-2012 period split along the EUA price ladder:",
+          "Phase 3a (2013--17, low price); Phase 3b (2018--19, ramp); Phase IV (2020--22, spike).",
+          "Columns (1)--(2): import share; (3)--(4): probability of sourcing.",
+          "Even columns add a regulated-product $\\times$ linear-trend control.",
+          "Two-way clustered on firm and country."),
+    "tab:cdgm_postmsr_finer")
+}, error = function(e)
+  cat("WARNING: etable LaTeX generation failed:", conditionMessage(e),
+      "\n(CSV outputs above are unaffected.)\n"))
 
 # ---------------------------------------------------------------------------
 # 8. Headline read: the preferred col(5), share outcome, p4 coefficient.
