@@ -102,6 +102,14 @@ if (file.exists(ext_rdata)) {
 cat("Panel rows:", nrow(d),
     "  (firm x cn8 x partner x year cells, including zeros)\n")
 
+# Drop Switzerland everywhere. Swiss-recorded import value is a commodity-
+# trading-hub invoicing artifact (value ~25x over 2015-2022 with flat tonnage;
+# unit value EUR 21 -> 1331/kg), i.e. country of consignment, not origin. It
+# mechanically inflates the extra-EU import share. See
+# phase6_cdgm_intrastat_break_diagnostic.R and the paper footnote.
+d <- d[partner_iso2 != "CH"]
+cat("Dropped Switzerland (CH). Rows now:", nrow(d), "\n")
+
 # Join the time-invariant ETS-country flag on (partner_iso2, year). Once
 # phase2_build_customs_panel.R is re-run on RMD with the updated builder,
 # the flag will be in the panel directly and this join becomes redundant —

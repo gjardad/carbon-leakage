@@ -105,6 +105,13 @@ cat("Panel rows (full):", nrow(d), "  year span:",
 d <- d[is_non_ets_country == 1L]
 cat("Panel rows (non-ETS only):", nrow(d), "\n")
 
+# Drop Switzerland: Swiss-recorded import value is a trading-hub invoicing
+# artifact (consignment, not origin) that inflates the extra-EU share and the
+# firm-year share denominator, biasing the regulated x phase coefficients
+# negative post-2016. See phase6_cdgm_intrastat_break_diagnostic.R.
+d <- d[partner_iso2 != "CH"]
+cat("Dropped Switzerland (CH). Rows now:", nrow(d), "\n")
+
 # Window: extended panel spans through 2022; keep everything 2000+ it offers.
 d <- d[year >= 2000L]
 
