@@ -27,15 +27,15 @@
 #
 # EUA PRICE WINDOW
 #   Headline D_EUA is the end-2016 -> end-2018 move, deflated to 2016 EUR:
-#   the MSR / Phase-4 repricing window (see section 2.1). Robustness windows
-#   extend the post date to end-2019 and end-2022.
+#   the MSR / Phase-4 repricing window (see section 2.1). One robustness
+#   window extends the post date to end-2019.
 #
 #   NB: the deflated end-of-year EUA values below are pinned to the daily
 #   ECX/ICE-Endex front-year series used in Figure 1. The end-2018 value
-#   (23.70) is the one already used in Table 3. The end-2019 / end-2022
-#   deflated values are approximate (nominal end-of-year deflated by the
-#   Belgian aggregate PPI); the co-author should confirm the exact deflated
-#   figures on RMD. They affect only the robustness columns, not the headline.
+#   (23.70) is the one already used in Table 3. The end-2019 deflated value
+#   is approximate (nominal end-of-year deflated by the Belgian aggregate
+#   PPI); the co-author should confirm the exact deflated figure on RMD. It
+#   affects only the robustness column, not the headline.
 #
 # OUTPUTS
 #   - phase4_within_intensive_ces_elasticity_density.{pdf,png}
@@ -73,13 +73,13 @@ EUA_OMEGA_WIN <- 6.54    # 2015-16 mean, the price at which omega is measured
 EUA_2016_REAL <- 6.57    # end-2016 (deflation ~ 1 in base year)
 EUA_2018_REAL <- 23.70   # end-2018, deflated (matches Table 3)
 EUA_2019_REAL <- 23.20   # end-2019, approx deflated -- confirm on RMD
-EUA_2022_REAL <- 55.10   # end-2022, approx deflated -- confirm on RMD
 
-# Each window: D_EUA = EUA_post - EUA_2016; K = D_EUA / EUA_OMEGA_WIN
+# Each window: D_EUA = EUA_post - EUA_2016; K = D_EUA / EUA_OMEGA_WIN.
+# Column headers are the post-date (all windows start at end-2016).
 WINDOWS <- data.table(
-  window  = c("end-2016 to end-2018", "end-2016 to end-2019", "end-2016 to end-2022"),
-  eua_post = c(EUA_2018_REAL, EUA_2019_REAL, EUA_2022_REAL),
-  headline = c(TRUE, FALSE, FALSE)
+  window  = c("end-2018", "end-2019"),
+  eua_post = c(EUA_2018_REAL, EUA_2019_REAL),
+  headline = c(TRUE, FALSE)
 )
 WINDOWS[, d_eua := eua_post - EUA_2016_REAL]
 WINDOWS[, K := d_eua / EUA_OMEGA_WIN]
