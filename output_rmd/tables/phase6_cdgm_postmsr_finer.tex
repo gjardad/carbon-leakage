@@ -1,0 +1,38 @@
+
+\begin{table}[htbp]
+   \caption{\label{tab:cdgm_postmsr_finer} Belgian import switching, post-2012 period split along the EUA price ladder: Phase 3a (2013--17, low price); Phase 3b (2018--19, ramp); Phase IV (2020--22, spike). Columns (1)--(2): import share; (3)--(4): probability of sourcing. Even columns add a regulated-product $\times$ linear-trend control. Two-way clustered on firm and country.}
+   \centering
+   \begin{tabular}{lcccc}
+      \tabularnewline \midrule \midrule
+      Dependent Variables: & \multicolumn{2}{c}{Import share} & \multicolumn{2}{c}{Sourcing prob.}\\
+      Model:                                   & (1)             & (2)             & (3)       & (4)\\  
+      \midrule
+      \emph{Variables}\\
+      Phase 1 (2005--08)                       & -0.0013$^{*}$   & -0.0019$^{**}$  & -0.0027   & -0.0121$^{**}$\\   
+                                               & (0.0007)        & (0.0008)        & (0.0039)  & (0.0061)\\   
+      Phase 2 (2009--12)                       & -0.0031$^{***}$ & -0.0043$^{***}$ & -0.0108   & -0.0286$^{**}$\\   
+                                               & (0.0009)        & (0.0011)        & (0.0071)  & (0.0118)\\   
+      Phase 3a (2013--17)                      & -0.0028$^{***}$ & -0.0045$^{***}$ & 0.0025    & -0.0248$^{*}$\\   
+                                               & (0.0008)        & (0.0011)        & (0.0094)  & (0.0133)\\   
+      Phase 3b (2018--19)                      & -0.0019$^{**}$  & -0.0041$^{***}$ & 0.0026    & -0.0320$^{*}$\\   
+                                               & (0.0009)        & (0.0010)        & (0.0067)  & (0.0174)\\   
+      Phase IV (2020--22)                      & -0.0005         & -0.0031$^{***}$ & 0.0107    & -0.0293\\   
+                                               & (0.0011)        & (0.0011)        & (0.0065)  & (0.0193)\\   
+      Regulated $\times$ linear trend          &                 & 0.0001$^{*}$    &           & 0.0021$^{**}$\\   
+                                               &                 & (0.0001)        &           & (0.0010)\\   
+      Trend control                            & No              & Yes             & No        & Yes\\  
+      \midrule
+      \emph{Fixed-effects}\\
+      Firm $\times$ product $\times$ country   & Yes             & Yes             & Yes       & Yes\\  
+      Country $\times$ year                    & Yes             & Yes             & Yes       & Yes\\  
+      Sector $\times$ year                     & Yes             & Yes             & Yes       & Yes\\  
+      \midrule
+      \emph{Fit statistics}\\
+      Observations                             & 4,928,403       & 4,928,403       & 4,928,403 & 4,928,403\\  
+      \midrule \midrule
+      \multicolumn{5}{l}{\emph{Clustered (vat \& partner\_iso2) standard-errors in parentheses}}\\
+      \multicolumn{5}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
+   \end{tabular}
+\end{table}
+
+
