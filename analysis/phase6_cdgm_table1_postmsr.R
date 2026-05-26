@@ -162,6 +162,15 @@ if (POST2019_EMPTY) {
 }
 
 # ---------------------------------------------------------------------------
+# Speed switch. TEX_ONLY = TRUE fits only the 8 preferred-FE col(5) models the
+# paper .tex tables need (~fast). FALSE additionally runs the full
+# 6-FE-column sweep across both schemes and writes the (gitignored) .csv files
+# plus the console robustness print + reproduction check.
+# ---------------------------------------------------------------------------
+TEX_ONLY <- TRUE
+mock_tag <- if (USE_MOCK) "_MOCK" else if (!USING_EXTENDED) "_NOEXT" else ""
+
+# ---------------------------------------------------------------------------
 # 6. Estimation engine. Runs the six CdGM FE columns for a given RHS term set
 #    and outcome, returns tidy coefficients with two-way clustered SE.
 # ---------------------------------------------------------------------------
@@ -208,24 +217,29 @@ run_outcome <- function(outcome) {
   ))
 }
 
-cat("\n===== PANEL A: SHARE =====\n")
-share_out <- run_outcome("share")
-print(share_out)
-
-cat("\n===== PANEL B: PROBABILITY =====\n")
-prob_out <- run_outcome("prob_active")
-print(prob_out)
-
 # ---------------------------------------------------------------------------
-# 7. Save tidy outputs.
+# 7. Full 6-FE-column sweep + tidy CSVs (skipped under TEX_ONLY).
 # ---------------------------------------------------------------------------
-mock_tag <- if (USE_MOCK) "_MOCK" else if (!USING_EXTENDED) "_NOEXT" else ""
-out_share <- file.path(OUT_TAB, sprintf("phase6_cdgm_postmsr_share%s.csv", mock_tag))
-out_prob  <- file.path(OUT_TAB, sprintf("phase6_cdgm_postmsr_prob%s.csv",  mock_tag))
-fwrite(share_out, out_share)
-fwrite(prob_out,  out_prob)
-cat("\nShare saved:", out_share, "\n")
-cat("Prob  saved:", out_prob,  "\n")
+share_out <- NULL
+if (!TEX_ONLY) {
+  cat("\n===== PANEL A: SHARE =====\n")
+  share_out <- run_outcome("share")
+  print(share_out)
+
+  cat("\n===== PANEL B: PROBABILITY =====\n")
+  prob_out <- run_outcome("prob_active")
+  print(prob_out)
+
+  out_share <- file.path(OUT_TAB, sprintf("phase6_cdgm_postmsr_share%s.csv", mock_tag))
+  out_prob  <- file.path(OUT_TAB, sprintf("phase6_cdgm_postmsr_prob%s.csv",  mock_tag))
+  fwrite(share_out, out_share)
+  fwrite(prob_out,  out_prob)
+  cat("\nShare saved:", out_share, "\n")
+  cat("Prob  saved:", out_prob,  "\n")
+} else {
+  cat("\nTEX_ONLY = TRUE: skipping the 6-FE-column sweep + CSVs; fitting only\n")
+  cat("the col(5) models the paper .tex tables need.\n")
+}
 
 # ---------------------------------------------------------------------------
 # 7b. Paper-ready LaTeX tables (.tex). Unlike the CSVs above, output_*/tables/
@@ -249,20 +263,39 @@ tex_dict <- c(
   treat_yearc = "Regulated $\\times$ linear trend",
   firm_prod_country = "Firm $\\times$ product $\\times$ country",
   country_year      = "Country $\\times$ year",
-  sector_year       = "Sector $\\times$ year"
+  sector_year       = "Sector $\\times$ year",
+  share             = "Import share",
+  prob_active       = "Sourcing prob."
 )
 
-write_postmsr_tex <- function(rhs, rhs_tr, file, title, label) {
+stars <- function(p) ifelse(is.na(p), "", ifelse(p < .001, "***",
+                     ifelse(p < .01, "**", ifelse(p < .05, "*",
+                     ifelse(p < .1, ".", "")))))
+
+# Echo the price-window coefficients (share, col(5)) so the decision number is
+# visible on the console even under TEX_ONLY.
+print_key <- function(m, lab) {
+  ct <- as.data.table(summary(m)$coeftable, keep.rownames = "term")
+  setnames(ct, c("term", "estimate", "se", "tval", "pval"))
+  for (tm in intersect(c("treat_p3", "treat_p3l", "treat_p4"), ct$term)) {
+    r <- ct[term == tm]
+    cat(sprintf("    %-5s %-9s b=%+.5f  se=%.5f  p=%.4f %s\n",
+                lab, tm, r$estimate, r$se, r$pval, stars(r$pval)))
+  }
+}
+
+write_postmsr_tex <- function(rhs, rhs_tr, file, title, label, scheme_name) {
   ms0 <- fit5("share", rhs);       ms1 <- fit5("share", rhs_tr)
   mp0 <- fit5("prob_active", rhs); mp1 <- fit5("prob_active", rhs_tr)
   etable(ms0, ms1, mp0, mp1,
          tex = TRUE, file = file, replace = TRUE,
          title = title, label = label, dict = tex_dict,
          fitstat = ~ n,
-         extralines = list("Outcome"       = c("Share", "Share", "Prob.", "Prob."),
-                           "Trend control" = c("No", "Yes", "No", "Yes")),
-         digits = "r4", digits.stats = 0)
+         extralines = list("Trend control" = c("No", "Yes", "No", "Yes")),
+         digits = "r4")
   cat("LaTeX table saved:", file, "\n")
+  cat(sprintf("  [%s] share col(5) price-window coefficients:\n", scheme_name))
+  print_key(ms0, "naive"); print_key(ms1, "trend")
 }
 
 tex_nested <- file.path(OUT_TAB, sprintf("phase6_cdgm_postmsr_nested%s.tex", mock_tag))
@@ -276,7 +309,7 @@ tryCatch({
           "Even columns add a regulated-product $\\times$ linear-trend control.",
           "Preferred fixed effects throughout; two-way clustered on firm and country.",
           "France benchmark (CdGM 2024), Phase~3 import share: $+0.121$ (0.029)."),
-    "tab:cdgm_postmsr_nested")
+    "tab:cdgm_postmsr_nested", "nested")
   write_postmsr_tex(
     rhs_finer, rhs_finer_tr, tex_finer,
     paste("Belgian import switching, post-2012 period split along the EUA price ladder:",
@@ -284,30 +317,14 @@ tryCatch({
           "Columns (1)--(2): import share; (3)--(4): probability of sourcing.",
           "Even columns add a regulated-product $\\times$ linear-trend control.",
           "Two-way clustered on firm and country."),
-    "tab:cdgm_postmsr_finer")
+    "tab:cdgm_postmsr_finer", "finer")
 }, error = function(e)
   cat("WARNING: etable LaTeX generation failed:", conditionMessage(e),
       "\n(CSV outputs above are unaffected.)\n"))
 
 # ---------------------------------------------------------------------------
-# 8. Headline read: the preferred col(5), share outcome, p4 coefficient.
+# 8. Decision rule, and (only when the full sweep ran) the reproduction check.
 # ---------------------------------------------------------------------------
-stars <- function(p) ifelse(is.na(p), "", ifelse(p < .001, "***",
-                     ifelse(p < .01, "**", ifelse(p < .05, "*",
-                     ifelse(p < .1, ".", "")))))
-cat("\n=========================================================\n")
-cat("HEADLINE: col(5), SHARE outcome\n")
-cat("=========================================================\n")
-hl <- share_out[col == "col5"]
-for (sc in c("nested", "finer")) for (tr in c(0L, 1L)) {
-  sub <- hl[scheme == sc & trend == tr]
-  if (nrow(sub) == 0L) next
-  cat(sprintf("\n[scheme=%s, trend=%d]\n", sc, tr))
-  for (i in seq_len(nrow(sub)))
-    cat(sprintf("  %-12s b=%+.5f  se=%.5f  p=%.4f %s\n",
-                sub$term[i], sub$estimate[i], sub$se[i], sub$pval[i],
-                stars(sub$pval[i])))
-}
 cat("\n---------------------------------------------------------\n")
 cat("DECISION RULE (p4 = 2020-22, the EUA-spike window):\n")
 cat("  p4 ~ 0 / wrong-signed  => null robust where price binds (STRONG).\n")
@@ -316,14 +333,10 @@ cat("CdGM France benchmark (their Phase 3, 2013-19): share +0.121*** .\n")
 if (POST2019_EMPTY)
   cat("\nNOTE: p4 is empty on this machine -> the rule applies to the RMD run.\n")
 
-# ---------------------------------------------------------------------------
-# 9. Built-in reproduction check: nested no-trend p1/p2/p3 on the <=2019
-#    subsample should match phase2_cdgm_table1 col(5). Printed for inspection.
-# ---------------------------------------------------------------------------
-cat("\n--- Reproduction check vs phase2_cdgm_table1 (nested, no-trend, col5, <=2019 implied) ---\n")
-cat("    Compare p1/p2/p3 below against output/tables/phase2_cdgm_table1_A.csv:\n")
-print(share_out[scheme == "nested" & trend == 0L & col == "col5" &
-                  term %in% c("treat_p1", "treat_p2", "treat_p3"),
-                .(term, estimate = round(estimate, 5), se = round(se, 5))])
-cat("(Exact match expected only on RMD full panel; local-1 is downsampled.\n",
-    " p4 is the NEW window the published table never had.)\n")
+if (!TEX_ONLY) {
+  cat("\n--- Reproduction check vs phase2_cdgm_table1 (nested, no-trend, col5) ---\n")
+  cat("    Compare p1/p2/p3 against output/tables/phase2_cdgm_table1_A.csv:\n")
+  print(share_out[scheme == "nested" & trend == 0L & col == "col5" &
+                    term %in% c("treat_p1", "treat_p2", "treat_p3"),
+                  .(term, estimate = round(estimate, 5), se = round(se, 5))])
+}
