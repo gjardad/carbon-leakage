@@ -380,10 +380,46 @@ The natural next RMD batch:
 |---|---|---:|
 | `phase6_c1_imports_vs_domestic.R` (hardened) | C1 main result + post-MSR cut | ~5 min |
 | `phase6_b5_b1_heterogeneity.R` (new) | HS6-CI + post-MSR heterogeneity on B1 | ~5 min |
-| `phase6_cdgm_table1_postmsr.R` (TODO) | CdGM aggregate split at 2017/2018 | ~15 min (new script needed) |
+| [phase6_cdgm_table1_postmsr.R](analysis/phase6_cdgm_table1_postmsr.R) (**written, local-tested**) | CdGM aggregate post-MSR split (nested + finer) | ~15 min — **RMD-pending** |
 
-The third script doesn't exist yet — extending the CdGM aggregate to a post-MSR sub-split is the natural follow-up if the user wants to push the heterogeneity story all the way through.
+The third script now exists and is tested on local-1 (§9 below). It is the cleanest answer to the "wrong window" objection to our aggregate null and is queued for RMD.
 
 ---
 
-*Last revision: 2026-05-11. This document inventories every international-margin estimate on disk. Treat as the single source of truth for the international-margin headline pending RMD execution of C1 and the priority-A heterogeneity cuts.*
+## 9. CdGM replication sharpening (2026-05-26)
+
+Two pieces of work to pin down *what the aggregate result actually is* before building the Belgium-vs-France discussion on top of it.
+
+### 9.1 Audit — is Table 1 truly apples-to-apples with France? (Piece A)
+
+Read [phase2_cdgm_table1.R](analysis/phase2_cdgm_table1.R) against CdGM's published spec (notes lines 63–74 of [articles/split_coster_mejean_digiovanni/notes.md](articles/split_coster_mejean_digiovanni/notes.md)). **Conclusion: aligned.**
+
+| Dimension | CdGM (France) | Our Table 1 | Match |
+|---|---|---|:--:|
+| Sample window | 2000–2019 | 2000–2019 | ✓ |
+| Phase bins | P1 2005–08, P2 2009–12, P3 2013–20 (realized 2013–19) | 2005–08 / 2009–12 / 2013–19 | ✓ |
+| Reference | 2000–04 | pre-2005 | ✓ |
+| Control group | unregulated × non-ETS | unregulated × non-ETS (treat=regulated within non-ETS sample) | ✓ |
+| Preferred FE col(5) | firm^prod^country + country^year + sector^year | identical | ✓ |
+| Clustering | two-way firm + country | identical | ✓ |
+| Share denominator | firm-year total over regression sample | firm-year total over non-ETS subsample | ✓ |
+
+CdGM's "P3 = 2013–20" label is realized as 2013–2019 in their 2000–2019 data — exactly our `treat_p3` bin, so the labels differ but the data window is identical. **The one genuine asymmetry vs France:** the *probability* margin has a non-zero negative pre-trend in Belgium (treated cells less likely active pre-2005; −0.014, CIs exclude 0 per §2.1), whereas France has flat pre-trends. Handling: lead the paper with the **share** margin (clean pre-trend), footnote probability, and report the trend-corrected probability (−0.021 n.s., [phase6_cdgm_corrected_B.csv](output_rmd/tables/phase6_cdgm_corrected_B.csv)) as the robustness. No change needed to the share headline; the comparison "−0.0024 ** vs France +0.121 ***" is on matched constructions.
+
+### 9.2 New script — post-MSR sub-split (Piece B)
+
+[phase6_cdgm_table1_postmsr.R](analysis/phase6_cdgm_table1_postmsr.R) runs CdGM Eq.(1) on the **extended 2000–2022 panel** with the post-2012 period sub-split. Motivation: CdGM's window ends in 2019 (EUA ~€25); the spike to €90+ is entirely in 2020–22. Our exact Table 1 also stops at 2019, so the strongest objection to the null is "you tested in a window where the price was too low to bite." This script removes that objection.
+
+**Two phase schemes**, each run with and without the `treat × year_centered` trend control, share + probability outcomes, all six FE columns, two-way (firm + country) clustering:
+- **nested:** p1=2005–08, p2=2009–12, p3=2013–19 (CdGM's exact bins → reproduces the published table on ≤2019 data, a built-in regression test), **p4=2020–22** (the new EUA-spike window).
+- **finer:** p1=2005–08, p2=2009–12, p3_early=2013–17 (EUA ~€5–8), p3_late=2018–19 (EUA ~€16–25), p4=2020–22 (EUA ~€25–90+). Splits along the price ladder; the 2018 break mirrors the B1 post-2018 differential (§8.2).
+
+**Decision rule.** p4 (2020–22) col(5) share coefficient:
+- ≈ 0 / wrong-signed → **null robust in the window where the price actually binds** (strong outcome; kills the "wrong window" objection).
+- negative & significant → leakage appears only at high carbon prices, invisible in France's pre-2020 window (headline shifts).
+
+**Local-1 test (2026-05-26):** runs clean (exit 0), all 24 scheme×trend×col blocks per outcome, 0 failures. The extended panel is RMD-only, so locally p4 is empty — the script's guard detects this, prints an RMD-pending warning, and tags output `_NOEXT`. Nested no-trend col(5) p1/p2/p3 reproduce the phase2 spec by construction. **Real p4 / finer-split coefficients require an RMD run against `customs_import_panel_extended.RData`.**
+
+---
+
+*Last revision: 2026-05-26. This document inventories every international-margin estimate on disk. Treat as the single source of truth for the international-margin headline pending RMD execution of C1, the post-MSR split (§9), and the priority-A heterogeneity cuts.*
