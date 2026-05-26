@@ -191,77 +191,117 @@ make_figure <- function(d_in, sample_label, fname_suffix) {
     share_dt <- share_dt[!year %in% incomplete_years]
   }
 
-  cat("Aggregate share by group/year:\n")
-  print(dcast(share_dt, year ~ group, value.var = "share"))
+  # Keep only the two non-ETS lines (the CdGM regression sample) and relabel
+  # them treatment / control. Their ETS complements are 1 - these and carry no
+  # information the non-ETS lines don't, so we drop them for readability.
+  TC_LEVELS <- c("Regulated (treatment)", "Unregulated (control)")
+  TC_COLORS <- c("Regulated (treatment)" = "firebrick",
+                 "Unregulated (control)" = "grey45")
+  to_tc <- function(dt) {
+    dt <- dt[group %in% c("Regulated x non-ETS", "Unregulated x non-ETS")]
+    dt[, tc := factor(fifelse(group == "Regulated x non-ETS",
+                              "Regulated (treatment)", "Unregulated (control)"),
+                      levels = TC_LEVELS)]
+    dt[]
+  }
 
-  p_a <- ggplot(share_dt, aes(x = year, y = share, color = group)) +
-    geom_vline(xintercept = 2004.5, linetype = "dashed", color = "grey40") +
-    geom_line(linewidth = 0.9) + geom_point(size = 1.6) +
+  # Event markers: ETS start (2005) and MSR (2017). No background shading.
+  markers <- list(
+    geom_vline(xintercept = 2005, linetype = "dashed",
+               color = "grey50", linewidth = 0.4),
+    geom_vline(xintercept = 2017, linetype = "dashed",
+               color = "grey50", linewidth = 0.4)
+  )
+  marker_labels <- list(
+    annotate("text", x = 2005, y = Inf, label = "ETS", hjust = -0.15,
+             vjust = 1.6, size = 4.2, color = "grey45"),
+    annotate("text", x = 2017, y = Inf, label = "MSR", hjust = -0.15,
+             vjust = 1.6, size = 4.2, color = "grey45")
+  )
+
+  # Shared clean theme: no gridlines, anchored axis lines, large axis title /
+  # tick fonts, and extra space between the y-axis title and its tick labels.
+  clean_theme <- theme_minimal(base_size = 14) +
+    theme(
+      panel.grid      = element_blank(),
+      axis.line       = element_line(color = "grey20", linewidth = 0.4),
+      axis.ticks      = element_line(color = "grey20", linewidth = 0.4),
+      axis.title.x    = element_text(size = 17, margin = margin(t = 10)),
+      axis.title.y    = element_text(size = 17, margin = margin(r = 14)),
+      axis.text       = element_text(size = 14, color = "grey20"),
+      legend.position = "none",
+      plot.margin     = margin(6, 80, 6, 6),
+      plot.title      = element_blank(),
+      plot.subtitle   = element_blank(),
+      plot.caption    = element_blank()
+    )
+
+  share_tc <- to_tc(share_dt)
+  cat("Non-ETS source share by product type / year:\n")
+  print(dcast(share_tc, year ~ tc, value.var = "share"))
+  lab_a <- share_tc[, .SD[which.max(year)], by = tc]
+  lab_a[, lab_short := fifelse(tc == "Regulated (treatment)",
+                               "Regulated", "Unregulated")]
+
+  p_a <- ggplot(share_tc, aes(x = year, y = share, color = tc)) +
+    markers + marker_labels +
+    geom_line(linewidth = 1.1) + geom_point(size = 1.8) +
+    geom_text(data = lab_a, aes(label = lab_short, color = tc),
+              hjust = 0, nudge_x = 0.20, size = 3.8, fontface = "bold",
+              show.legend = FALSE) +
     scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-    scale_color_manual(values = GROUP_COLORS, drop = FALSE) +
-    annotate("text", x = 2002, y = max(share_dt$share, na.rm = TRUE),
-             label = "Pre-ETS", size = 3, color = "grey40") +
-    annotate("text", x = 2012, y = max(share_dt$share, na.rm = TRUE),
-             label = "Post-2005 (ETS)", size = 3, color = "grey40") +
-    labs(title = sprintf("(a) Source split within product type, %s", sample_label),
-         subtitle = "Regulated pair (Red+Blue) sums to 1; Unregulated pair (Orange+Grey) sums to 1.",
-         x = NULL, y = "Share within product type", color = NULL) +
-    theme_minimal(base_size = 11) +
-    theme(legend.position = "bottom")
+    scale_color_manual(values = TC_COLORS, drop = FALSE) +
+    scale_x_continuous(expand = expansion(mult = c(0.02, 0.04))) +
+    coord_cartesian(clip = "off") +
+    labs(x = NULL, y = "Non-ETS import share", color = NULL) +
+    clean_theme
 
-  # --- Panel (b): probability of sourcing -----------------------------
+  # --- Panel (b): probability of sourcing from non-ETS ----------------
   prob_dt <- d_in[!is.na(group), .(active = mean(value > 0)),
                    by = .(year, group)]
   if (length(incomplete_years) > 0) {
     prob_dt <- prob_dt[!year %in% incomplete_years]
   }
+  prob_tc <- to_tc(prob_dt)
+  cat("Probability of sourcing from non-ETS by product type / year:\n")
+  print(dcast(prob_tc, year ~ tc, value.var = "active"))
+  lab_b <- prob_tc[, .SD[which.max(year)], by = tc]
+  lab_b[, lab_short := fifelse(tc == "Regulated (treatment)",
+                               "Regulated", "Unregulated")]
 
-  cat("Probability of sourcing by group/year:\n")
-  print(dcast(prob_dt, year ~ group, value.var = "active"))
-
-  p_b <- ggplot(prob_dt, aes(x = year, y = active, color = group)) +
-    geom_vline(xintercept = 2004.5, linetype = "dashed", color = "grey40") +
-    geom_line(linewidth = 0.9) + geom_point(size = 1.6) +
+  p_b <- ggplot(prob_tc, aes(x = year, y = active, color = tc)) +
+    markers + marker_labels +
+    geom_line(linewidth = 1.1) + geom_point(size = 1.8) +
+    geom_text(data = lab_b, aes(label = lab_short, color = tc),
+              hjust = 0, nudge_x = 0.20, size = 3.8, fontface = "bold",
+              show.legend = FALSE) +
     scale_y_continuous(labels = scales::percent_format(accuracy = 0.1)) +
-    scale_color_manual(values = GROUP_COLORS, drop = FALSE) +
-    labs(title = "(b) Probability of sourcing (extensive margin)",
-         x = NULL, y = "P(value > 0 | triplet, year)", color = NULL) +
-    theme_minimal(base_size = 11) +
-    theme(legend.position = "bottom")
+    scale_color_manual(values = TC_COLORS, drop = FALSE) +
+    scale_x_continuous(expand = expansion(mult = c(0.02, 0.04))) +
+    coord_cartesian(clip = "off") +
+    labs(x = NULL, y = "Sourcing probability", color = NULL) +
+    clean_theme
 
-  # --- Combine and save -----------------------------------------------
-  p_combined <- (p_a / p_b) +
-    plot_annotation(
-      title = sprintf("CdGM Figure 2 replication: %s", sample_label),
-      subtitle = sprintf("Belgium customs panel%s, %d-%d",
-                         ifelse(USE_MOCK, " (MOCK DATA)", ""),
-                         min(d_in$year), max(d_in$year)),
-      caption = paste("Four lines:",
-                      paste(GROUP_LEVELS, collapse = "; "),
-                      ".  Panel (a) denominator: within-regulation-status",
-                      "totals (regulated pair sums to 1; unregulated pair sums to 1).",
-                      "Panel (b) denominator: per-group triplet pool.",
-                      sep = " ")
-    ) &
-    theme(plot.title = element_text(size = 12),
-          legend.position = "bottom")
-
+  # --- Save each panel as a SEPARATE figure ---------------------------
   fig_dir <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "figures")
   tab_dir <- file.path(REPO_DIR, paste0("output_", MACHINE_TAG), "tables")
   dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
   dir.create(tab_dir, recursive = TRUE, showWarnings = FALSE)
 
   mock_tag <- if (USE_MOCK) "_MOCK" else ""
-  out_fig <- file.path(fig_dir, sprintf("phase2_cdgm_figure2%s%s.png",
-                                         fname_suffix, mock_tag))
-  ggsave(out_fig, p_combined, width = 9, height = 8, dpi = 200)
-  cat(sprintf("Figure saved: %s\n", out_fig))
+  out_a <- file.path(fig_dir, sprintf("phase2_cdgm_figure2_share%s%s.png",
+                                      fname_suffix, mock_tag))
+  out_b <- file.path(fig_dir, sprintf("phase2_cdgm_figure2_prob%s%s.png",
+                                      fname_suffix, mock_tag))
+  ggsave(out_a, p_a, width = 8, height = 5, dpi = 200)
+  ggsave(out_b, p_b, width = 8, height = 5, dpi = 200)
+  cat(sprintf("Figures saved:\n  %s\n  %s\n", out_a, out_b))
 
   out_tab <- file.path(tab_dir, sprintf("phase2_cdgm_figure2%s%s.csv",
                                          fname_suffix, mock_tag))
-  agg <- merge(share_dt[, .(year, group, share)],
-               prob_dt[, .(year, group, prob_active = active)],
-               by = c("year", "group"))
+  agg <- merge(share_tc[, .(year, tc, share)],
+               prob_tc[, .(year, tc, prob_active = active)],
+               by = c("year", "tc"))
   fwrite(agg, out_tab)
   cat(sprintf("Table saved:  %s\n", out_tab))
 }
