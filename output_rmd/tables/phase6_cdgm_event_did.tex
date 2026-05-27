@@ -1,0 +1,28 @@
+
+\begin{table}[htbp]
+   \caption{\label{tab:cdgm_event_did} Belgian import switching, single-event difference-in-differences. The regulated $\times$ post interaction is dated at the 2017 Market Stability Reserve (columns 1, 3), matching the event-time treatment of the domestic test, and at the 2005 ETS introduction (columns 2, 4), mirroring \citet{CosterMejeanDiGiovanni2024}'s main exercise. Columns (1)--(2): import share; (3)--(4): probability of sourcing. Preferred fixed effects throughout; two-way clustered on firm and country. Switzerland excluded. France benchmark: $+0.121$.}
+   \centering
+   \begin{tabular}{lcccc}
+      \tabularnewline \midrule \midrule
+      Dependent Variables: & \multicolumn{2}{c}{Import share} & \multicolumn{2}{c}{Sourcing prob.}\\
+      Model:                                   & (1)        & (2)            & (3)           & (4)\\  
+      \midrule
+      \emph{Variables}\\
+      Regulated $\times$ post-event            & 0.0004     & -0.0018$^{**}$ & 0.0124$^{**}$ & 0.0013\\   
+                                               & (0.0010)   & (0.0008)       & (0.0049)      & (0.0062)\\   
+      Event                                    & MSR (2017) & ETS (2005)     & MSR (2017)    & ETS (2005)\\  
+      \midrule
+      \emph{Fixed-effects}\\
+      Firm $\times$ product $\times$ country   & Yes        & Yes            & Yes           & Yes\\  
+      Country $\times$ year                    & Yes        & Yes            & Yes           & Yes\\  
+      Sector $\times$ year                     & Yes        & Yes            & Yes           & Yes\\  
+      \midrule
+      \emph{Fit statistics}\\
+      Observations                             & 4,644,560  & 4,644,560      & 4,644,560     & 4,644,560\\  
+      \midrule \midrule
+      \multicolumn{5}{l}{\emph{Clustered (vat \& partner\_iso2) standard-errors in parentheses}}\\
+      \multicolumn{5}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
+   \end{tabular}
+\end{table}
+
+
