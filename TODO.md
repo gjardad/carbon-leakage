@@ -2,7 +2,21 @@
 
 Open analyses that are deferred until headline results land. Add dated entries when new follow-ups appear; strike through and date items when they're closed out.
 
+---
+
+## New to-do list (assembled 2026-07-03)
+
+This list is assembled separately from everything below because I no longer remember which of the older items are still relevant. Treat this as the current, authoritative short list; the older sections are kept for reference but may be stale.
+
+- [ ] **1. PRODCOM pass-through Stata port for the co-author.** Finish the Stata port of the firm × PC8 × month pipeline so the co-author can reproduce the analysis end-to-end on RMD. Data-build scripts `00_`–`05_` + sample-selection landed; regression specs `06_`–`09_`, the monthly-panel build for the event study, and RMD testing against the mock `prod.dta` are still open. Detail in §2 below and [PRODCOM_PLAN.md](PRODCOM_PLAN.md).
+- [ ] **2. Does treatment bite in 2017 or 2018? Move the DiD cutoff to end-of-2017.** The headline regressions currently use end-of-2016 / start-of-2017 as the treatment cutoff. Check this against the actual EUA price trajectory — prices stayed low through 2017 and only began their sustained climb in 2018 — and reassess whether end-of-2017 is the more defensible cutoff. Re-run the affected DiD / event-study specs under the end-of-2017 cutoff and compare.
+- [ ] **3. Do carbon-price-driven price increases affect the formation of new buyer-supplier relationships?** Add results on the extensive margin of *new* relationships: are buyers less likely to form new relationships with high-exposure (high-ω) suppliers once carbon costs push their prices up? Distinct from the existing within/across reallocation work, which is about reallocation among existing relationships. (Existing `phase4_new_relationships_*` figures may be a starting point.)
+
+---
+
 ### Quick follow-ups
+- [x] ~~**(added 2026-06-16)** Check the denominator in the carbon cost share definition (the exposure variable): only domestic inputs, or domestic + imported inputs?~~ **Closed 2026-06-16.** Denominator is `total_cost = mat_inputs + wage_bill` with `mat_inputs = revenue − value_added`, identical in [phase5_attach_firm_cost_share.R:88-89](analysis/phase5_attach_firm_cost_share.R#L88-L89) and [phase3_build_exposure_panel.R:72-73](analysis/phase3_build_exposure_panel.R#L72-L73). `value_added` = NBB Annual Accounts code **9800** (per [02_build_firm_year_euets.do:160](analysis/prodcom_passthrough_stata/02_build_firm_year_euets.do#L160)), `revenue` = `turnover_VAT`. Code 9800 subtracts **all** intermediate consumption (blocks 60+61), which Belgian accounts do **not** split by origin → **imports ARE included** in `mat_inputs`. Labor is included via `wage_bill`. **Emissions costs are NOT explicitly added** (only implicitly, if a firm books allowance purchases in block 61) — second-order (carbon cost is the numerator, typically <1–2% of total cost), handle with a footnote, no re-run needed. Minor caveats: (i) `mat_inputs` mixes VAT turnover with accounting VA and nets out "other operating income," so it's a proxy for intermediate inputs rather than an exact 60/61 sum (still includes imports); (ii) 9800 is gross (pre-depreciation).
+
 - [x] ~~**(added 2026-05-11)** Look carefully at the across-NACE4d RMD results — eight figures across intensive + extensive batches plus `phase4_across_nace4d_intensive_margin` and `phase4_across_nace4d_extensive_margin`. Specifically: (a) confirm whether the 2015–2016 step in `_by_shortage_share` is a real B2B-reporting threshold change (it survived full-sample, ruling out downsampling), (b) the Q3 high-exposure −3pp 2012→2022 decline in `_intensive_by_buyer_exposure` is the cleanest across-NACE4d leakage signal — formalize with a DiD around 2013, (c) reconcile the local-1 "Q4 high-exposure drift" finding with RMD where it appears milder.~~ **Closed 2026-05-12** — across-NACE4d documented in REALLOCATION_FINDINGS.md as a well-supported null (commit `2f1ea6f`). (a) 2015–16 step confirmed as a real B2B reporting discontinuity (origin still to be checked with NBB); contamination acknowledged in the writeup. (b) Q3 decline starts 2011 with no corresponding ETS event; mechanism not pursued, flagged as plausibly compositional / structural-sectoral rather than policy-related. (c) Q4 size-within-exposure drift attributed to ceiling effect + size-omega confound; not pursued.
 
 - [ ] **(added 2026-05-12)** International margin — sharpened second-cut analysis. Headline so far: aggregate CdGM-style replication is null/negative ([IMPORT_LEAKAGE.md](IMPORT_LEAKAGE.md), [INTERNATIONAL_MARGIN_FINDINGS.md](INTERNATIONAL_MARGIN_FINDINGS.md)); within-product-type framing on [output_rmd/figures/phase2_cdgm_figure2.png](output_rmd/figures/phase2_cdgm_figure2.png) shows regulated × ETS basically flat while unregulated diverges — wrong-signed for ETS-policy leakage, consistent with generic globalization. Three sharpened tests parallel the carbon-policy-as-cost-shifter mechanism we used domestically. All share one data dependency. **See §7 below for the detailed plan.**
@@ -36,15 +50,14 @@ Open analyses that are deferred until headline results land. Add dated entries w
   - [ ] **Ship to RMD** and run against `customs_import_panel_extended.RData`. Decision rule: p4 (2020–22) col(5) share ≈ 0 → null robust where the price binds (strong); negative & sig → leakage only at high prices. Outputs land at `output_rmd/tables/phase6_cdgm_postmsr_{share,prob}.csv`.
   - [ ] Once p4 lands, fold the result into [leakage_international.tex](paper/leakage_within_across/sections/leakage_international.tex) and finalize the Belgium-vs-France discussion on top of the confirmed number.
 
-Five active workstreams:
+Four active workstreams:
 
 0. **New exposure measure (high priority, added 2026-05-07)** — rebuild the firm-level treatment intensity as `emissions_pre × (1 − expected_allocation_share_post)` with both pieces predetermined / exogenous to MSR. See §0 below.
 1. **Reallocation mechanism** — H1 (within-sector reallocation) vs H2 (inelastic-demand shield). Plan: [REALLOCATION_MECHANISM_PLAN.md](REALLOCATION_MECHANISM_PLAN.md).
 2. **PRODCOM pass-through** — Stata port of firm × PC8 × month pipeline for co-author. Plan: [PRODCOM_PLAN.md](PRODCOM_PLAN.md).
 3. **Threat hypothesis** — do firms invest in cleaner tech in response to carbon-price news, not only realized prices? Plan: [TREAT_HYPOTHESIS_PLAN.md](TREAT_HYPOTHESIS_PLAN.md).
-4. **Greenflation** — firm-level test of CPShock pass-through into realized prices, extending Hensel et al. / Känzig-Konradt. Lit review: [greenflation.md](greenflation.md).
 
-A sixth section at the bottom holds shock-size / abatement-timing diagnostics from the earlier Phase 3 scope that aren't tied to any single workstream.
+The legacy section at the bottom holds shock-size / abatement-timing diagnostics from the earlier Phase 3 scope that aren't tied to any single workstream.
 
 ---
 
@@ -392,31 +405,9 @@ Source: [TREAT_HYPOTHESIS_PLAN.md](TREAT_HYPOTHESIS_PLAN.md). Goal: test whether
 
 ---
 
-## 4. Greenflation workstream (added 2026-04-22)
-
-Source: [greenflation.md](greenflation.md) (literature review). Goal: deliver a firm- and sector-level test of carbon-price pass-through into realized prices that extends Hensel et al. (2024) and Känzig–Konradt (2023) using Belgian data's unique firm-level ETS identification. No implementation plan yet — this is an open research agenda to be scoped before work starts.
-
-### Step 1 — Scope into a concrete plan
-- [ ] Convert `greenflation.md` section "How this project's data can extend this literature" (subsections 1–6) into a sequenced implementation plan (analogue of `REALLOCATION_MECHANISM_PLAN.md` or `TREAT_HYPOTHESIS_PLAN.md`). Output: `GREENFLATION_PLAN.md`.
-
-### Step 2 — Candidate tests (from the lit-review synthesis, to be prioritized)
-- [ ] Firm-level Hensel-style pass-through: CPShock × firm ETS exposure → realized unit prices (PRODCOM) and sector PPI. Leverages existing PRODCOM and S12 machinery.
-- [ ] Within-Belgium version of the Känzig–Konradt channel decomposition (coverage, leakage) — using B2B-derived direct vs network-propagated exposure.
-- [ ] Empirical test of the DDD (2025) two facts for Belgium: energy centrality in the I/O matrix, and emission-intensive sectors' price-change frequency.
-- [ ] Free-allocation heterogeneity: within-Belgium replication of Känzig–Konradt's cross-country allocation result, using firm-year `allocated_free` from EUTL.
-- [ ] Price leakage in small open economy: does pass-through rise in sectors with low import exposure? Requires customs × PRODCOM × PPI.
-- [ ] Phase IV as a natural experiment: first high-EUA-price window for a within-country test.
-
-### Step 3 — Open questions to resolve before designing regressions
-- [ ] Why do Bettarelli (2025) and Konradt–WdM (2023) find opposite signs? Does the Bettarelli result survive in an OECD-only subsample? Matters because Belgium is OECD-European and inherits the Konradt–WdM benchmark.
-- [ ] Clean side-by-side mapping between pass-through layers (wholesale, futures, HICP, NACE4d PPI, firm unit prices). Missing from the literature; this project is positioned to deliver it.
-- [ ] Direct vs network-propagated pass-through decomposition. DDD counterfactuals say IO propagation ≈ 2/3 of core inflation response; our B2B-derived Leontief can test this empirically (caveat: downsampled local version only directional; real decomposition needs RMD).
-
----
-
 ## 5. Legacy — Phase 3 shock-size / abatement diagnostics
 
-Context: originally scoped under the Phase 3 pipeline (`phase3_*`, addressing histograms of carbon cost share, sector-level pass-through, and shock-size diagnostics). Items below were postponed until headline diagnostics landed. They touch multiple workstreams above (reallocation, threat, greenflation) and don't belong exclusively to any one, so they sit here until reshelved.
+Context: originally scoped under the Phase 3 pipeline (`phase3_*`, addressing histograms of carbon cost share, sector-level pass-through, and shock-size diagnostics). Items below were postponed until headline diagnostics landed. They touch multiple workstreams above (reallocation, threat) and don't belong exclusively to any one, so they sit here until reshelved.
 
 ### Task 3.5 — Benchmark EUA-driven cost variation against other shocks (added 2026-04-21)
 Compare within-firm standard deviation of `(shortage × EUA price) / total_cost` against within-firm s.d. of other cost shocks, 2005–2023:
